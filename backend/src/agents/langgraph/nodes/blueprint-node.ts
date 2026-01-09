@@ -65,6 +65,14 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
 
         const planBlueprint = planningResponse.data.blueprint;
 
+        // Use LLM to dynamically generate project-specific pages
+        console.log('   🎯 Generating unique pages with LLM...');
+        const dynamicPages = await extractPagesWithLLM(
+            state.userPrompt,
+            planBlueprint.detailedContext,
+            planBlueprint.features
+        );
+
         // Convert PlanningService blueprint to LangGraph ProjectBlueprint format
         const blueprint: ProjectBlueprint = {
             projectName: planBlueprint.projectName,
@@ -74,7 +82,7 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
                 description: typeof f === 'string' ? f : f,
                 priority: 'high' as const
             })),
-            pages: extractPagesFromContext(planBlueprint.detailedContext, planBlueprint.features),
+            pages: dynamicPages,
             components: extractComponentsFromContext(planBlueprint.detailedContext),
             designSystem: extractDesignSystem(planBlueprint.detailedContext),
             dependencies: { ...STANDARD_DEPENDENCIES }
@@ -141,52 +149,173 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
 }
 
 /**
- * Extract pages from detailedContext - parses the planning output
+ * Extract pages using LLM - truly dynamic, project-specific page generation
+ * This replaces the old keyword-based approach with intelligent LLM analysis
+ */
+async function extractPagesWithLLM(userPrompt: string, detailedContext: string, features: any[]): Promise<any[]> {
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({
+        apiKey: process.env.gemini2,
+        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    });
+
+    const featureNames = features.map(f => typeof f === 'string' ? f : f.name || f).join(', ');
+
+    const prompt = `You are an expert web architect. Based on the project requirements, determine the EXACT pages this SPECIFIC project needs.
+
+PROJECT REQUIREMENT: "${userPrompt}"
+
+IDENTIFIED FEATURES: ${featureNames}
+
+DETAILED CONTEXT (excerpt):
+${detailedContext.slice(0, 6000)}
+
+═══════════════════════════════════════════════════════════════
+CRITICAL RULES:
+═══════════════════════════════════════════════════════════════
+
+1. Pages must be UNIQUE to THIS specific project type
+2. DO NOT use generic pages unless explicitly needed
+3. Think about what makes THIS project special
+
+EXAMPLES OF PROJECT-SPECIFIC PAGES:
+
+For "ChatGPT-like AI chat bot":
+- ChatPage (/chat) - Main chat interface
+- ConversationHistoryPage (/history) - Past conversations
+- ModelsPage (/models) - AI model selection
+- APIDocsPage (/api-docs) - API documentation
+- SettingsPage (/settings) - User preferences
+❌ NOT: CartPage, BlogPage, ServicesPage
+
+For "Artist portfolio website":
+- GalleryPage (/gallery) - Art collection grid
+- ArtworkDetailPage (/artwork/:id) - Single artwork view
+- CommissionsPage (/commissions) - Commission requests
+- ExhibitionsPage (/exhibitions) - Past/upcoming shows
+- AboutArtistPage (/about) - Artist biography
+❌ NOT: CartPage, DashboardPage, BlogPage
+
+For "Cake selling bakery":
+- CakesPage (/cakes) - Cake catalog
+- CustomOrderPage (/custom-order) - Custom cake builder
+- FlavorPage (/flavors) - Flavor options
+- OrderStatusPage (/order-status) - Track orders
+- GalleryPage (/gallery) - Past creations
+❌ NOT: Generic ProductsPage, ServicesPage
+
+For "Fitness tracking app":
+- WorkoutsPage (/workouts) - Exercise library
+- ProgressPage (/progress) - Stats and charts
+- NutritionPage (/nutrition) - Meal tracking
+- ChallengesPage (/challenges) - Fitness challenges
+- ProfilePage (/profile) - User stats
+❌ NOT: BlogPage, TestimonialsPage
+
+═══════════════════════════════════════════════════════════════
+
+Now, for the project "${userPrompt}", generate 5-8 UNIQUE pages.
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {
+    "name": "PageName",
+    "route": "/route-path",
+    "description": "Specific description for this project",
+    "sections": ["Section1", "Section2", "Section3"],
+    "components": ["Component1", "Component2"]
+  }
+]
+
+IMPORTANT:
+- First page should be HomePage with route "/"
+- Last page should be NotFoundPage with route "*"
+- All other pages should be UNIQUE to this project type
+- Use descriptive, project-specific names (e.g., "ChatPage" not "MainPage")
+- Include 5-8 pages total`;
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gemini-2.5-flash-lite-preview-09-2025",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a web architect who creates unique, project-specific page structures. You NEVER use generic templates. Return ONLY valid JSON arrays."
+                },
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.7
+        });
+
+        const content = response.choices[0].message.content || '[]';
+
+        // Extract JSON from response
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            const pages = JSON.parse(jsonMatch[0]);
+            console.log(`   🎯 LLM generated ${pages.length} unique pages for this project`);
+            return pages;
+        }
+    } catch (error: any) {
+        console.error('   ⚠️ LLM page extraction failed:', error.message);
+    }
+
+    // Minimal fallback - ONLY if LLM fails
+    console.log('   ⚠️ Using minimal fallback pages');
+    return [
+        {
+            name: 'HomePage',
+            route: '/',
+            description: 'Main landing page',
+            sections: ['Hero', 'Features', 'CTA'],
+            components: ['Hero', 'FeatureGrid']
+        },
+        {
+            name: 'NotFoundPage',
+            route: '*',
+            description: '404 error page',
+            sections: ['ErrorMessage'],
+            components: ['ErrorDisplay']
+        }
+    ];
+}
+
+/**
+ * Synchronous fallback for extractPagesFromContext - used when async not available
+ * This is a minimal version that relies on LLM context parsing
  */
 function extractPagesFromContext(context: string, features: any[]): any[] {
+    // This function now just returns minimal pages
+    // The real work is done by extractPagesWithLLM in blueprintNode
     const pages: any[] = [];
 
     // Always include HomePage
     pages.push({
         name: 'HomePage',
         route: '/',
-        description: 'Main landing page with hero section and key features',
-        sections: ['Hero', 'Features', 'Testimonials', 'CTA'],
-        components: ['Hero', 'FeatureGrid', 'TestimonialSlider', 'CallToAction']
+        description: 'Main landing page with hero section',
+        sections: ['Hero', 'Features', 'CTA'],
+        components: ['Hero', 'FeatureGrid', 'CallToAction']
     });
 
-    // Parse features to determine additional pages
-    const featureNames = features.map(f => typeof f === 'string' ? f : f.name || f);
-
-    // Common page patterns based on features
-    const pagePatterns = [
-        { keywords: ['product', 'catalog', 'shop', 'store', 'item'], page: { name: 'ProductsPage', route: '/products', description: 'Product catalog and listings', sections: ['ProductGrid', 'Filters', 'Pagination'], components: ['ProductCard', 'FilterBar', 'SearchBar'] } },
-        { keywords: ['service', 'offering'], page: { name: 'ServicesPage', route: '/services', description: 'Services offered', sections: ['ServiceGrid', 'Pricing'], components: ['ServiceCard', 'PricingTable'] } },
-        { keywords: ['about', 'team', 'story'], page: { name: 'AboutPage', route: '/about', description: 'About the company/project', sections: ['Story', 'Team', 'Values'], components: ['TeamMember', 'Timeline'] } },
-        { keywords: ['contact', 'support', 'help'], page: { name: 'ContactPage', route: '/contact', description: 'Contact information and form', sections: ['ContactForm', 'Map', 'Info'], components: ['ContactForm', 'LocationMap'] } },
-        { keywords: ['pricing', 'plan', 'subscription'], page: { name: 'PricingPage', route: '/pricing', description: 'Pricing plans and tiers', sections: ['PricingCards', 'Comparison', 'FAQ'], components: ['PricingCard', 'ComparisonTable', 'FAQ'] } },
-        { keywords: ['dashboard', 'admin', 'analytics'], page: { name: 'DashboardPage', route: '/dashboard', description: 'User dashboard with stats', sections: ['Stats', 'Charts', 'RecentActivity'], components: ['StatCard', 'Chart', 'ActivityFeed'] } },
-        { keywords: ['blog', 'article', 'news', 'post'], page: { name: 'BlogPage', route: '/blog', description: 'Blog posts and articles', sections: ['FeaturedPost', 'PostGrid', 'Categories'], components: ['BlogCard', 'BlogPost', 'CategoryFilter'] } },
-        { keywords: ['portfolio', 'project', 'work', 'gallery'], page: { name: 'PortfolioPage', route: '/portfolio', description: 'Portfolio and project showcase', sections: ['ProjectGrid', 'Categories', 'Featured'], components: ['ProjectCard', 'ImageGallery', 'Modal'] } },
-        { keywords: ['faq', 'question'], page: { name: 'FAQPage', route: '/faq', description: 'Frequently asked questions', sections: ['FAQList', 'Categories'], components: ['Accordion', 'SearchBar'] } },
-        { keywords: ['testimonial', 'review', 'feedback'], page: { name: 'TestimonialsPage', route: '/testimonials', description: 'Customer testimonials', sections: ['TestimonialGrid', 'Stats'], components: ['TestimonialCard', 'RatingStars'] } },
-        { keywords: ['login', 'signin', 'auth'], page: { name: 'LoginPage', route: '/login', description: 'User authentication', sections: ['LoginForm'], components: ['LoginForm', 'SocialLogin'] } },
-        { keywords: ['register', 'signup'], page: { name: 'RegisterPage', route: '/register', description: 'User registration', sections: ['RegisterForm'], components: ['RegisterForm', 'PasswordStrength'] } },
-        { keywords: ['profile', 'account', 'setting'], page: { name: 'ProfilePage', route: '/profile', description: 'User profile and settings', sections: ['ProfileInfo', 'Settings'], components: ['ProfileCard', 'SettingsForm'] } },
-        { keywords: ['cart', 'checkout', 'order'], page: { name: 'CartPage', route: '/cart', description: 'Shopping cart', sections: ['CartItems', 'Summary'], components: ['CartItem', 'OrderSummary', 'CheckoutButton'] } },
-        { keywords: ['search', 'find', 'explore'], page: { name: 'SearchPage', route: '/search', description: 'Search results', sections: ['SearchBar', 'Results', 'Filters'], components: ['SearchBar', 'ResultCard', 'FilterSidebar'] } },
-    ];
-
-    // Match features to pages
+    // Parse the context for explicit page mentions
     const contextLower = context.toLowerCase();
-    const featuresLower = featureNames.join(' ').toLowerCase();
 
-    for (const pattern of pagePatterns) {
-        const hasMatch = pattern.keywords.some(kw =>
-            contextLower.includes(kw) || featuresLower.includes(kw)
-        );
-        if (hasMatch && !pages.find(p => p.name === pattern.page.name)) {
-            pages.push(pattern.page);
+    // Look for PAGE_ARCHITECTURE section in context
+    const pageArchMatch = context.match(/PAGE_ARCHITECTURE:([\s\S]*?)(?=\n\n|$)/i);
+    if (pageArchMatch) {
+        const pageLines = pageArchMatch[1].split('\n').filter(l => l.includes('/'));
+        for (const line of pageLines) {
+            const match = line.match(/(\w+Page)\s*\(["']?([^"')]+)["']?\)/i);
+            if (match && match[1] !== 'HomePage') {
+                pages.push({
+                    name: match[1],
+                    route: match[2],
+                    description: line.split('-')[1]?.trim() || match[1],
+                    sections: ['MainContent'],
+                    components: []
+                });
+            }
         }
     }
 
@@ -198,19 +327,6 @@ function extractPagesFromContext(context: string, features: any[]): any[] {
         sections: ['ErrorMessage', 'BackButton'],
         components: ['ErrorDisplay']
     });
-
-    // Ensure minimum 5 pages
-    const defaultPages = [
-        { name: 'AboutPage', route: '/about', description: 'About page', sections: ['Story', 'Team'], components: ['TeamMember'] },
-        { name: 'ContactPage', route: '/contact', description: 'Contact page', sections: ['ContactForm'], components: ['ContactForm'] },
-        { name: 'ServicesPage', route: '/services', description: 'Services page', sections: ['ServiceGrid'], components: ['ServiceCard'] }
-    ];
-
-    for (const dp of defaultPages) {
-        if (pages.length < 5 && !pages.find(p => p.name === dp.name)) {
-            pages.push(dp);
-        }
-    }
 
     return pages;
 }
