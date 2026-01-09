@@ -25,7 +25,17 @@ import { UI_UX_DESIGN_PROMPT, DESIGN_IMPLEMENTATION_RULES } from './prompts/ui-d
 import { GenerationPipeline } from './agents';
 import { generateWebsite, GeneratedFile } from './agents/langgraph';
 import { fixCodeError, analyzeCode } from './agents/langgraph/services/error-fixer.service';
+import Project from './models/project';
+import { analyzeModificationRequest, applyModifications } from './services/modification.service';
+import multer from 'multer';
+import AdmZip from 'adm-zip';
 dotenv.config();
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
 
 const app: Application = express();
 
@@ -1067,6 +1077,361 @@ app.post('/api/analyze-code', async (req: Request, res: Response) => {
       error: 'Failed to analyze code',
       details: error.message
     });
+  }
+});
+
+// ====================================
+// PROJECT STORAGE ENDPOINTS
+// ====================================
+
+/**
+ * POST /api/projects
+ * Save a new project or update existing one
+ */
+app.post('/api/projects', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, userId, name, prompt, files, blueprint } = req.body;
+
+    if (!prompt || !files) {
+      res.status(400).json({ error: 'Missing required fields: prompt, files' });
+      return;
+    }
+
+    // Generate name from prompt if not provided
+    const projectName = name || prompt.slice(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Untitled Project';
+
+    console.log(`\n💾 SAVING PROJECT: ${projectName}`);
+    console.log(`   Files: ${files.length}`);
+
+    const project = new Project({
+      userId,
+      sessionId: sessionId || `session-${Date.now()}`,
+      name: projectName,
+      prompt,
+      files,
+      blueprint,
+      status: 'complete',
+      fileCount: files.length,
+    });
+
+    await project.save();
+
+    console.log(`   ✅ Project saved with ID: ${project._id}`);
+
+    res.json({
+      success: true,
+      projectId: project._id,
+      name: projectName,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Failed to save project:', error.message);
+    res.status(500).json({ error: 'Failed to save project', details: error.message });
+  }
+});
+
+/**
+ * GET /api/projects
+ * Get all projects (filtered by sessionId or userId)
+ */
+app.get('/api/projects', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, userId } = req.query;
+
+    // Build query to match either sessionId OR userId
+    const orConditions: any[] = [];
+    if (sessionId) orConditions.push({ sessionId });
+    if (userId) orConditions.push({ userId });
+
+    const query = orConditions.length > 0 ? { $or: orConditions } : {};
+
+    const projects = await Project.find(query)
+      .select('_id name prompt fileCount status createdAt updatedAt')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    console.log(`📋 Retrieved ${projects.length} projects`);
+
+    res.json({ projects });
+
+  } catch (error: any) {
+    console.error('❌ Failed to get projects:', error.message);
+    res.status(500).json({ error: 'Failed to get projects', details: error.message });
+  }
+});
+
+/**
+ * GET /api/projects/:projectId
+ * Get a single project with all files
+ */
+app.get('/api/projects/:projectId', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    console.log(`📂 Retrieved project: ${project.name} (${project.files.length} files)`);
+
+    res.json({ project });
+
+  } catch (error: any) {
+    console.error('❌ Failed to get project:', error.message);
+    res.status(500).json({ error: 'Failed to get project', details: error.message });
+  }
+});
+
+/**
+ * POST /api/projects/:projectId/modify
+ * Apply follow-up modifications to a project
+ */
+app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const { modificationRequest } = req.body;
+
+    if (!modificationRequest) {
+      res.status(400).json({ error: 'Missing modificationRequest' });
+      return;
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    console.log(`\n🔧 MODIFICATION REQUEST`);
+    console.log(`   Project: ${project.name}`);
+    console.log(`   Request: ${modificationRequest.slice(0, 100)}...`);
+
+    // Step 1: Analyze which files need modification
+    const plan = await analyzeModificationRequest(modificationRequest, project.files);
+
+    if (plan.filesToModify.length === 0) {
+      res.json({
+        success: true,
+        modifiedFiles: [],
+        summary: 'No modifications needed'
+      });
+      return;
+    }
+
+    // Step 2: Apply modifications
+    const modifiedFiles = await applyModifications(modificationRequest, plan, project.files);
+
+    // Step 3: Update project in database
+    for (const modified of modifiedFiles) {
+      const fileIndex = project.files.findIndex(f =>
+        f.path === modified.path || f.path.endsWith(modified.path.split('/').pop() || '')
+      );
+
+      if (fileIndex >= 0) {
+        project.files[fileIndex].content = modified.content;
+      } else if (modified.action === 'created') {
+        project.files.push({ path: modified.path, content: modified.content });
+      }
+    }
+
+    project.fileCount = project.files.length;
+    await project.save();
+
+    console.log(`   ✅ Applied ${modifiedFiles.length} modifications`);
+
+    res.json({
+      success: true,
+      modifiedFiles,
+      summary: plan.summary,
+      updatedFileCount: project.files.length,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Modification failed:', error.message);
+    res.status(500).json({ error: 'Modification failed', details: error.message });
+  }
+});
+
+/**
+ * PATCH /api/projects/:projectId/files
+ * Update one or more files in a project
+ */
+app.patch('/api/projects/:projectId/files', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const { files: updatedFiles } = req.body;
+
+    if (!updatedFiles || !Array.isArray(updatedFiles)) {
+      res.status(400).json({ error: 'Missing files array' });
+      return;
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    // Update each file
+    let updatedCount = 0;
+    for (const update of updatedFiles) {
+      const { path, content } = update;
+      const normalizedPath = path.startsWith('/') ? path : '/' + path;
+
+      const fileIndex = project.files.findIndex(f =>
+        f.path === normalizedPath || f.path === path ||
+        '/' + f.path === normalizedPath
+      );
+
+      if (fileIndex >= 0) {
+        project.files[fileIndex].content = content;
+        updatedCount++;
+      } else {
+        // Add new file
+        project.files.push({ path: normalizedPath, content });
+        updatedCount++;
+      }
+    }
+
+    project.fileCount = project.files.length;
+    await project.save();
+
+    console.log(`📝 Updated ${updatedCount} file(s) in project: ${project.name}`);
+    res.json({ success: true, updatedCount });
+
+  } catch (error: any) {
+    console.error('❌ Failed to update files:', error.message);
+    res.status(500).json({ error: 'Failed to update files', details: error.message });
+  }
+});
+
+/**
+ * DELETE /api/projects/:projectId
+ * Delete a project
+ */
+app.delete('/api/projects/:projectId', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    const result = await Project.findByIdAndDelete(projectId);
+
+    if (!result) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    console.log(`🗑️ Deleted project: ${result.name}`);
+    res.json({ success: true });
+
+  } catch (error: any) {
+    console.error('❌ Failed to delete project:', error.message);
+    res.status(500).json({ error: 'Failed to delete project', details: error.message });
+  }
+});
+
+/**
+ * POST /api/projects/upload
+ * Upload a zip file and import as a project
+ */
+app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No zip file uploaded' });
+      return;
+    }
+
+    console.log(`\n📦 ZIP UPLOAD: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
+
+    // Extract zip contents
+    const zip = new AdmZip(req.file.buffer);
+    const zipEntries = zip.getEntries();
+
+    const files: { path: string; content: string }[] = [];
+    let packageJson: any = null;
+
+    // Text file extensions to extract
+    const textExtensions = ['.tsx', '.ts', '.jsx', '.js', '.css', '.html', '.json', '.md', '.txt', '.svg', '.xml', '.yaml', '.yml', '.env', '.gitignore'];
+
+    for (const entry of zipEntries) {
+      if (entry.isDirectory) continue;
+
+      let entryName = entry.entryName;
+
+      // Remove root folder if exists (e.g., "project-name/src/..." -> "src/...")
+      const parts = entryName.split('/');
+      if (parts.length > 1) {
+        // Check if first part looks like a root folder
+        const firstPart = parts[0];
+        if (!firstPart.includes('.') && parts.length > 1) {
+          entryName = parts.slice(1).join('/');
+        }
+      }
+
+      // Skip empty paths or hidden files
+      if (!entryName || entryName.startsWith('.')) continue;
+
+      // Check if it's a text file
+      const ext = '.' + entryName.split('.').pop()?.toLowerCase();
+      if (!textExtensions.includes(ext)) continue;
+
+      try {
+        const content = entry.getData().toString('utf8');
+
+        // Normalize path
+        const normalizedPath = '/' + entryName.replace(/\\/g, '/');
+        files.push({ path: normalizedPath, content });
+
+        // Capture package.json for name and description
+        if (entryName === 'package.json' || entryName.endsWith('/package.json')) {
+          try {
+            packageJson = JSON.parse(content);
+          } catch { }
+        }
+      } catch (err) {
+        // Skip binary files that fail to decode
+      }
+    }
+
+    if (files.length === 0) {
+      res.status(400).json({ error: 'No valid files found in zip' });
+      return;
+    }
+
+    // Get project name and description from package.json
+    const projectName = packageJson?.name || req.file.originalname.replace('.zip', '') || 'Imported Project';
+    const projectDescription = packageJson?.description || `Imported from ${req.file.originalname}`;
+
+    // Create project in MongoDB
+    const project = new Project({
+      userId: userId || undefined,
+      sessionId: `import-${Date.now()}`,
+      name: projectName,
+      prompt: projectDescription,
+      files,
+      status: 'complete',
+      fileCount: files.length,
+    });
+
+    await project.save();
+
+    console.log(`   ✅ Imported "${projectName}" with ${files.length} files`);
+
+    res.json({
+      success: true,
+      projectId: project._id,
+      name: projectName,
+      description: projectDescription,
+      fileCount: files.length,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Upload failed:', error.message);
+    res.status(500).json({ error: 'Upload failed', details: error.message });
   }
 });
 

@@ -26,7 +26,7 @@ const Login = () => {
     if (googleAuthInProgress === 'true') {
       // Clear the flag
       localStorage.removeItem('googleAuthInProgress');
-      
+
       // Show a toast message
       toast.info('Google authentication was interrupted. Please try again.', {
         autoClose: 5000
@@ -53,12 +53,12 @@ const Login = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
+
         await login(user, token); // Ensure login is awaited
         toast.success('Login successful!', { autoClose: 2000 });
-        
+
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
+          navigate('/agent', { replace: true });
         }, 500);
       }
     } catch (error: any) {
@@ -75,14 +75,14 @@ const Login = () => {
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
     setShowColdStartMessage(true);
-    
+
     // Store a flag in localStorage to indicate Google auth is in progress
     localStorage.setItem('googleAuthInProgress', 'true');
-    
+
     // Redirect to Google auth endpoint
     window.location.href = `${BACKEND_URL}/auth/google`;
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex justify-center items-center p-4 sm:p-6">
       <ToastContainer position="top-right" />
@@ -99,8 +99,8 @@ const Login = () => {
 
             <div className="flex flex-col space-y-4">
               <div className="flex justify-center">
-                <button 
-                  onClick={handleGoogleLogin} 
+                <button
+                  onClick={handleGoogleLogin}
                   disabled={googleLoading}
                   className="flex items-center justify-center w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >

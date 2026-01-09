@@ -316,7 +316,31 @@ MUST INCLUDE:
 5. ALL FEATURES: Implement every feature from blueprint
 6. PROPER IMPORTS: Import components from @/components/ui/ and @/components/features/
 7. DEFAULT EXPORT: Each page must have export default PageName;
-8. NO APPLAYOUT WRAPPER: Pages render inside AppLayout via Outlet`;
+8. NO APPLAYOUT WRAPPER: Pages render inside AppLayout via Outlet
+
+═══════════════════════════════════════════════════════════════════════════════
+📱 MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
+═══════════════════════════════════════════════════════════════════════════════
+All pages MUST be mobile-first using these Tailwind breakpoints:
+- BASE (320px+): Mobile - single column, stacked layouts
+- sm (640px+): Large mobile
+- md (768px+): Tablet - start 2-column
+- lg (1024px+): Desktop - full layouts
+- xl (1280px+): Large desktop
+
+Example patterns to use:
+- Grid: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+- Flex: flex-col md:flex-row
+- Text sizes: text-3xl md:text-4xl lg:text-5xl xl:text-6xl
+- Spacing: p-4 md:p-6 lg:p-8, gap-4 md:gap-6 lg:gap-8
+- Container: container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl
+
+${state.detailedContext ? `
+═══════════════════════════════════════════════════════════════════════════════
+📋 DETAILED SPECIFICATIONS FROM PLANNING
+═══════════════════════════════════════════════════════════════════════════════
+${state.detailedContext.slice(0, 3000)}...
+` : ''}`;
 
   try {
     const response = await invokeLLM(systemPrompt, userPrompt, 0.7);

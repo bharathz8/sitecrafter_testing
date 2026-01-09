@@ -151,6 +151,24 @@ export const WebsiteStateAnnotation = Annotation.Root({
     availableImages: Annotation<UnsplashImage[]>({
         reducer: (_, newVal) => newVal,
         default: () => []
+    }),
+
+    // Detailed context from PlanningService (8000+ word specs)
+    detailedContext: Annotation<string>({
+        reducer: (_, newVal) => newVal,
+        default: () => ''
+    }),
+
+    // Workflow nodes for architecture visualization
+    workflowNodes: Annotation<any[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
+    }),
+
+    // Workflow edges for architecture visualization
+    workflowEdges: Annotation<any[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
     })
 });
 

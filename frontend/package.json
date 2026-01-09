@@ -13,6 +13,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@types/dagre": "^0.7.53",
     "@types/react-scroll": "^1.8.10",
+    "@types/react-speech-recognition": "^3.9.6",
     "@types/react-toastify": "^4.0.2",
     "@types/xml2js": "^0.4.14",
     "@webcontainer/api": "^1.5.1",
@@ -27,8 +28,10 @@
     "react-flow": "^1.0.3",
     "react-router-dom": "^6.22.3",
     "react-scroll": "^1.9.3",
+    "react-speech-recognition": "^4.0.1",
     "react-toastify": "^11.0.3",
     "reactflow": "^11.11.4",
+    "speech-to-text": "^3.0.2",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

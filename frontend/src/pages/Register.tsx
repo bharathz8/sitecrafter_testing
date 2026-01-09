@@ -27,7 +27,7 @@ const Register = () => {
     if (googleAuthInProgress === 'true') {
       // Clear the flag
       localStorage.removeItem('googleAuthInProgress');
-      
+
       // Show a toast message
       toast.info('Google authentication was interrupted. Please try again.', {
         autoClose: 5000
@@ -54,12 +54,12 @@ const Register = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
+
         await login(user, token); // Ensure this is awaited
         toast.success('Registered Successfully!', { autoClose: 2000 });
-        
+
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
+          navigate('/agent', { replace: true });
         }, 500);
       }
     } catch (error: any) {
@@ -75,10 +75,10 @@ const Register = () => {
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
     setShowColdStartMessage(true);
-    
+
     // Store a flag in localStorage to indicate Google auth is in progress
     localStorage.setItem('googleAuthInProgress', 'true');
-    
+
     // Redirect to Google auth endpoint
     window.location.href = `${BACKEND_URL}/auth/google`;
   };
@@ -109,8 +109,8 @@ const Register = () => {
 
             <div className="flex flex-col space-y-4">
               <div className="flex justify-center">
-                <button 
-                  onClick={handleGoogleLogin} 
+                <button
+                  onClick={handleGoogleLogin}
                   disabled={googleLoading}
                   className="flex items-center justify-center w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >

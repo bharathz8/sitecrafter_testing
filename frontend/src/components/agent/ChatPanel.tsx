@@ -50,7 +50,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             Describe the website you want to build, and I'll create it for you step by step.
                             I'll explain what I'm doing as I go.
                         </p>
-                        <div className="mt-6 flex flex-wrap gap-2 justify-center">
+                        {/* <div className="mt-6 flex flex-wrap gap-2 justify-center">
                             {['Portfolio website', 'E-commerce store', 'Restaurant landing page', 'Blog platform'].map((suggestion) => (
                                 <button
                                     key={suggestion}
@@ -60,7 +60,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                     {suggestion}
                                 </button>
                             ))}
-                        </div>
+                        </div> */}
                     </div>
                 ) : (
                     <div className="p-4 space-y-4">

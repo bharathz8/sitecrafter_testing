@@ -10,7 +10,9 @@ import {
     Check,
     FileCode,
     FolderTree,
-    Save
+    Save,
+    Terminal,
+    Loader2
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -24,6 +26,9 @@ interface PreviewPanelProps {
     isLoading?: boolean;
     totalFiles?: number;
     onDownload?: () => void;
+    terminalOutput?: string[];
+    isInstalling?: boolean;
+    isBooting?: boolean;
 }
 
 // Determine language for Monaco from file extension
@@ -49,7 +54,10 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
     onFileChange,
     previewUrl,
     totalFiles = 0,
-    onDownload
+    onDownload,
+    terminalOutput = [],
+    isInstalling = false,
+    isBooting = false,
 }) => {
     const [activeTab, setActiveTab] = useState<'files' | 'preview' | 'code'>('files');
     const [copied, setCopied] = useState(false);
@@ -111,7 +119,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 <button
                     onClick={() => setActiveTab('files')}
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'files'
-                        ? 'text-emerald-400 border-b-2 border-emerald-400 bg-emerald-500/5'
+                        ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
                         : 'text-gray-500 hover:text-gray-300'
                         }`}
                 >
@@ -122,7 +130,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     onClick={() => setActiveTab('code')}
                     disabled={!selectedFile}
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'code'
-                        ? 'text-emerald-400 border-b-2 border-emerald-400 bg-emerald-500/5'
+                        ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
                         : 'text-gray-500 hover:text-gray-300 disabled:opacity-50'
                         }`}
                 >
@@ -134,7 +142,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     onClick={() => setActiveTab('preview')}
                     disabled={!previewUrl}
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'preview'
-                        ? 'text-emerald-400 border-b-2 border-emerald-400 bg-emerald-500/5'
+                        ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
                         : 'text-gray-500 hover:text-gray-300 disabled:opacity-50'
                         }`}
                 >
@@ -175,7 +183,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                 {hasChanges && onFileChange && (
                                     <button
                                         onClick={handleSave}
-                                        className="flex items-center gap-1 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded transition-colors"
+                                        className="flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs rounded transition-colors"
                                     >
                                         <Save className="w-3 h-3" />
                                         Save
@@ -186,7 +194,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                     className="p-1.5 hover:bg-[#2e2e2e] rounded transition-colors"
                                 >
                                     {copied ? (
-                                        <Check className="w-4 h-4 text-emerald-400" />
+                                        <Check className="w-4 h-4 text-amber-400" />
                                     ) : (
                                         <Copy className="w-4 h-4 text-gray-500" />
                                     )}
@@ -202,6 +210,29 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                 value={editedContent || selectedFile.content || ''}
                                 onChange={handleEditorChange}
                                 theme="vs-dark"
+                                beforeMount={(monaco) => {
+                                    // Configure TypeScript/JavaScript to be less strict
+                                    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                                        noSemanticValidation: true,
+                                        noSyntaxValidation: true,
+                                    });
+                                    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+                                        noSemanticValidation: true,
+                                        noSyntaxValidation: true,
+                                    });
+                                    // Set compiler options
+                                    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+                                        target: monaco.languages.typescript.ScriptTarget.ESNext,
+                                        allowNonTsExtensions: true,
+                                        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                                        module: monaco.languages.typescript.ModuleKind.ESNext,
+                                        noEmit: true,
+                                        esModuleInterop: true,
+                                        jsx: monaco.languages.typescript.JsxEmit.React,
+                                        allowJs: true,
+                                        typeRoots: ['node_modules/@types'],
+                                    });
+                                }}
                                 options={{
                                     minimap: { enabled: false },
                                     fontSize: 13,
@@ -222,15 +253,35 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                         {previewUrl ? (
                             <>
                                 <div className="flex items-center justify-between px-4 py-2 bg-[#141414] border-b border-[#2e2e2e]">
-                                    <span className="text-sm text-gray-400">{previewUrl}</span>
                                     <a
                                         href={previewUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="p-1.5 hover:bg-[#2e2e2e] rounded transition-colors"
+                                        className="text-sm text-blue-400 hover:text-blue-300 hover:underline truncate max-w-[80%] transition-colors"
+                                        title="Click to open in new tab (you may need to click 'Connect to Project')"
                                     >
-                                        <ExternalLink className="w-4 h-4 text-gray-500" />
+                                        {previewUrl}
                                     </a>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(previewUrl);
+                                            }}
+                                            className="p-1.5 hover:bg-[#2e2e2e] rounded transition-colors"
+                                            title="Copy URL"
+                                        >
+                                            <Copy className="w-4 h-4 text-gray-500 hover:text-gray-300" />
+                                        </button>
+                                        <a
+                                            href={previewUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1.5 hover:bg-[#2e2e2e] rounded transition-colors"
+                                            title="Open in new tab"
+                                        >
+                                            <ExternalLink className="w-4 h-4 text-gray-500 hover:text-gray-300" />
+                                        </a>
+                                    </div>
                                 </div>
                                 <div className="flex-1 bg-white">
                                     <iframe
@@ -240,6 +291,39 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                     />
                                 </div>
                             </>
+                        ) : (isInstalling || isBooting) ? (
+                            /* Terminal view during installation */
+                            <div className="h-full flex flex-col bg-[#0d0d0d]">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-[#141414] border-b border-[#2e2e2e]">
+                                    <Terminal className="w-4 h-4 text-amber-500" />
+                                    <span className="text-sm text-gray-300">Terminal</span>
+                                    <Loader2 className="w-3 h-3 animate-spin text-amber-500 ml-auto" />
+                                    <span className="text-xs text-amber-400">
+                                        {isBooting ? 'Booting...' : 'Installing packages...'}
+                                    </span>
+                                </div>
+                                <div className="flex-1 overflow-auto p-4 font-mono text-xs">
+                                    {terminalOutput.slice(-50).map((line, i) => (
+                                        <div
+                                            key={i}
+                                            className={`py-0.5 ${line.includes('✅') ? 'text-amber-400' :
+                                                line.includes('❌') ? 'text-red-400' :
+                                                    line.includes('⚡') ? 'text-yellow-400' :
+                                                        line.includes('📦') ? 'text-blue-400' :
+                                                            line.includes('🚀') ? 'text-purple-400' :
+                                                                'text-gray-400'
+                                                }`}
+                                        >
+                                            {line}
+                                        </div>
+                                    ))}
+                                    {terminalOutput.length === 0 && (
+                                        <div className="text-gray-500">
+                                            Starting WebContainer...
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-center py-8">
                                 <Eye className="w-8 h-8 text-gray-600 mb-2" />

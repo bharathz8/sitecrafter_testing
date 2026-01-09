@@ -9,6 +9,9 @@ import { Builder } from "./pages/Builder";
 import { Planning } from "./pages/Planning";
 import { ProjectTypeSelection } from "./pages/ProjectTypeSelection";
 import { AgentBuilder } from "./pages/AgentBuilder";
+import { ProjectHistory } from "./pages/ProjectHistory";
+import { ProjectUpload } from "./pages/ProjectUpload";
+import { WebContainerConnect } from "./pages/WebContainerConnect";
 import { WebContainerProvider } from "./hooks/useWebContainer.tsx";
 
 const App = () => {
@@ -21,6 +24,9 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
+            {/* WebContainer connect handler for new tab redirects */}
+            <Route path="/webcontainer/connect/:sessionId" element={<WebContainerConnect />} />
+
             <Route path="/dashboard" element={<ProtectedRoute />}>
               <Route index element={<ProjectTypeSelection />} />
             </Route>
@@ -30,6 +36,8 @@ const App = () => {
               <Route path="/planning" element={<Planning />} />
               <Route path="/builder" element={<Builder />} />
               <Route path="/agent" element={<AgentBuilder />} />
+              <Route path="/projects" element={<ProjectHistory />} />
+              <Route path="/upload" element={<ProjectUpload />} />
             </Route>
 
             <Route path="*" element={

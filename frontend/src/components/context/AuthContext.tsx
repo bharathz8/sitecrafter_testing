@@ -51,14 +51,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.setItem("token", authToken);
       localStorage.setItem("user", JSON.stringify(userData));
-      
+
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-      
+
       setUser(userData);
       setToken(authToken);
-      
-      navigate("/dashboard", { replace: true });
+
+      navigate("/agent", { replace: true });
     } catch (error) {
       console.error("Login failed:", error);
       throw error;

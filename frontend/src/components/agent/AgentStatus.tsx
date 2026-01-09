@@ -16,9 +16,9 @@ export const AgentStatus: React.FC<AgentStatusProps> = ({ status, message }) => 
             textColor: 'text-gray-400'
         },
         running: {
-            color: 'bg-emerald-500',
+            color: 'bg-amber-500',
             text: message || 'Agent is running...',
-            textColor: 'text-emerald-400'
+            textColor: 'text-amber-400'
         },
         complete: {
             color: 'bg-blue-500',

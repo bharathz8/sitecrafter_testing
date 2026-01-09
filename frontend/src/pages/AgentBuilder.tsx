@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import axios from 'axios';
 import { ChatPanel } from '../components/agent/ChatPanel';
 import { PreviewPanel } from '../components/preview/PreviewPanel';
+import { PlanningReview } from '../components/agent/PlanningReview';
 import { AgentMessageData, MessageType } from '../components/agent/AgentMessage';
 import { ProcessingPhase } from '../components/agent/ProcessingStep';
 import { AgentStatusType } from '../components/agent/AgentStatus';
@@ -11,10 +13,11 @@ import { FileNode } from '../components/preview/FileTree';
 import { BACKEND_URL } from '../config';
 import { useWebContainer } from '../hooks/useWebContainer.tsx';
 import { parseStackTrace } from '../utils/errorReporter';
-import { ArrowLeft, Sparkles, Loader2, Zap } from 'lucide-react';
+import type { ProjectBlueprint } from '../types/planning.types';
+import { ArrowLeft, Sparkles, Loader2, Zap, FolderOpen } from 'lucide-react';
 import type { FileSystemTree } from '@webcontainer/api';
 
-const MAX_FIX_ATTEMPTS = 15;
+const MAX_FIX_ATTEMPTS = 50; // Allow many fix attempts for continuous error resolution
 
 // Helper to convert flat file list to tree structure
 const buildFileTree = (files: { path: string; content: string }[]): FileNode[] => {
@@ -132,7 +135,92 @@ export const AgentBuilder: React.FC = () => {
     const filesRef = useRef<{ path: string; content: string }[]>([]);
     const fixedFilesRef = useRef<Set<string>>(new Set());
 
+    // Planning review state
+    const [showPlanningReview, setShowPlanningReview] = useState(false);
+    const [blueprint, setBlueprint] = useState<ProjectBlueprint | null>(null);
+    const [pendingPrompt, setPendingPrompt] = useState<string>('');
+    const [projectId, setProjectId] = useState<string | null>(null);
+
     const abortControllerRef = useRef<AbortController | null>(null);
+    const [searchParams] = useSearchParams();
+    const [isLoadingProject, setIsLoadingProject] = useState(false);
+
+    // Load project from URL parameter on mount
+    useEffect(() => {
+        const projectIdFromUrl = searchParams.get('project');
+        if (projectIdFromUrl && !projectId && files.length === 0 && !isLoadingProject) {
+            loadProject(projectIdFromUrl);
+        }
+    }, [searchParams]);
+
+    // Save projectId to localStorage for WebContainer new tab redirect support
+    useEffect(() => {
+        if (projectId) {
+            localStorage.setItem('lastProjectId', projectId);
+        }
+    }, [projectId]);
+
+    // Function to load a project from the API
+    const loadProject = async (id: string) => {
+        setIsLoadingProject(true);
+        setStatusMessage('Loading project...');
+
+        try {
+            const response = await axios.get(`${BACKEND_URL}/api/projects/${id}`);
+            const project = response.data.project;
+
+            if (project && project.files) {
+                // Set project ID
+                setProjectId(id);
+
+                // Set files
+                const projectFiles = project.files.map((f: any) => ({
+                    path: f.path.startsWith('/') ? f.path : '/' + f.path,
+                    content: f.content,
+                }));
+                setFiles(projectFiles);
+
+                // Build file tree
+                const tree = buildFileTree(projectFiles);
+                setFileTree(tree);
+
+                // Set blueprint if available
+                if (project.blueprint) {
+                    setBlueprint(project.blueprint);
+                }
+
+                // Set prompt
+                if (project.prompt) {
+                    setPendingPrompt(project.prompt);
+                }
+
+                // Add success message (inline since addMessage not defined yet)
+                setMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    type: 'success' as MessageType,
+                    content: `📂 Loaded project: ${project.name} (${projectFiles.length} files)`,
+                    timestamp: new Date(),
+                }]);
+                setStatus('complete');
+
+                // Mount files to WebContainer and start dev server
+                const fsTree = toWebContainerFS(projectFiles);
+                await mountFiles(fsTree);
+                await startDevServer();
+            }
+        } catch (err: any) {
+            console.error('Failed to load project:', err);
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                type: 'error' as MessageType,
+                content: `Failed to load project: ${err.message}`,
+                timestamp: new Date(),
+            }]);
+        } finally {
+            setIsLoadingProject(false);
+            setStatusMessage(undefined);
+        }
+    };
 
     // Keep filesRef in sync
     useEffect(() => {
@@ -167,6 +255,36 @@ export const AgentBuilder: React.FC = () => {
         ));
     }, []);
 
+    // Get or create session ID
+    const getSessionId = () => {
+        let sessionId = localStorage.getItem('sitecrafter_session_id');
+        if (!sessionId) {
+            sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+            localStorage.setItem('sitecrafter_session_id', sessionId);
+        }
+        return sessionId;
+    };
+
+    // Save project to MongoDB
+    const saveProject = useCallback(async (collectedFiles: { path: string; content: string }[]) => {
+        try {
+            const response = await axios.post(`${BACKEND_URL}/api/projects`, {
+                sessionId: getSessionId(),
+                prompt: pendingPrompt,
+                files: collectedFiles,
+                blueprint: blueprint,
+            });
+
+            if (response.data.success) {
+                setProjectId(response.data.projectId);
+                addMessage('success', `💾 Project saved: ${response.data.name}`);
+                console.log('Project saved with ID:', response.data.projectId);
+            }
+        } catch (err) {
+            console.error('Failed to save project:', err);
+        }
+    }, [pendingPrompt, blueprint, addMessage]);
+
     // Handle file content changes from Monaco Editor
     const handleFileChange = useCallback(async (path: string, content: string) => {
         setFiles(prev => prev.map(f =>
@@ -182,56 +300,110 @@ export const AgentBuilder: React.FC = () => {
         if (isRunning) {
             await updateFile(path.replace(/^\//, ''), content);
         }
-    }, [selectedFile?.path, updateFile, isRunning]);
 
-    // Parse error from terminal output
+        // Auto-save to MongoDB (debounced)
+        if (projectId) {
+            // Clear any pending save
+            if ((window as any).__saveTimeout) {
+                clearTimeout((window as any).__saveTimeout);
+            }
+            // Debounce save - wait 2 seconds after last change
+            (window as any).__saveTimeout = setTimeout(async () => {
+                try {
+                    await axios.patch(`${BACKEND_URL}/api/projects/${projectId}/files`, {
+                        files: [{ path, content }]
+                    });
+                    console.log('✅ Auto-saved to MongoDB:', path);
+                } catch (err) {
+                    console.error('❌ Auto-save failed:', err);
+                }
+            }, 2000);
+        }
+    }, [selectedFile?.path, updateFile, isRunning, projectId]);
+
+    // Parse error from terminal output - STRICT error detection
     const parseError = useCallback((output: string[]): { file: string; error: string } | null => {
-        const text = output.slice(-80).join('\n');
+        // Strip ANSI escape codes for better pattern matching
+        const rawText = output.slice(-80).join('\n');
+        const text = rawText.replace(/\x1B\[[0-9;]*[mGKHF]/g, '').replace(/\[\d+m/g, '');
 
-        // Babel error
-        const babelMatch = text.match(/\[plugin:vite:react-babel\]\s*([^\n:]+\.tsx?):\s*(.+?)(?:\n|$)/);
-        if (babelMatch) {
-            const fileName = babelMatch[1].split('/').pop() || '';
-            const fileMatch = text.match(new RegExp(`src/[\\w\\-\\/]*${fileName}`));
-            return {
-                file: fileMatch ? fileMatch[0] : `src/components/ui/${fileName}`,
-                error: `Babel Syntax Error: ${babelMatch[2]}\n\nFull error:\n${text.slice(-600)}`,
-            };
+        // Skip if this looks like a successful update message, not an error
+        if (text.includes('hmr update') && !text.includes('[plugin:vite')) {
+            return null;
+        }
+        if (text.includes('✅') && !text.includes('[plugin:vite')) {
+            return null;
         }
 
-        // ESBuild error
-        const esbuildMatch = text.match(/\[plugin:vite:esbuild\]\s*([^\n:]+\.tsx?):(\d+):(\d+):\s*(.+?)(?:\n|$)/);
-        if (esbuildMatch) {
-            const fileName = esbuildMatch[1].split('/').pop() || '';
-            const fileMatch = text.match(new RegExp(`src/[\\w\\-\\/]*${fileName}`));
-            return {
-                file: fileMatch ? fileMatch[0] : `src/components/ui/${fileName}`,
-                error: `ESBuild Error at line ${esbuildMatch[2]}: ${esbuildMatch[4]}\n\nFull error:\n${text.slice(-600)}`,
-            };
-        }
+        // 1. Vite plugin errors (most common)
+        // Pattern: [plugin:vite:react-babel] or [plugin:vite:import-analysis] etc.
+        if (text.includes('[plugin:vite:')) {
+            // Extract file from "File:" line
+            const fileLineMatch = text.match(/File:\s*(?:\/home\/[^\/]+\/)?(src\/[^\s:]+\.tsx?)(?::(\d+))?/);
+            if (fileLineMatch) {
+                const filePath = fileLineMatch[1];
+                console.log('🎯 Vite plugin error, file:', filePath);
+                return {
+                    file: filePath,
+                    error: `Vite Error in ${filePath}\n\nFull error:\n${text.slice(-1000)}`,
+                };
+            }
 
-        // TypeScript error
-        const tsMatch = text.match(/(src\/[\w\-\/]+\.tsx?)\((\d+),(\d+)\):\s*error\s*(TS\d+):\s*(.+?)(?:\n|$)/);
-        if (tsMatch) {
-            return {
-                file: tsMatch[1],
-                error: `TypeScript Error ${tsMatch[4]} at line ${tsMatch[2]}: ${tsMatch[5]}\n\nFull error:\n${text.slice(-600)}`,
-            };
-        }
-
-        // Generic errors
-        if (text.includes('Unexpected token') || text.includes('unexpected token')) {
-            const fileMatch = text.match(/(?:src\/[\w\-\/]+\.tsx?)/);
-            if (fileMatch) {
-                return { file: fileMatch[0], error: `Syntax Error:\n${text.slice(-600)}` };
+            // Try to extract from error message itself
+            const inlineFileMatch = text.match(/(?:\/home\/[^\/]+\/)?(src\/[^\s:)]+\.tsx?)/);
+            if (inlineFileMatch) {
+                console.log('🎯 Vite plugin error (inline), file:', inlineFileMatch[1]);
+                return {
+                    file: inlineFileMatch[1],
+                    error: `Vite Error in ${inlineFileMatch[1]}\n\nFull error:\n${text.slice(-1000)}`,
+                };
             }
         }
 
-        // Module not found
-        if (/Cannot find module ['"]([^'"]+)['"]/.test(text)) {
-            const fileMatch = text.match(/(?:src\/[\w\-\/]+\.tsx?)/);
+        // 2. Import resolution errors
+        const importMatch = text.match(/Failed to resolve import\s*["']([^"']+)["']\s*from\s*["']([^"']+)["']/);
+        if (importMatch) {
+            const sourceFile = importMatch[2].replace(/^\//, '');
+            const filePath = sourceFile.startsWith('src/') ? sourceFile : 'src/' + sourceFile.split('src/').pop();
+            console.log('🎯 Import error, file:', filePath);
+            return {
+                file: filePath,
+                error: `Import Error: Cannot find "${importMatch[1]}" in ${filePath}\n\nFull error:\n${text.slice(-800)}`,
+            };
+        }
+
+        // 3. TypeScript errors (with line numbers)
+        const tsMatch = text.match(/(src\/[\w\-\/]+\.tsx?)\((\d+),(\d+)\):\s*error\s*(TS\d+):\s*(.+)/);
+        if (tsMatch) {
+            console.log('🎯 TypeScript error, file:', tsMatch[1]);
+            return {
+                file: tsMatch[1],
+                error: `TypeScript ${tsMatch[4]} at line ${tsMatch[2]}: ${tsMatch[5]}\n\nFull error:\n${text.slice(-600)}`,
+            };
+        }
+
+        // 4. Syntax errors with specific patterns
+        if (text.includes('SyntaxError') || text.includes('Unexpected token')) {
+            const fileMatch = text.match(/(?:\/home\/[^\/]+\/)?(src\/[\w\-\/]+\.tsx?)/);
             if (fileMatch) {
-                return { file: fileMatch[0], error: text.slice(-500) };
+                console.log('🎯 Syntax error, file:', fileMatch[1]);
+                return {
+                    file: fileMatch[1],
+                    error: `Syntax Error in ${fileMatch[1]}\n\n${text.slice(-600)}`
+                };
+            }
+        }
+
+        // 5. Module not found (strict pattern)
+        const moduleMatch = text.match(/Cannot find module\s*["']([^"']+)["']/);
+        if (moduleMatch) {
+            const fileMatch = text.match(/(?:\/home\/[^\/]+\/)?(src\/[\w\-\/]+\.tsx?)/);
+            if (fileMatch) {
+                console.log('🎯 Module not found, file:', fileMatch[1]);
+                return {
+                    file: fileMatch[1],
+                    error: `Module not found: ${moduleMatch[1]}\n\n${text.slice(-500)}`
+                };
             }
         }
 
@@ -252,56 +424,137 @@ export const AgentBuilder: React.FC = () => {
         setIsFixing(true);
         fixAttempts.current++;
 
+        let fixSuccess = false;
+
         try {
-            let targetFile = filesRef.current.find(f =>
-                f.path === errorFile ||
-                f.path.endsWith(errorFile) ||
-                f.path.includes(errorFile.replace('src/', ''))
-            );
+            // Check if this is a "missing component" error
+            const missingImportMatch = errorText.match(/Cannot find module ["']([^"']+)["']|Failed to resolve import ["']([^"']+)["']/i);
 
-            if (!targetFile?.content) {
-                const fileName = errorFile.split('/').pop();
-                if (fileName) {
-                    targetFile = filesRef.current.find(f => f.path.endsWith(fileName));
+            if (missingImportMatch) {
+                const missingPath = missingImportMatch[1] || missingImportMatch[2];
+                console.log('🆕 Missing component detected:', missingPath);
+
+                // Extract component name and path
+                const componentName = missingPath.split('/').pop()?.replace(/\.(tsx?|jsx?)$/, '') || 'Component';
+                let filePath = missingPath;
+
+                // Handle @/ alias
+                if (filePath.startsWith('@/')) {
+                    filePath = filePath.replace('@/', 'src/');
                 }
-            }
+                if (!filePath.endsWith('.tsx') && !filePath.endsWith('.ts')) {
+                    filePath += '.tsx';
+                }
+                if (!filePath.startsWith('src/')) {
+                    filePath = 'src/' + filePath;
+                }
 
-            if (!targetFile?.content) {
-                console.warn(`File not found: ${errorFile}`);
-                return false;
-            }
+                addMessage('thinking', `🆕 Creating missing component: ${componentName}...`);
 
-            console.log(`🔧 Fixing code in: ${targetFile.path}`);
-            addMessage('thinking', `🔧 Auto-fixing error in ${targetFile.path}...`);
+                // Generate a simple component using LLM
+                const response = await fetch(`${BACKEND_URL}/api/fix-error`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        error: `Create a new React component for: ${componentName}. The file path is ${filePath}. Make it a functional TypeScript component with proper props interface and modern styling using Tailwind CSS.`,
+                        filePath: filePath,
+                        fileContent: '// NEW FILE - GENERATE COMPONENT',
+                    }),
+                });
 
-            const response = await fetch(`${BACKEND_URL}/api/fix-error`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    error: errorText,
-                    filePath: targetFile.path,
-                    fileContent: targetFile.content,
-                }),
-            });
+                if (response.ok) {
+                    const { fixedCode } = await response.json();
+                    if (fixedCode) {
+                        // Add to files state
+                        setFiles(prev => [...prev, { path: '/' + filePath, content: fixedCode }]);
 
-            if (!response.ok) throw new Error('Backend failed');
+                        // Write to WebContainer
+                        await updateFile(filePath, fixedCode);
 
-            const { fixedCode } = await response.json();
+                        // Auto-save to MongoDB
+                        if (projectId) {
+                            try {
+                                await axios.patch(`${BACKEND_URL}/api/projects/${projectId}/files`, {
+                                    files: [{ path: '/' + filePath, content: fixedCode }]
+                                });
+                                console.log('✅ Auto-saved fix to MongoDB:', filePath);
+                            } catch (err) {
+                                console.error('❌ Failed to auto-save fix:', err);
+                            }
+                        }
 
-            if (fixedCode && fixedCode !== targetFile.content) {
-                // Update file in state
-                setFiles(prev => prev.map(f =>
-                    f.path === targetFile!.path ? { ...f, content: fixedCode } : f
-                ));
+                        setFixCount(prev => prev + 1);
+                        fixedFilesRef.current.add(errorKey);
+                        addMessage('success', `✅ Created missing component: ${componentName}`);
+                        fixSuccess = true;
+                    }
+                }
+            } else {
+                // Standard fix for existing files
+                let targetFile = filesRef.current.find(f =>
+                    f.path === errorFile ||
+                    f.path.endsWith(errorFile) ||
+                    f.path.includes(errorFile.replace('src/', ''))
+                );
 
-                // Update file in WebContainer
-                await updateFile(targetFile.path.replace(/^\//, ''), fixedCode);
+                if (!targetFile?.content) {
+                    const fileName = errorFile.split('/').pop();
+                    if (fileName) {
+                        targetFile = filesRef.current.find(f => f.path.endsWith(fileName));
+                    }
+                }
 
-                setFixCount(prev => prev + 1);
-                fixedFilesRef.current.add(errorKey);
+                if (!targetFile?.content) {
+                    console.warn(`File not found: ${errorFile}`);
+                    fixingRef.current = false;
+                    setIsFixing(false);
+                    return false;
+                }
 
-                addMessage('success', `✅ Fixed error in ${targetFile.path}`);
-                return true;
+                console.log(`🔧 Fixing code in: ${targetFile.path}`);
+                addMessage('thinking', `🔧 Auto-fixing error in ${targetFile.path}...`);
+
+                const response = await fetch(`${BACKEND_URL}/api/fix-error`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        error: errorText,
+                        filePath: targetFile.path,
+                        fileContent: targetFile.content,
+                    }),
+                });
+
+                if (!response.ok) throw new Error('Backend failed');
+
+                const { fixedCode } = await response.json();
+
+                if (fixedCode && fixedCode !== targetFile.content) {
+                    // Update file in state
+                    setFiles(prev => prev.map(f =>
+                        f.path === targetFile!.path ? { ...f, content: fixedCode } : f
+                    ));
+
+                    // Update file in WebContainer
+                    await updateFile(targetFile.path.replace(/^\//, ''), fixedCode);
+
+                    // Auto-save to MongoDB
+                    if (projectId) {
+                        try {
+                            await axios.patch(`${BACKEND_URL}/api/projects/${projectId}/files`, {
+                                files: [{ path: targetFile.path, content: fixedCode }]
+                            });
+                            console.log('✅ Auto-saved fix to MongoDB:', targetFile.path);
+                        } catch (err) {
+                            console.error('❌ Failed to auto-save fix:', err);
+                        }
+                    }
+
+                    setFixCount(prev => prev + 1);
+                    fixedFilesRef.current.add(errorKey);
+
+                    addMessage('success', `✅ Fixed error in ${targetFile.path}`);
+                    fixSuccess = true;
+                }
             }
         } catch (err) {
             console.error('Fix failed:', err);
@@ -310,22 +563,64 @@ export const AgentBuilder: React.FC = () => {
             fixingRef.current = false;
             setIsFixing(false);
         }
-        return false;
-    }, [addMessage, updateFile]);
+
+        // After successful fix, schedule a re-check for more errors
+        // Only continue if it's a DIFFERENT file to avoid infinite loops
+        if (fixSuccess) {
+            setTimeout(() => {
+                // Re-parse terminal output to check for more errors
+                const newErrorInfo = parseError(terminalOutput);
+                if (newErrorInfo && newErrorInfo.file) {
+                    // Only fix if it's a different file than the one we just fixed
+                    if (newErrorInfo.file !== errorFile) {
+                        console.log('🔄 More errors detected in different file:', newErrorInfo.file);
+                        fixCodeError(newErrorInfo.file, newErrorInfo.error);
+                    } else {
+                        console.log('⏳ Same file still shows errors, waiting for cooldown...');
+                    }
+                } else {
+                    console.log('✅ No more errors detected in terminal output');
+                }
+            }, 3000); // Wait 3 seconds for terminal to update
+        }
+
+        return fixSuccess;
+    }, [addMessage, updateFile, parseError, terminalOutput]);
 
     // Watch terminal output for errors and auto-fix
+    // Track last fix time per file to prevent repeated fixes
+    const lastFixTimeRef = useRef<Map<string, number>>(new Map());
+    const FIX_COOLDOWN_MS = 10000; // 10 seconds cooldown per file
+
     useEffect(() => {
         if (!isRunning || fixingRef.current || isFixing) return;
         if (fixAttempts.current >= MAX_FIX_ATTEMPTS) return;
 
         const errorInfo = parseError(terminalOutput);
-        if (errorInfo && errorInfo.file) {
-            const timeoutId = setTimeout(() => {
-                fixCodeError(errorInfo.file, errorInfo.error);
-            }, 2000);
+        if (!errorInfo?.file) return;
 
-            return () => clearTimeout(timeoutId);
+        // Check cooldown for this file
+        const now = Date.now();
+        const lastFixTime = lastFixTimeRef.current.get(errorInfo.file) || 0;
+        if (now - lastFixTime < FIX_COOLDOWN_MS) {
+            // Still in cooldown, skip
+            return;
         }
+
+        // Check if already fixed (using the ref)
+        const errorKey = `${errorInfo.file}:${errorInfo.error.slice(0, 100)}`;
+        if (fixedFilesRef.current.has(errorKey)) {
+            return;
+        }
+
+        console.log('🔧 Auto-fix triggered for:', errorInfo.file);
+        lastFixTimeRef.current.set(errorInfo.file, now);
+
+        const timeoutId = setTimeout(() => {
+            fixCodeError(errorInfo.file, errorInfo.error);
+        }, 1500);
+
+        return () => clearTimeout(timeoutId);
     }, [terminalOutput, isRunning, isFixing, parseError, fixCodeError]);
 
     // Listen for runtime errors from preview iframe
@@ -336,9 +631,10 @@ export const AgentBuilder: React.FC = () => {
             if (fixAttempts.current >= MAX_FIX_ATTEMPTS) return;
 
             const { message, stack, errorType } = event.data;
-            console.log('🔴 Runtime error received:', { message, stack, errorType });
+            console.log('Runtime error received:', { message, stack, errorType });
 
-            const { filePath } = parseStackTrace(stack || '');
+            // Pass both stack and message to parseStackTrace for better file detection
+            const { filePath } = parseStackTrace(stack || '', message || '');
 
             if (filePath) {
                 const errorContext = `Runtime Error (${errorType})\n${message}\n\nStack trace:\n${stack}`;
@@ -346,7 +642,7 @@ export const AgentBuilder: React.FC = () => {
                     fixCodeError(filePath, errorContext);
                 }, 1500);
             } else {
-                console.warn('Could not extract file path from runtime error:', stack);
+                console.warn('Could not extract file path from runtime error:', message);
             }
         };
 
@@ -359,7 +655,51 @@ export const AgentBuilder: React.FC = () => {
         // Add user message
         addMessage('user', userMessage);
 
-        // Reset state
+        // Check if this is a follow-up modification (project already exists)
+        if (projectId && files.length > 0) {
+            setIsProcessing(true);
+            setStatusMessage('Thinking...');
+            addMessage('thinking', 'Understanding your request...');
+
+            try {
+                const response = await axios.post(`${BACKEND_URL}/api/projects/${projectId}/modify`, {
+                    modificationRequest: userMessage,
+                });
+
+                if (response.data.success && response.data.modifiedFiles?.length > 0) {
+                    const modifiedFiles = response.data.modifiedFiles;
+
+                    // Update files in state
+                    for (const modified of modifiedFiles) {
+                        const path = modified.path.startsWith('/') ? modified.path : '/' + modified.path;
+
+                        setFiles(prev => {
+                            const existing = prev.find(f => f.path === path);
+                            if (existing) {
+                                return prev.map(f => f.path === path ? { ...f, content: modified.content } : f);
+                            } else {
+                                return [...prev, { path, content: modified.content }];
+                            }
+                        });
+
+                        // Update in WebContainer
+                        await updateFile(modified.path.replace(/^\//, ''), modified.content);
+                    }
+
+                    addMessage('success', `✅ Modified ${modifiedFiles.length} file(s): ${response.data.summary}`);
+                } else {
+                    addMessage('progress', 'No modifications were needed.');
+                }
+            } catch (err: any) {
+                addMessage('error', `Modification failed: ${err.message}`);
+            } finally {
+                setIsProcessing(false);
+                setStatusMessage(undefined);
+            }
+            return;
+        }
+
+        // New project - Reset state
         setPhases(prev => prev.map(p => ({ ...p, status: 'pending', filesCreated: 0 })));
         setFiles([]);
         setFileTree([]);
@@ -367,155 +707,44 @@ export const AgentBuilder: React.FC = () => {
         setFixCount(0);
         fixAttempts.current = 0;
         fixedFilesRef.current.clear();
+        setProjectId(null);
 
         // Set processing state
         setIsProcessing(true);
         setStatus('running');
-        setStatusMessage('Agent is running...');
+        setStatusMessage('Generating architecture plan...');
 
         // Add thinking message
         addMessage('thinking', "I'm analyzing your requirements and planning the website structure...");
 
         try {
-            abortControllerRef.current = new AbortController();
-
             updatePhase('blueprint', 'in-progress');
-            setStatusMessage('Generating project blueprint...');
 
-            // Use SSE streaming endpoint
-            const response = await fetch(`${BACKEND_URL}/chat/langgraph-stream`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: userMessage,
-                    projectType: 'frontend'
-                }),
-                signal: abortControllerRef.current.signal
+            // Call /planning endpoint to get blueprint for review
+            const response = await axios.post(`${BACKEND_URL}/planning`, {
+                requirements: userMessage.trim(),
+                projectType: 'frontend'
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.data.success && response.data.data?.blueprint) {
+                setBlueprint(response.data.data.blueprint);
+                setPendingPrompt(userMessage);
+                setShowPlanningReview(true);
+                updatePhase('blueprint', 'complete');
+                setIsProcessing(false);
+                addMessage('success', `📋 Planning complete! Review the architecture.`);
+                setStatusMessage('Review the plan and approve to start coding');
+                return; // Exit here - handleApproveAndContinue takes over after user approval
             }
-
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-
-            let componentCount = 0;
-            let pageCount = 0;
-            let totalFiles = 0;
-            const collectedFiles: { path: string; content: string }[] = [];
-
-            if (reader) {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
-
-                    for (const line of lines) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-
-                            switch (data.type) {
-                                case 'message':
-                                    addMessage('progress', data.content, data.phase);
-                                    break;
-
-                                case 'phase':
-                                    setStatusMessage(data.message);
-                                    if (data.phase === 'blueprint') {
-                                        updatePhase('blueprint', 'in-progress');
-                                    } else if (data.phase === 'structure' || data.phase === 'core') {
-                                        updatePhase('blueprint', 'complete');
-                                        updatePhase('core', 'in-progress');
-                                    } else if (data.phase === 'components') {
-                                        updatePhase('core', 'complete');
-                                        updatePhase('components', 'in-progress');
-                                    } else if (data.phase === 'pages') {
-                                        updatePhase('components', 'complete', componentCount);
-                                        updatePhase('pages', 'in-progress');
-                                    } else if (data.phase === 'validation' || data.phase === 'repair') {
-                                        updatePhase('pages', 'complete', pageCount);
-                                        updatePhase('repair', 'in-progress');
-                                    }
-                                    break;
-
-                                case 'file':
-                                    totalFiles++;
-                                    const filePath = data.path.startsWith('/') ? data.path : '/' + data.path;
-
-                                    collectedFiles.push({ path: filePath, content: data.content });
-                                    setFiles(prev => [...prev, { path: filePath, content: data.content }]);
-
-                                    if (filePath.includes('/components/')) {
-                                        componentCount++;
-                                        updatePhase('components', 'in-progress', componentCount);
-                                    } else if (filePath.includes('/pages/')) {
-                                        pageCount++;
-                                        updatePhase('pages', 'in-progress', pageCount);
-                                    }
-
-                                    if (totalFiles % 5 === 0) {
-                                        addMessage('file', `Created ${totalFiles} files...`, data.phase, [filePath]);
-                                    }
-                                    break;
-
-                                case 'complete':
-                                    updatePhase('blueprint', 'complete');
-                                    updatePhase('core', 'complete');
-                                    updatePhase('components', 'complete', componentCount);
-                                    updatePhase('pages', 'complete', pageCount);
-                                    updatePhase('repair', 'complete');
-
-                                    setStatus('complete');
-                                    setStatusMessage(undefined);
-                                    addMessage('success', data.message || `🎉 Generated ${data.totalFiles} files successfully!`);
-
-                                    // Start WebContainer preview after generation completes
-                                    if (collectedFiles.length > 0) {
-                                        setStatusMessage('Starting preview...');
-                                        addMessage('thinking', '🚀 Starting WebContainer preview...');
-
-                                        try {
-                                            const fsTree = toWebContainerFS(collectedFiles);
-                                            await mountFiles(fsTree);
-                                            await startDevServer();
-                                            addMessage('success', '✅ Preview is loading with auto-fix enabled!');
-                                        } catch (e) {
-                                            console.warn('WebContainer preview failed:', e);
-                                            addMessage('error', `Preview failed: ${e}`);
-                                        }
-                                    }
-                                    break;
-
-                                case 'error':
-                                    throw new Error(data.message);
-                            }
-                        } catch (e) {
-                            if (line.trim() && !line.includes('data: ')) {
-                                console.warn('Invalid SSE line:', line);
-                            }
-                        }
-                    }
-                }
-            }
-
         } catch (error: any) {
-            if (error.name === 'AbortError') {
-                addMessage('error', 'Generation was cancelled.');
-                setStatus('idle');
-            } else {
-                console.error('Generation error:', error);
-                addMessage('error', `Something went wrong: ${error.message || 'Unknown error'}`);
-                setStatus('error');
-                setStatusMessage(error.message);
-            }
+            console.error('Planning error:', error);
+            addMessage('error', `Planning failed: ${error.message || 'Unknown error'}`);
+            setStatus('error');
+            setStatusMessage(error.message);
         } finally {
             setIsProcessing(false);
-            abortControllerRef.current = null;
         }
-    }, [addMessage, updatePhase, mountFiles, startDevServer]);
+    }, [addMessage, updatePhase, projectId, files.length, updateFile]);
 
     // Handle stop
     const handleStop = useCallback(() => {
@@ -523,6 +752,87 @@ export const AgentBuilder: React.FC = () => {
             abortControllerRef.current.abort();
         }
     }, []);
+
+    // Handle approve planning and start code generation
+    const handleApproveAndContinue = useCallback(async () => {
+        if (!blueprint) return;
+        setShowPlanningReview(false);
+        setIsProcessing(true);
+        setStatus('running');
+        addMessage('thinking', 'Starting code generation from approved plan...');
+
+        // Trigger the existing SSE generation with the detailedContext
+        const prompt = blueprint.detailedContext || pendingPrompt;
+
+        try {
+            abortControllerRef.current = new AbortController();
+            updatePhase('core', 'in-progress');
+            setStatusMessage('Generating code...');
+
+            const response = await fetch(`${BACKEND_URL}/chat/langgraph-stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, projectType: 'frontend' }),
+                signal: abortControllerRef.current.signal
+            });
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let componentCount = 0, pageCount = 0, totalFiles = 0;
+            const collected: { path: string; content: string }[] = [];
+
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+
+                    for (const line of lines) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.type === 'file') {
+                                totalFiles++;
+                                const path = data.path.startsWith('/') ? data.path : '/' + data.path;
+                                collected.push({ path, content: data.content });
+                                setFiles(prev => [...prev, { path, content: data.content }]);
+                                if (data.phase === 'components') componentCount++;
+                                else if (data.phase === 'page') pageCount++;
+                            } else if (data.type === 'phase') {
+                                setStatusMessage(data.message);
+                            } else if (data.type === 'complete') {
+                                setStatus('complete');
+                                addMessage('success', `✅ Generated ${totalFiles} files!`);
+                                if (collected.length > 0) {
+                                    const fsTree = toWebContainerFS(collected);
+                                    await mountFiles(fsTree);
+                                    await startDevServer();
+                                    // Save project to MongoDB
+                                    await saveProject(collected);
+                                }
+                            }
+                        } catch { }
+                    }
+                }
+            }
+        } catch (e: any) {
+            addMessage('error', e.message);
+            setStatus('error');
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [blueprint, pendingPrompt, addMessage, updatePhase, mountFiles, startDevServer, saveProject]);
+
+    // Handle reject planning
+    const handleRejectPlan = useCallback(() => {
+        setShowPlanningReview(false);
+        setBlueprint(null);
+        setPendingPrompt('');
+        setStatus('idle');
+        addMessage('progress', 'Plan rejected. Try a different prompt.');
+    }, [addMessage]);
 
     // Handle file select
     const handleSelectFile = useCallback((file: FileNode) => {
@@ -564,7 +874,7 @@ export const AgentBuilder: React.FC = () => {
                         <ArrowLeft className="w-5 h-5 text-gray-400" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-teal-600 flex items-center justify-center">
                             <Sparkles className="w-4 h-4 text-white" />
                         </div>
                         <span className="font-semibold text-gray-100">SiteCrafter Agent</span>
@@ -575,7 +885,7 @@ export const AgentBuilder: React.FC = () => {
                     {/* WebContainer Status */}
                     <div className="flex items-center gap-2 text-xs">
                         {isPreWarmed && !isPreWarming && (
-                            <span className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 rounded-full text-emerald-500">
+                            <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 rounded-full text-amber-500">
                                 <Zap className="w-3 h-3" />
                                 Ready
                             </span>
@@ -587,14 +897,33 @@ export const AgentBuilder: React.FC = () => {
                             </span>
                         )}
                         {fixCount > 0 && (
-                            <span className="px-2 py-1 bg-emerald-500/10 rounded-full text-emerald-400">
+                            <span className="px-2 py-1 bg-amber-500/10 rounded-full text-amber-400">
                                 {fixCount} {fixCount === 1 ? 'fix' : 'fixes'}
                             </span>
                         )}
                     </div>
+
+                    {/* My Projects Button */}
+                    <button
+                        onClick={() => navigate('/projects')}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-all"
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        My Projects
+                    </button>
+
                     <span className="text-xs text-gray-500">Powered by LangGraph + Gemini</span>
                 </div>
             </header>
+
+            {/* Planning Review Overlay */}
+            {showPlanningReview && blueprint && (
+                <PlanningReview
+                    blueprint={blueprint}
+                    onApprove={handleApproveAndContinue}
+                    onReject={handleRejectPlan}
+                />
+            )}
 
             {/* Main Content */}
             <div className="flex-1 flex overflow-hidden">
@@ -622,6 +951,9 @@ export const AgentBuilder: React.FC = () => {
                         isLoading={isProcessing || isInstalling || isBooting}
                         totalFiles={files.length}
                         onDownload={handleDownload}
+                        terminalOutput={terminalOutput}
+                        isInstalling={isInstalling}
+                        isBooting={isBooting}
                     />
                 </div>
             </div>

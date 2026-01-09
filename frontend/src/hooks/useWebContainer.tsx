@@ -120,7 +120,9 @@ export const WebContainerProvider: React.FC<{ children: React.ReactNode }> = ({ 
             appendOutput('⚡ Booting WebContainer...');
 
             try {
-                const instance = await WebContainer.boot();
+                const instance = await WebContainer.boot({
+                    coep: 'credentialless'  // Enables cross-tab previews without "Connect to Project"
+                });
                 webcontainerInstance = instance;
 
                 instance.on('server-ready', (_port, url) => {
@@ -297,67 +299,67 @@ export const WebContainerProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     return (
-        <WebContainerContext.Provider value= { value } >
-        { children }
+        <WebContainerContext.Provider value={value} >
+            {children}
 
-    {/* Non-blocking Toast in Corner */ }
-    {
-        showToast && (
-            <div className="fixed bottom-4 right-4 z-[9999] max-w-sm animate-in slide-in-from-bottom-5" >
-                <div className="bg-[#1a1a1a] border border-[#2e2e2e] rounded-lg shadow-xl overflow-hidden" >
-                    {/* Header */ }
-                    < div className = "px-4 py-3 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-teal-500/10" >
-                        <div className="flex items-center gap-2" >
+            {/* Non-blocking Toast in Corner */}
+            {
+                showToast && (
+                    <div className="fixed bottom-4 right-4 z-[9999] max-w-sm animate-in slide-in-from-bottom-5" >
+                        <div className="bg-[#1a1a1a] border border-[#2e2e2e] rounded-lg shadow-xl overflow-hidden" >
+                            {/* Header */}
+                            < div className="px-4 py-3 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-teal-500/10" >
+                                <div className="flex items-center gap-2" >
+                                    {
+                                        isPreWarming ? (
+                                            <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                                        ) : (
+                                            <Check className="w-4 h-4 text-emerald-500" />
+                                        )}
+                                    <span className="text-sm font-medium text-white" >
+                                        {isPreWarming ? 'Warming Up...' : 'Ready!'}
+                                    </span>
+                                </div>
+                                < button
+                                    onClick={() => setShowToast(false)}
+                                    className="p-1 hover:bg-white/10 rounded"
+                                >
+                                    <X className="w-3 h-3 text-gray-400" />
+                                </button>
+                            </div>
+
+                            {/* Progress */}
                             {
-                                isPreWarming?(
-                                    <Loader2 className = "w-4 h-4 animate-spin text-emerald-500" />
-                                ): (
-                                        <Check className = "w-4 h-4 text-emerald-500" />
+                                isPreWarming && (
+                                    <div className="px-4 py-2" >
+                                        <div className="h-1.5 bg-[#2e2e2e] rounded-full overflow-hidden" >
+                                            <div
+                                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
+                                                style={{ width: `${Math.min(terminalOutput.length * 2, 95)}%` }
+                                                }
+                                            />
+                                        </div>
+                                        < p className="text-[10px] text-gray-500 mt-1" >
+                                            Installing 16 packages for instant previews...
+                                        </p>
+                                    </div>
                                 )}
-<span className="text-sm font-medium text-white" >
-    { isPreWarming? 'Warming Up...': 'Ready!' }
-    </span>
-    </div>
-    < button
-onClick = {() => setShowToast(false)}
-className = "p-1 hover:bg-white/10 rounded"
-    >
-    <X className="w-3 h-3 text-gray-400" />
-        </button>
-        </div>
 
-{/* Progress */ }
-{
-    isPreWarming && (
-        <div className="px-4 py-2" >
-            <div className="h-1.5 bg-[#2e2e2e] rounded-full overflow-hidden" >
-                <div 
-                                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
-    style = {{ width: `${Math.min(terminalOutput.length * 2, 95)}%` }
-}
-                                    />
-    </div>
-    < p className = "text-[10px] text-gray-500 mt-1" >
-        Installing 16 packages for instant previews...
-</p>
-    </div>
-                        )}
-
-{/* Success message */ }
-{
-    !isPreWarming && isPreWarmed && (
-        <div className="px-4 py-2" >
-            <p className="text-xs text-emerald-400 flex items-center gap-1" >
-                <Zap className="w-3 h-3" />
-                    Previews will load instantly!
-                        </p>
+                            {/* Success message */}
+                            {
+                                !isPreWarming && isPreWarmed && (
+                                    <div className="px-4 py-2" >
+                                        <p className="text-xs text-emerald-400 flex items-center gap-1" >
+                                            <Zap className="w-3 h-3" />
+                                            Previews will load instantly!
+                                        </p>
+                                    </div>
+                                )
+                            }
                         </div>
-                        )
-}
-</div>
-    </div>
-            )}
-</WebContainerContext.Provider>
+                    </div>
+                )}
+        </WebContainerContext.Provider>
     );
 };
 

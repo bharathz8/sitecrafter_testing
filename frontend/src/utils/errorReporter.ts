@@ -105,31 +105,72 @@ export function getErrorReporterScript(): string {
 
 /**
  * Parse stack trace to extract file path and line number
+ * Enhanced to handle WebContainer URLs and React error messages
  */
-export function parseStackTrace(stack: string): { filePath: string | null; lineNumber: number | null } {
-    if (!stack) return { filePath: null, lineNumber: null };
+export function parseStackTrace(stack: string, message?: string): { filePath: string | null; lineNumber: number | null } {
+    const combinedText = `${message || ''}\n${stack || ''}`;
 
-    // Match patterns like:
-    // at Component (https://.../src/components/Component.tsx:24:31)
-    // at https://.../src/App.tsx:45:12
+    if (!combinedText.trim()) return { filePath: null, lineNumber: null };
 
-    const patterns = [
-        // React component format
-        /at\s+\w+\s+\(https?:\/\/[^)]+\/(src\/[^:)]+):(\d+):\d+\)/,
-        // Direct URL format
-        /at\s+https?:\/\/[^/]+\/(src\/[^:)]+):(\d+):\d+/,
-        // Simple path format
-        /(src\/[\w\/.-]+\.(?:tsx?|jsx?))/
-    ];
+    // Pattern 1: Direct /src/ path extraction from WebContainer URLs
+    // Match: https://...io/src/components/features/StatCard.tsx:20:3
+    const srcPathMatch = combinedText.match(/\.io\/src\/([^\s:)]+\.tsx?):(\\d+)/);
+    if (srcPathMatch) {
+        return {
+            filePath: 'src/' + srcPathMatch[1],
+            lineNumber: srcPathMatch[2] ? parseInt(srcPathMatch[2], 10) : null
+        };
+    }
 
-    for (const pattern of patterns) {
-        const match = stack.match(pattern);
-        if (match) {
+    // Pattern 2: Extract component name from "Check the render method of `ComponentName`"
+    const renderMethodMatch = combinedText.match(/Check the render method of [`']?(\w+)[`']?/i);
+    if (renderMethodMatch) {
+        const componentName = renderMethodMatch[1];
+
+        // Try to find the component file in the combined text
+        const componentFilePattern = new RegExp(`at ${componentName}\\s*\\([^)]*\\/src\\/([^\\s:)]+\\.tsx?):(\\d+)`);
+        const componentFileMatch = combinedText.match(componentFilePattern);
+        if (componentFileMatch) {
             return {
-                filePath: match[1],
-                lineNumber: match[2] ? parseInt(match[2], 10) : null
+                filePath: 'src/' + componentFileMatch[1],
+                lineNumber: componentFileMatch[2] ? parseInt(componentFileMatch[2], 10) : null
             };
         }
+
+        // Fallback: construct likely path from component name
+        return {
+            filePath: `src/components/features/${componentName}.tsx`,
+            lineNumber: null
+        };
+    }
+
+    // Pattern 3: React component format
+    // at Component (https://.../src/components/Component.tsx:24:31)
+    const reactMatch = combinedText.match(/at\s+\w+\s+\(https?:\/\/[^)]+\/(src\/[^:)]+):(\d+):\d+\)/);
+    if (reactMatch) {
+        return {
+            filePath: reactMatch[1],
+            lineNumber: parseInt(reactMatch[2], 10)
+        };
+    }
+
+    // Pattern 4: Direct URL format
+    // at https://.../src/App.tsx:45:12
+    const urlMatch = combinedText.match(/at\s+https?:\/\/[^/]+\/(src\/[^:)]+):(\d+):\d+/);
+    if (urlMatch) {
+        return {
+            filePath: urlMatch[1],
+            lineNumber: parseInt(urlMatch[2], 10)
+        };
+    }
+
+    // Pattern 5: Simple path format
+    const simpleMatch = combinedText.match(/(src\/[\w\/.-]+\.(?:tsx?|jsx?))/);
+    if (simpleMatch) {
+        return {
+            filePath: simpleMatch[1],
+            lineNumber: null
+        };
     }
 
     return { filePath: null, lineNumber: null };

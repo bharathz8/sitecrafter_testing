@@ -1,11 +1,12 @@
 /**
- * Blueprint Node - Generates project blueprint
+ * Blueprint Node - Generates project blueprint using PlanningService
+ * Uses autonomous multi-phase planning for dynamic feature ideation
  */
 
 import { WebsiteState, ProjectBlueprint } from '../graph-state';
-import { invokeLLM } from '../llm-utils';
 import { storeBlueprintMemory, clearProjectMemory, generateProjectId } from '../memory-utils';
 import { fetchProjectImages, storeImagesInMemory, UnsplashImage } from '../services/image.service';
+import { PlanningService } from '../../../services/planning-fixed.service';
 
 // Complete list of dependencies
 const STANDARD_DEPENDENCIES: Record<string, string> = {
@@ -43,69 +44,41 @@ const DEV_DEPENDENCIES: Record<string, string> = {
 
 export async function blueprintNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
     console.log('\n📋 ═══════════════════════════════════════════');
-    console.log('📋 NODE: BLUEPRINT');
+    console.log('📋 NODE: BLUEPRINT (DYNAMIC PLANNING)');
     console.log('📋 ═══════════════════════════════════════════\n');
 
-    const systemPrompt = `You are a senior software architect designing a modern React web application.
-
-Generate a detailed project blueprint in JSON format.
-
-IMPORTANT: Return ONLY valid JSON, no markdown, no explanations.`;
-
-    const userPrompt = `Design a production-ready React application for:
-
-"${state.userPrompt}"
-
-Return a JSON object with this EXACT structure:
-{
-    "projectName": "kebab-case-name",
-    "description": "Detailed description of the application",
-    "features": [
-        { "name": "Feature Name", "description": "What it does", "priority": "high|medium|low" }
-    ],
-    "pages": [
-        { 
-            "name": "PageName", 
-            "route": "/route-path", 
-            "description": "What this page shows",
-            "sections": ["Hero", "Features", "CTA"],
-            "components": ["ComponentName1", "ComponentName2"]
-        }
-    ],
-    "components": [
-        { "name": "ComponentName", "type": "ui|feature|layout", "props": ["prop1", "prop2"] }
-    ],
-    "designSystem": {
-        "primaryColor": "#hexcode",
-        "secondaryColor": "#hexcode",
-        "accentColor": "#hexcode",
-        "style": "modern|minimal|playful|corporate",
-        "fonts": ["Inter", "system-ui"]
-    }
-}
-
-REQUIREMENTS:
-1. Include 5-7 pages: Home, About, Services/Products, Contact, 404, and 1-2 more relevant pages
-2. Include these UI components: Button, Card, Input, Modal, Badge, Avatar, Skeleton
-3. Include 3-5 feature components specific to this project
-4. Make component and page names PascalCase with no spaces
-5. Choose colors that match the project theme
-6. Keep the design focused and cohesive`;
-
     try {
-        const response = await invokeLLM(systemPrompt, userPrompt, 0.8);
+        console.log('🤖 Starting autonomous planning...');
+        console.log(`   User Request: "${state.userPrompt.slice(0, 100)}..."`);
+        console.log(`   Project Type: ${state.projectType || 'frontend'}`);
 
-        // Extract JSON from response
-        let jsonStr = response;
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            jsonStr = jsonMatch[0];
+        // Use PlanningService for autonomous multi-phase planning
+        const planningResponse = await PlanningService.generateBlueprint(
+            state.userPrompt,
+            0, // retry count
+            state.projectType || 'frontend'
+        );
+
+        if (!planningResponse.success || !planningResponse.data) {
+            throw new Error(planningResponse.error || 'Planning failed');
         }
 
-        const blueprint: ProjectBlueprint = JSON.parse(jsonStr);
+        const planBlueprint = planningResponse.data.blueprint;
 
-        // Add standard dependencies
-        blueprint.dependencies = { ...STANDARD_DEPENDENCIES };
+        // Convert PlanningService blueprint to LangGraph ProjectBlueprint format
+        const blueprint: ProjectBlueprint = {
+            projectName: planBlueprint.projectName,
+            description: planBlueprint.description,
+            features: planBlueprint.features.map(f => ({
+                name: typeof f === 'string' ? f : f,
+                description: typeof f === 'string' ? f : f,
+                priority: 'high' as const
+            })),
+            pages: extractPagesFromContext(planBlueprint.detailedContext, planBlueprint.features),
+            components: extractComponentsFromContext(planBlueprint.detailedContext),
+            designSystem: extractDesignSystem(planBlueprint.detailedContext),
+            dependencies: { ...STANDARD_DEPENDENCIES }
+        };
 
         // Ensure page names are valid
         blueprint.pages = blueprint.pages.map(page => ({
@@ -113,10 +86,14 @@ REQUIREMENTS:
             name: page.name.replace(/\s+/g, '')
         }));
 
-        console.log(`✅ Blueprint created: ${blueprint.projectName}`);
-        console.log(`   Pages: ${blueprint.pages.length}`);
-        console.log(`   Components: ${blueprint.components.length}`);
-        console.log(`   Features: ${blueprint.features.length}`);
+        console.log(`\n✅ Dynamic Blueprint Created: ${blueprint.projectName}`);
+        console.log(`   📄 Pages: ${blueprint.pages.length} (dynamically determined)`);
+        console.log(`   🧩 Components: ${blueprint.components.length}`);
+        console.log(`   ✨ Features: ${blueprint.features.length}`);
+        console.log(`   🎨 Workflow Nodes: ${planBlueprint.workflow?.nodes?.length || 0}`);
+
+        // Log the pages for visibility
+        blueprint.pages.forEach(p => console.log(`      → ${p.name} (${p.route})`));
 
         // Generate project ID for Mem0 tracking
         const projectId = generateProjectId(blueprint.projectName);
@@ -145,14 +122,235 @@ REQUIREMENTS:
             blueprint,
             projectId,
             availableImages,
+            detailedContext: planBlueprint.detailedContext || '',
+            workflowNodes: planBlueprint.workflow?.nodes || [],
+            workflowEdges: planBlueprint.workflow?.edges || [],
             currentPhase: 'blueprint',
-            messages: [`Blueprint created: ${blueprint.projectName} with ${blueprint.pages.length} pages, ${availableImages.length} images`]
+            messages: [
+                `🤖 Autonomous Planning Complete: ${blueprint.projectName}`,
+                `📄 ${blueprint.pages.length} pages dynamically determined`,
+                `✨ ${blueprint.features.length} features identified`,
+                `🖼️ ${availableImages.length} images ready`
+            ]
         };
 
     } catch (error: any) {
         console.error('❌ Blueprint generation failed:', error.message);
         throw error;
     }
+}
+
+/**
+ * Extract pages from detailedContext - parses the planning output
+ */
+function extractPagesFromContext(context: string, features: any[]): any[] {
+    const pages: any[] = [];
+
+    // Always include HomePage
+    pages.push({
+        name: 'HomePage',
+        route: '/',
+        description: 'Main landing page with hero section and key features',
+        sections: ['Hero', 'Features', 'Testimonials', 'CTA'],
+        components: ['Hero', 'FeatureGrid', 'TestimonialSlider', 'CallToAction']
+    });
+
+    // Parse features to determine additional pages
+    const featureNames = features.map(f => typeof f === 'string' ? f : f.name || f);
+
+    // Common page patterns based on features
+    const pagePatterns = [
+        { keywords: ['product', 'catalog', 'shop', 'store', 'item'], page: { name: 'ProductsPage', route: '/products', description: 'Product catalog and listings', sections: ['ProductGrid', 'Filters', 'Pagination'], components: ['ProductCard', 'FilterBar', 'SearchBar'] } },
+        { keywords: ['service', 'offering'], page: { name: 'ServicesPage', route: '/services', description: 'Services offered', sections: ['ServiceGrid', 'Pricing'], components: ['ServiceCard', 'PricingTable'] } },
+        { keywords: ['about', 'team', 'story'], page: { name: 'AboutPage', route: '/about', description: 'About the company/project', sections: ['Story', 'Team', 'Values'], components: ['TeamMember', 'Timeline'] } },
+        { keywords: ['contact', 'support', 'help'], page: { name: 'ContactPage', route: '/contact', description: 'Contact information and form', sections: ['ContactForm', 'Map', 'Info'], components: ['ContactForm', 'LocationMap'] } },
+        { keywords: ['pricing', 'plan', 'subscription'], page: { name: 'PricingPage', route: '/pricing', description: 'Pricing plans and tiers', sections: ['PricingCards', 'Comparison', 'FAQ'], components: ['PricingCard', 'ComparisonTable', 'FAQ'] } },
+        { keywords: ['dashboard', 'admin', 'analytics'], page: { name: 'DashboardPage', route: '/dashboard', description: 'User dashboard with stats', sections: ['Stats', 'Charts', 'RecentActivity'], components: ['StatCard', 'Chart', 'ActivityFeed'] } },
+        { keywords: ['blog', 'article', 'news', 'post'], page: { name: 'BlogPage', route: '/blog', description: 'Blog posts and articles', sections: ['FeaturedPost', 'PostGrid', 'Categories'], components: ['BlogCard', 'BlogPost', 'CategoryFilter'] } },
+        { keywords: ['portfolio', 'project', 'work', 'gallery'], page: { name: 'PortfolioPage', route: '/portfolio', description: 'Portfolio and project showcase', sections: ['ProjectGrid', 'Categories', 'Featured'], components: ['ProjectCard', 'ImageGallery', 'Modal'] } },
+        { keywords: ['faq', 'question'], page: { name: 'FAQPage', route: '/faq', description: 'Frequently asked questions', sections: ['FAQList', 'Categories'], components: ['Accordion', 'SearchBar'] } },
+        { keywords: ['testimonial', 'review', 'feedback'], page: { name: 'TestimonialsPage', route: '/testimonials', description: 'Customer testimonials', sections: ['TestimonialGrid', 'Stats'], components: ['TestimonialCard', 'RatingStars'] } },
+        { keywords: ['login', 'signin', 'auth'], page: { name: 'LoginPage', route: '/login', description: 'User authentication', sections: ['LoginForm'], components: ['LoginForm', 'SocialLogin'] } },
+        { keywords: ['register', 'signup'], page: { name: 'RegisterPage', route: '/register', description: 'User registration', sections: ['RegisterForm'], components: ['RegisterForm', 'PasswordStrength'] } },
+        { keywords: ['profile', 'account', 'setting'], page: { name: 'ProfilePage', route: '/profile', description: 'User profile and settings', sections: ['ProfileInfo', 'Settings'], components: ['ProfileCard', 'SettingsForm'] } },
+        { keywords: ['cart', 'checkout', 'order'], page: { name: 'CartPage', route: '/cart', description: 'Shopping cart', sections: ['CartItems', 'Summary'], components: ['CartItem', 'OrderSummary', 'CheckoutButton'] } },
+        { keywords: ['search', 'find', 'explore'], page: { name: 'SearchPage', route: '/search', description: 'Search results', sections: ['SearchBar', 'Results', 'Filters'], components: ['SearchBar', 'ResultCard', 'FilterSidebar'] } },
+    ];
+
+    // Match features to pages
+    const contextLower = context.toLowerCase();
+    const featuresLower = featureNames.join(' ').toLowerCase();
+
+    for (const pattern of pagePatterns) {
+        const hasMatch = pattern.keywords.some(kw =>
+            contextLower.includes(kw) || featuresLower.includes(kw)
+        );
+        if (hasMatch && !pages.find(p => p.name === pattern.page.name)) {
+            pages.push(pattern.page);
+        }
+    }
+
+    // Always add 404 page
+    pages.push({
+        name: 'NotFoundPage',
+        route: '*',
+        description: '404 error page',
+        sections: ['ErrorMessage', 'BackButton'],
+        components: ['ErrorDisplay']
+    });
+
+    // Ensure minimum 5 pages
+    const defaultPages = [
+        { name: 'AboutPage', route: '/about', description: 'About page', sections: ['Story', 'Team'], components: ['TeamMember'] },
+        { name: 'ContactPage', route: '/contact', description: 'Contact page', sections: ['ContactForm'], components: ['ContactForm'] },
+        { name: 'ServicesPage', route: '/services', description: 'Services page', sections: ['ServiceGrid'], components: ['ServiceCard'] }
+    ];
+
+    for (const dp of defaultPages) {
+        if (pages.length < 5 && !pages.find(p => p.name === dp.name)) {
+            pages.push(dp);
+        }
+    }
+
+    return pages;
+}
+
+/**
+ * Extract components from detailedContext
+ */
+function extractComponentsFromContext(context: string): any[] {
+    // Base UI components that are always needed
+    const baseComponents = [
+        { name: 'Button', type: 'ui', props: ['children', 'variant', 'size', 'onClick', 'disabled', 'loading'] },
+        { name: 'Card', type: 'ui', props: ['children', 'className', 'hover'] },
+        { name: 'Input', type: 'ui', props: ['placeholder', 'value', 'onChange', 'type', 'error'] },
+        { name: 'Modal', type: 'ui', props: ['isOpen', 'onClose', 'title', 'children'] },
+        { name: 'Badge', type: 'ui', props: ['children', 'variant', 'size'] },
+        { name: 'Avatar', type: 'ui', props: ['src', 'alt', 'size', 'fallback'] },
+        { name: 'Skeleton', type: 'ui', props: ['width', 'height', 'className'] },
+        { name: 'Spinner', type: 'ui', props: ['size', 'className'] },
+        { name: 'Toast', type: 'ui', props: ['message', 'type', 'duration'] },
+        { name: 'Tooltip', type: 'ui', props: ['content', 'children', 'position'] },
+        { name: 'Tabs', type: 'ui', props: ['tabs', 'activeTab', 'onChange'] },
+        { name: 'Accordion', type: 'ui', props: ['items', 'allowMultiple'] },
+        { name: 'Dropdown', type: 'ui', props: ['trigger', 'items', 'onSelect'] },
+    ];
+
+    // Layout components
+    const layoutComponents = [
+        { name: 'Header', type: 'layout', props: ['logo', 'navItems', 'sticky'] },
+        { name: 'Footer', type: 'layout', props: ['links', 'social', 'copyright'] },
+        { name: 'Sidebar', type: 'layout', props: ['items', 'collapsed', 'onToggle'] },
+        { name: 'Container', type: 'layout', props: ['children', 'maxWidth', 'className'] },
+        { name: 'Section', type: 'layout', props: ['children', 'id', 'className', 'background'] },
+    ];
+
+    // Feature components based on context keywords
+    const featureComponents: any[] = [];
+    const contextLower = context.toLowerCase();
+
+    if (contextLower.includes('product') || contextLower.includes('shop')) {
+        featureComponents.push(
+            { name: 'ProductCard', type: 'feature', props: ['product', 'onAddToCart'] },
+            { name: 'ProductGrid', type: 'feature', props: ['products', 'columns'] },
+            { name: 'FilterBar', type: 'feature', props: ['filters', 'onFilterChange'] },
+            { name: 'CartItem', type: 'feature', props: ['item', 'onRemove', 'onQuantityChange'] }
+        );
+    }
+
+    if (contextLower.includes('testimonial') || contextLower.includes('review')) {
+        featureComponents.push(
+            { name: 'TestimonialCard', type: 'feature', props: ['testimonial'] },
+            { name: 'TestimonialSlider', type: 'feature', props: ['testimonials', 'autoPlay'] },
+            { name: 'RatingStars', type: 'feature', props: ['rating', 'maxStars'] }
+        );
+    }
+
+    if (contextLower.includes('pricing') || contextLower.includes('plan')) {
+        featureComponents.push(
+            { name: 'PricingCard', type: 'feature', props: ['plan', 'popular', 'onSelect'] },
+            { name: 'PricingTable', type: 'feature', props: ['plans', 'features'] },
+            { name: 'FeatureCheck', type: 'feature', props: ['feature', 'included'] }
+        );
+    }
+
+    if (contextLower.includes('dashboard') || contextLower.includes('stat')) {
+        featureComponents.push(
+            { name: 'StatCard', type: 'feature', props: ['title', 'value', 'change', 'icon'] },
+            { name: 'Chart', type: 'feature', props: ['data', 'type', 'options'] },
+            { name: 'ActivityFeed', type: 'feature', props: ['activities', 'maxItems'] }
+        );
+    }
+
+    if (contextLower.includes('blog') || contextLower.includes('article')) {
+        featureComponents.push(
+            { name: 'BlogCard', type: 'feature', props: ['post', 'compact'] },
+            { name: 'BlogPost', type: 'feature', props: ['content', 'author', 'date'] },
+            { name: 'AuthorCard', type: 'feature', props: ['author'] }
+        );
+    }
+
+    if (contextLower.includes('contact') || contextLower.includes('form')) {
+        featureComponents.push(
+            { name: 'ContactForm', type: 'feature', props: ['onSubmit', 'fields'] },
+            { name: 'NewsletterForm', type: 'feature', props: ['onSubscribe'] }
+        );
+    }
+
+    if (contextLower.includes('team') || contextLower.includes('member')) {
+        featureComponents.push(
+            { name: 'TeamMember', type: 'feature', props: ['member'] },
+            { name: 'TeamGrid', type: 'feature', props: ['members', 'columns'] }
+        );
+    }
+
+    // Hero and CTA are always useful
+    featureComponents.push(
+        { name: 'Hero', type: 'feature', props: ['title', 'subtitle', 'cta', 'image'] },
+        { name: 'CallToAction', type: 'feature', props: ['title', 'description', 'buttonText', 'onAction'] },
+        { name: 'FeatureGrid', type: 'feature', props: ['features', 'columns'] },
+        { name: 'FeatureCard', type: 'feature', props: ['icon', 'title', 'description'] }
+    );
+
+    return [...layoutComponents, ...baseComponents, ...featureComponents];
+}
+
+/**
+ * Extract design system from detailedContext
+ */
+function extractDesignSystem(context: string): any {
+    // Default modern design system
+    const defaultDesign = {
+        primaryColor: '#6366f1', // Indigo
+        secondaryColor: '#8b5cf6', // Violet
+        accentColor: '#10b981', // Emerald
+        style: 'modern',
+        fonts: ['Inter', 'system-ui', 'sans-serif']
+    };
+
+    // Try to extract colors from context
+    const colorMatch = context.match(/(#[0-9A-Fa-f]{6})/g);
+    if (colorMatch && colorMatch.length >= 2) {
+        defaultDesign.primaryColor = colorMatch[0];
+        defaultDesign.secondaryColor = colorMatch[1];
+        if (colorMatch.length >= 3) {
+            defaultDesign.accentColor = colorMatch[2];
+        }
+    }
+
+    // Determine style from keywords
+    const contextLower = context.toLowerCase();
+    if (contextLower.includes('minimal') || contextLower.includes('clean')) {
+        defaultDesign.style = 'minimal';
+    } else if (contextLower.includes('playful') || contextLower.includes('fun') || contextLower.includes('colorful')) {
+        defaultDesign.style = 'playful';
+    } else if (contextLower.includes('corporate') || contextLower.includes('professional') || contextLower.includes('business')) {
+        defaultDesign.style = 'corporate';
+    } else if (contextLower.includes('dark') || contextLower.includes('modern')) {
+        defaultDesign.style = 'modern';
+    }
+
+    return defaultDesign;
 }
 
 export { STANDARD_DEPENDENCIES, DEV_DEPENDENCIES };

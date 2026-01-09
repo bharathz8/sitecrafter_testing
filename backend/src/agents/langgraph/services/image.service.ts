@@ -25,22 +25,23 @@ export interface UnsplashImage {
 }
 
 /**
- * Generate 20 image keywords using LLM based on project description
+ * Generate 15 image keywords using LLM based on project description
  */
 async function generateKeywords(description: string): Promise<ImageKeyword[]> {
-    const systemPrompt = `You are an image keyword generator for website builders. 
-Given a website description, generate exactly 20 image keywords that would be needed for that type of website.
-Return ONLY a valid JSON array with this exact structure (no markdown, no explanation):
-[
-  {"keyword": "chocolate cake", "description": "Decadent chocolate layer cake for product showcase"},
-  {"keyword": "wedding cake", "description": "Elegant multi-tier wedding cake for special occasions section"}
-]`;
+    const systemPrompt = `You are an image keyword generator. Generate exactly 15 image keywords DIRECTLY related to the user's specific topic.
 
-    const userPrompt = `Generate 20 unique and relevant image keywords for: "${description}"
+CRITICAL: ALL keywords must be specific to the user's business/topic. NO generic or abstract images.
+- For "cake selling website" → chocolate cake, birthday cake, wedding cake, cupcakes, bakery, frosting
+- For "car dealership" → sports car, sedan, SUV, showroom, car keys
+- For "restaurant" → food plates, chef, dining table, menu, dishes
 
-For example, for a "cake selling website", you might need: chocolate cake, wedding cake, birthday cake, bakery interior, frosting close-up, pastry chef, cupcakes display, etc.
+Return ONLY valid JSON array:
+[{"keyword": "chocolate cake", "description": "Product photo"}]`;
 
-Return ONLY the JSON array, no other text.`;
+    const userPrompt = `Generate 15 image keywords for: "${description}"
+
+IMPORTANT: Every keyword must be about "${description}" - NO generic images like aurora, geometric, abstract.
+Return ONLY the JSON array.`;
 
     try {
         const response = await invokeLLM(systemPrompt, userPrompt, 0.7);
@@ -119,7 +120,7 @@ async function fetchUnsplashImage(keyword: string): Promise<{ url: string; link:
 }
 
 /**
- * Fetch 25 images for a project description
+ * Fetch 15 images for a project description
  * This runs directly in the backend - no separate service needed
  */
 export async function fetchProjectImages(description: string): Promise<UnsplashImage[]> {

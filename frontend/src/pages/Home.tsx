@@ -12,7 +12,7 @@ import screen from '../assests/cake.png';
 const Home = () => {
   const navigate = useNavigate();
   const featuresRef = useRef<HTMLDivElement>(null);
-  
+
   // Intersection Observer for animations
   useEffect(() => {
     const observerOptions = {
@@ -20,7 +20,7 @@ const Home = () => {
       rootMargin: '0px',
       threshold: 0.1
     };
-    
+
     const handleIntersect = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -29,17 +29,17 @@ const Home = () => {
         }
       });
     };
-    
+
     const observer = new IntersectionObserver(handleIntersect, observerOptions);
-    
+
     const animatedElements = document.querySelectorAll('.animate-on-scroll');
     animatedElements.forEach(el => observer.observe(el));
-    
+
     return () => {
       animatedElements.forEach(el => observer.unobserve(el));
     };
   }, []);
-  
+
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -47,7 +47,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      
+
       <section id="hero" className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-20 px-4 sm:px-6 md:px-10 overflow-hidden">
         {/* Background animated elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -55,7 +55,7 @@ const Home = () => {
           <div className="absolute top-60 -right-20 w-60 h-60 bg-yellow-400 rounded-full opacity-10 animate-blob animation-delay-2000"></div>
           <div className="absolute bottom-20 left-60 w-40 h-40 bg-yellow-300 rounded-full opacity-10 animate-blob animation-delay-4000"></div>
         </div>
-        
+
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center space-y-8 mb-16 animate-fade-in">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-white leading-tight animate-slide-up">
@@ -67,8 +67,8 @@ const Home = () => {
               Create stunning websites that turn visitors into customers with our AI-powered platform
             </p>
             <div className="animate-slide-up animation-delay-900">
-              <button 
-                onClick={() => navigate('/dashboard')}
+              <button
+                onClick={() => navigate('/agent')}
                 className="inline-flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
               >
                 <span>Get Started</span>
@@ -83,11 +83,10 @@ const Home = () => {
               { img: main_page, delay: 300 },
               { img: screen, delay: 600 }
             ].map((item, index) => (
-              <div 
+              <div
                 key={index}
-                className={`transform transition-all duration-500 hover:scale-105 hover:rotate-1 animate-slide-up ${
-                  index === 1 ? 'md:translate-y-8' : ''
-                } animation-delay-${item.delay}`}
+                className={`transform transition-all duration-500 hover:scale-105 hover:rotate-1 animate-slide-up ${index === 1 ? 'md:translate-y-8' : ''
+                  } animation-delay-${item.delay}`}
               >
                 <img
                   src={item.img}
@@ -97,9 +96,9 @@ const Home = () => {
               </div>
             ))}
           </div>
-          
+
           <div className="flex justify-center mt-16 animate-bounce-slow">
-            <button 
+            <button
               onClick={scrollToFeatures}
               className="text-white hover:text-yellow-400 transition-colors duration-300 focus:outline-none"
               aria-label="Scroll to features"
@@ -117,7 +116,7 @@ const Home = () => {
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Choose SiteCrafter?</h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">Our platform combines cutting-edge AI with intuitive design tools to help you create websites that convert.</p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
@@ -136,7 +135,7 @@ const Home = () => {
                   delay: 400
                 }
               ].map((feature, index) => (
-                <div 
+                <div
                   key={index}
                   className={`bg-gray-50 p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 animate-on-scroll opacity-0 transition-all duration-700 translate-y-10`}
                   style={{ transitionDelay: `${feature.delay}ms` }}
@@ -156,7 +155,7 @@ const Home = () => {
       <About />
       <Contact />
       <Footer />
-      
+
       {/* Add CSS for animations */}
       <style>
         {`

@@ -269,6 +269,30 @@ Each feature component MUST:
 - Work with provided design system colors
 
 ═══════════════════════════════════════════════════════════════════════════════
+📱 MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
+═══════════════════════════════════════════════════════════════════════════════
+All components MUST be responsive using these breakpoints:
+- BASE (320px+): Mobile - single column, larger touch targets
+- sm (640px+): Large mobile - can slightly widen
+- md (768px+): Tablet - start 2-column layouts
+- lg (1024px+): Desktop - full layouts
+- xl (1280px+): Large desktop - max container
+
+Example responsive patterns:
+- Grid: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+- Flex: flex-col md:flex-row
+- Text: text-2xl md:text-3xl lg:text-4xl
+- Padding: p-4 md:p-6 lg:p-8
+- Gap: gap-4 md:gap-6 lg:gap-8
+
+${state.detailedContext ? `
+═══════════════════════════════════════════════════════════════════════════════
+📋 DETAILED SPECIFICATIONS FROM PLANNING
+═══════════════════════════════════════════════════════════════════════════════
+${state.detailedContext.slice(0, 2000)}...
+` : ''}
+
+═══════════════════════════════════════════════════════════════════════════════
 ⚠️ ZERO TOLERANCE REQUIREMENTS
 ═══════════════════════════════════════════════════════════════════════════════
 1. NO invisible text (verify contrast!)
