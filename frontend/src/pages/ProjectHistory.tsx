@@ -121,7 +121,7 @@ export const ProjectHistory: React.FC = () => {
                 <h1 className="text-lg font-semibold">My Projects</h1>
                 <button
                     onClick={() => navigate('/agent')}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-sm font-medium hover:from-emerald-600 hover:to-teal-600 transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/40 rounded-lg text-sm font-medium text-amber-300 hover:bg-amber-500/30 hover:border-amber-500/60 transition-all backdrop-blur-sm"
                 >
                     <Plus size={16} />
                     New Project
@@ -132,7 +132,7 @@ export const ProjectHistory: React.FC = () => {
             <main className="max-w-6xl mx-auto px-6 py-8">
                 {loading ? (
                     <div className="flex items-center justify-center h-64">
-                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                        <Loader2 className="w-8 h-8 animate-spin text-amber-400/70" />
                     </div>
                 ) : error ? (
                     <div className="text-center py-16">
@@ -151,7 +151,7 @@ export const ProjectHistory: React.FC = () => {
                         <p className="text-gray-500 mb-6">Create your first project to see it here</p>
                         <button
                             onClick={() => navigate('/agent')}
-                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg font-medium hover:from-emerald-600 hover:to-teal-600"
+                            className="px-6 py-3 bg-amber-500/20 border border-amber-500/40 rounded-lg font-medium text-amber-300 hover:bg-amber-500/30 hover:border-amber-500/60 transition-all"
                         >
                             Create Project
                         </button>
@@ -162,12 +162,12 @@ export const ProjectHistory: React.FC = () => {
                             <div
                                 key={project._id}
                                 onClick={() => handleOpenProject(project._id)}
-                                className="group bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl p-5 cursor-pointer hover:border-emerald-500/50 hover:bg-[#1a1a1a]/80 transition-all"
+                                className="group bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl p-5 cursor-pointer hover:border-amber-500/30 hover:bg-[#1f1f1f] transition-all"
                             >
                                 {/* Project Header */}
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
+                                        <h3 className="font-semibold text-white truncate group-hover:text-amber-300 transition-colors">
                                             {project.name}
                                         </h3>
                                         <p className="text-sm text-gray-500 truncate mt-1">
@@ -196,11 +196,11 @@ export const ProjectHistory: React.FC = () => {
 
                                 {/* Status Badge */}
                                 <div className="mt-3">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${project.status === 'complete'
-                                        ? 'bg-emerald-500/10 text-emerald-400'
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border ${project.status === 'complete'
+                                        ? 'bg-amber-500/10 text-amber-300/80 border-amber-500/20'
                                         : project.status === 'generating'
-                                            ? 'bg-amber-500/10 text-amber-400'
-                                            : 'bg-red-500/10 text-red-400'
+                                            ? 'bg-yellow-500/10 text-yellow-300/80 border-yellow-500/20'
+                                            : 'bg-red-500/10 text-red-300/80 border-red-500/20'
                                         }`}>
                                         <Clock size={12} />
                                         {project.status}
@@ -216,3 +216,5 @@ export const ProjectHistory: React.FC = () => {
 };
 
 export default ProjectHistory;
+
+

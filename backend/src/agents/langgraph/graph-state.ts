@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LangGraph Website Generator - Graph State
  * Central state that flows through all nodes
  */
@@ -169,6 +169,65 @@ export const WebsiteStateAnnotation = Annotation.Root({
     workflowEdges: Annotation<any[]>({
         reducer: (_, newVal) => newVal,
         default: () => []
+    }),
+
+    // ═══════════════════════════════════════════════════════════════
+    // INTELLIGENT ROUTING & MODIFICATION STATE (NEW)
+    // ═══════════════════════════════════════════════════════════════
+
+    // Request intent: 'create' | 'modify' | 'question' | 'explain'
+    requestIntent: Annotation<'create' | 'modify' | 'question' | 'explain'>({
+        reducer: (_, newVal) => newVal,
+        default: () => 'create'
+    }),
+
+    // Is this a modification request (vs new creation)?
+    isModification: Annotation<boolean>({
+        reducer: (_, newVal) => newVal,
+        default: () => false
+    }),
+
+    // Files to modify (detected by analyzer)
+    filesToModify: Annotation<string[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
+    }),
+
+    // Files to create (detected by analyzer)
+    filesToCreate: Annotation<string[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
+    }),
+
+    // Modification plan from analyzer
+    modificationPlan: Annotation<{
+        summary: string;
+        changes: Array<{
+            file: string;
+            action: 'create' | 'modify' | 'delete';
+            description: string;
+        }>;
+    } | null>({
+        reducer: (_, newVal) => newVal,
+        default: () => null
+    }),
+
+    // Chat response (for question/explain intents)
+    chatResponse: Annotation<string>({
+        reducer: (_, newVal) => newVal,
+        default: () => ''
+    }),
+
+    // Full project context stored for intelligent responses
+    projectContext: Annotation<{
+        description: string;
+        pages: Array<{ name: string; route: string; purpose: string }>;
+        components: Array<{ name: string; location: string; purpose: string }>;
+        features: string[];
+        fileStructure: string[];
+    } | null>({
+        reducer: (_, newVal) => newVal,
+        default: () => null
     })
 });
 

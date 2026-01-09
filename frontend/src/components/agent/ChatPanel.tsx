@@ -13,6 +13,7 @@ interface ChatPanelProps {
     onSendMessage: (message: string) => void;
     onStop?: () => void;
     isProcessing: boolean;
+    isCreating?: boolean; // NEW: Only show phases during new project creation
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -22,7 +23,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     statusMessage,
     onSendMessage,
     onStop,
-    isProcessing
+    isProcessing,
+    isCreating = false // Default to false - don't show phases
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,17 +52,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             Describe the website you want to build, and I'll create it for you step by step.
                             I'll explain what I'm doing as I go.
                         </p>
-                        {/* <div className="mt-6 flex flex-wrap gap-2 justify-center">
-                            {['Portfolio website', 'E-commerce store', 'Restaurant landing page', 'Blog platform'].map((suggestion) => (
-                                <button
-                                    key={suggestion}
-                                    onClick={() => onSendMessage(suggestion)}
-                                    className="px-3 py-1.5 text-xs bg-[#1f1f1f] hover:bg-[#2a2a2a] text-gray-300 rounded-full border border-[#2e2e2e] transition-colors"
-                                >
-                                    {suggestion}
-                                </button>
-                            ))}
-                        </div> */}
                     </div>
                 ) : (
                     <div className="p-4 space-y-4">
@@ -68,8 +59,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             <AgentMessage key={message.id} message={message} />
                         ))}
 
-                        {/* Show processing steps when running */}
-                        {isProcessing && phases.length > 0 && (
+                        {/* Only show full processing steps during NEW PROJECT CREATION */}
+                        {isProcessing && isCreating && phases.length > 0 && (
                             <ProcessingStep phases={phases} />
                         )}
 

@@ -1186,6 +1186,169 @@ app.get('/api/projects/:projectId', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/projects/:projectId/chat
+ * Intelligent chat endpoint - handles questions, modifications, or explanations
+ * Detects intent and responds appropriately:
+ * - Questions: Answer without modifying files
+ * - Modifications: Analyze and apply changes
+ * - Explanations: Explain project structure
+ */
+app.post('/api/projects/:projectId/chat', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const { message } = req.body;
+
+    if (!message) {
+      res.status(400).json({ error: 'Missing message' });
+      return;
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    console.log(`\n🧠 INTELLIGENT CHAT REQUEST`);
+    console.log(`   Project: ${project.name}`);
+    console.log(`   Message: ${message.slice(0, 100)}...`);
+
+    // Step 1: Detect intent
+    const intentPrompt = `Analyze this user message and determine their intent.
+
+USER MESSAGE: "${message}"
+
+PROJECT CONTEXT:
+- Project name: ${project.name}
+- Files: ${project.files.length}
+- Prompt: ${project.prompt?.slice(0, 200) || 'N/A'}
+
+INTENTS:
+1. "question" - User asks WHERE something is, or HOW something works
+2. "explain" - User wants explanation of project/features
+3. "modify" - User wants to ADD, CHANGE, UPDATE, or REMOVE something
+
+IMPORTANT:
+- "Where is X?" → question
+- "Show me X" → question  
+- "Explain the X" → explain
+- "Add X" or "Create X" → modify
+- "Change X" or "Update X" → modify
+
+Respond with ONE WORD ONLY: question, explain, or modify`;
+
+    const intentResponse = await client.chat.completions.create({
+      model: "gemini-2.5-flash-lite-preview-09-2025",
+      messages: [
+        { role: "system", content: "You are an intent classifier. Respond with only one word." },
+        { role: "user", content: intentPrompt }
+      ],
+      temperature: 0.1
+    });
+
+    const intent = intentResponse.choices[0].message.content?.toLowerCase().trim() || 'modify';
+    console.log(`   🎯 Detected Intent: ${intent}`);
+
+    // Handle based on intent
+    if (intent === 'question' || intent === 'explain') {
+      // Build project context for answering
+      const fileList = project.files.map(f => `- ${f.path}`).join('\n');
+      const componentFiles = project.files.filter(f => f.path.includes('/components/')).map(f => f.path);
+      const pageFiles = project.files.filter(f => f.path.includes('/pages/')).map(f => f.path);
+
+      const answerPrompt = `You are a helpful AI assistant that knows everything about this project.
+
+USER QUESTION: "${message}"
+
+PROJECT: ${project.name}
+DESCRIPTION: ${project.prompt || 'Not specified'}
+
+FILES IN PROJECT:
+${fileList}
+
+PAGES: ${pageFiles.join(', ')}
+COMPONENTS: ${componentFiles.join(', ')}
+
+Answer the user's question specifically:
+- If they ask WHERE something is, tell them the exact file path
+- If they ask about a feature, explain where it's implemented
+- Be specific and helpful
+- If something doesn't exist, say so clearly`;
+
+      const answerResponse = await client.chat.completions.create({
+        model: "gemini-2.5-flash-lite-preview-09-2025",
+        messages: [
+          { role: "system", content: "You answer questions about web projects. Be specific about file locations." },
+          { role: "user", content: answerPrompt }
+        ],
+        temperature: 0.7
+      });
+
+      const answer = answerResponse.choices[0].message.content || "I couldn't find that information.";
+
+      res.json({
+        success: true,
+        intent,
+        response: answer,
+        modifiedFiles: [] // No files modified for questions
+      });
+      return;
+    }
+
+    // Intent is 'modify' - redirect to modification logic
+    console.log(`   → Routing to modification handler`);
+
+    // Analyze which files need modification
+    const plan = await analyzeModificationRequest(message, project.files);
+
+    if (plan.filesToModify.length === 0) {
+      res.json({
+        success: true,
+        intent: 'modify',
+        response: 'I analyzed your request but no file modifications are needed.',
+        modifiedFiles: [],
+        summary: 'No modifications needed'
+      });
+      return;
+    }
+
+    // Apply modifications
+    const modifiedFiles = await applyModifications(message, plan, project.files);
+
+    // Update project in database
+    for (const modified of modifiedFiles) {
+      const fileIndex = project.files.findIndex(f =>
+        f.path === modified.path || f.path.endsWith(modified.path.split('/').pop() || '')
+      );
+
+      if (fileIndex >= 0) {
+        project.files[fileIndex].content = modified.content;
+      } else if (modified.action === 'created') {
+        project.files.push({ path: modified.path, content: modified.content });
+      }
+    }
+
+    project.fileCount = project.files.length;
+    await project.save();
+
+    console.log(`   ✅ Applied ${modifiedFiles.length} modifications`);
+
+    res.json({
+      success: true,
+      intent: 'modify',
+      response: `I've made ${modifiedFiles.length} change(s): ${plan.summary}`,
+      modifiedFiles,
+      summary: plan.summary,
+      updatedFileCount: project.files.length,
+    });
+
+  } catch (error: any) {
+    console.error('❌ Chat failed:', error.message);
+    res.status(500).json({ error: 'Chat failed', details: error.message });
+  }
+});
+
+/**
  * POST /api/projects/:projectId/modify
  * Apply follow-up modifications to a project
  */

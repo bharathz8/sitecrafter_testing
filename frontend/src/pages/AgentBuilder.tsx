@@ -122,6 +122,7 @@ export const AgentBuilder: React.FC = () => {
     const [status, setStatus] = useState<AgentStatusType>('idle');
     const [statusMessage, setStatusMessage] = useState<string>();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isCreating, setIsCreating] = useState(false); // NEW: Track if we're creating a new project
 
     const [files, setFiles] = useState<{ path: string; content: string }[]>([]);
     const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -196,7 +197,7 @@ export const AgentBuilder: React.FC = () => {
 
                 // Add success message (inline since addMessage not defined yet)
                 setMessages(prev => [...prev, {
-                    id: Date.now().toString(),
+                    id: `msg-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                     type: 'success' as MessageType,
                     content: `📂 Loaded project: ${project.name} (${projectFiles.length} files)`,
                     timestamp: new Date(),
@@ -211,7 +212,7 @@ export const AgentBuilder: React.FC = () => {
         } catch (err: any) {
             console.error('Failed to load project:', err);
             setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: `msg-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 type: 'error' as MessageType,
                 content: `Failed to load project: ${err.message}`,
                 timestamp: new Date(),
@@ -235,10 +236,10 @@ export const AgentBuilder: React.FC = () => {
         }
     }, [files]);
 
-    // Helper to add a message
+    // Helper to add a message - uses crypto.randomUUID for unique keys
     const addMessage = useCallback((type: MessageType, content: string, phase?: string, filesArr?: string[]) => {
         const message: AgentMessageData = {
-            id: Date.now().toString(),
+            id: `msg-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             type,
             content,
             timestamp: new Date(),
@@ -655,43 +656,52 @@ export const AgentBuilder: React.FC = () => {
         // Add user message
         addMessage('user', userMessage);
 
-        // Check if this is a follow-up modification (project already exists)
+        // Check if this is a follow-up (project already exists)
         if (projectId && files.length > 0) {
             setIsProcessing(true);
-            setStatusMessage('Thinking...');
-            addMessage('thinking', 'Understanding your request...');
+            setStatusMessage('Understanding your request...');
+            addMessage('thinking', '🧠 Analyzing your message...');
 
             try {
-                const response = await axios.post(`${BACKEND_URL}/api/projects/${projectId}/modify`, {
-                    modificationRequest: userMessage,
+                // Use the new intelligent chat endpoint
+                const response = await axios.post(`${BACKEND_URL}/api/projects/${projectId}/chat`, {
+                    message: userMessage,
                 });
 
-                if (response.data.success && response.data.modifiedFiles?.length > 0) {
-                    const modifiedFiles = response.data.modifiedFiles;
+                const { intent, response: chatResponse, modifiedFiles } = response.data;
 
-                    // Update files in state
-                    for (const modified of modifiedFiles) {
-                        const path = modified.path.startsWith('/') ? modified.path : '/' + modified.path;
+                // Handle based on detected intent
+                if (intent === 'question' || intent === 'explain') {
+                    // Just show the answer - no file modifications
+                    addMessage('success', `💬 ${chatResponse}`);
+                } else if (intent === 'modify') {
+                    // Show modification results
+                    if (modifiedFiles && modifiedFiles.length > 0) {
+                        // Update files in state
+                        for (const modified of modifiedFiles) {
+                            const path = modified.path.startsWith('/') ? modified.path : '/' + modified.path;
 
-                        setFiles(prev => {
-                            const existing = prev.find(f => f.path === path);
-                            if (existing) {
-                                return prev.map(f => f.path === path ? { ...f, content: modified.content } : f);
-                            } else {
-                                return [...prev, { path, content: modified.content }];
-                            }
-                        });
+                            setFiles(prev => {
+                                const existing = prev.find(f => f.path === path);
+                                if (existing) {
+                                    return prev.map(f => f.path === path ? { ...f, content: modified.content } : f);
+                                } else {
+                                    return [...prev, { path, content: modified.content }];
+                                }
+                            });
 
-                        // Update in WebContainer
-                        await updateFile(modified.path.replace(/^\//, ''), modified.content);
+                            // Update in WebContainer
+                            await updateFile(modified.path.replace(/^\//, ''), modified.content);
+                        }
+
+                        addMessage('success', `✅ ${chatResponse}`);
+                    } else {
+                        addMessage('progress', chatResponse || 'No modifications were needed.');
                     }
-
-                    addMessage('success', `✅ Modified ${modifiedFiles.length} file(s): ${response.data.summary}`);
-                } else {
-                    addMessage('progress', 'No modifications were needed.');
                 }
+
             } catch (err: any) {
-                addMessage('error', `Modification failed: ${err.message}`);
+                addMessage('error', `Request failed: ${err.message}`);
             } finally {
                 setIsProcessing(false);
                 setStatusMessage(undefined);
@@ -709,8 +719,9 @@ export const AgentBuilder: React.FC = () => {
         fixedFilesRef.current.clear();
         setProjectId(null);
 
-        // Set processing state
+        // Set processing state - this is NEW PROJECT CREATION
         setIsProcessing(true);
+        setIsCreating(true); // NEW: Mark as creating to show phases UI
         setStatus('running');
         setStatusMessage('Generating architecture plan...');
 
@@ -822,6 +833,7 @@ export const AgentBuilder: React.FC = () => {
             setStatus('error');
         } finally {
             setIsProcessing(false);
+            setIsCreating(false); // Reset creation mode when done
         }
     }, [blueprint, pendingPrompt, addMessage, updatePhase, mountFiles, startDevServer, saveProject]);
 
@@ -937,6 +949,7 @@ export const AgentBuilder: React.FC = () => {
                         onSendMessage={handleSendMessage}
                         onStop={handleStop}
                         isProcessing={isProcessing}
+                        isCreating={isCreating}
                     />
                 </div>
 

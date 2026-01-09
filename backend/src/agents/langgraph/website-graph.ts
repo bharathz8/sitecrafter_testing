@@ -1,6 +1,11 @@
 /**
  * Website Generator Graph - Main LangGraph orchestration
  * Connects all nodes with conditional edges for repair loop
+ * 
+ * NEW: Intelligent routing based on user intent
+ * - Questions → chatResponseNode
+ * - Modifications → modificationAnalyzerNode → modificationNode
+ * - Creation → Full blueprint pipeline
  */
 
 import { StateGraph, END } from '@langchain/langgraph';
@@ -12,6 +17,9 @@ import { componentNode } from './nodes/component-node';
 import { pageNode } from './nodes/page-node';
 import { validationNode } from './nodes/validation-node';
 import { repairNode } from './nodes/repair-node';
+import { intentRouterNode } from './nodes/intent-router-node';
+import { chatResponseNode } from './nodes/chat-response-node';
+import { modificationAnalyzerNode } from './nodes/modification-analyzer-node';
 
 // Global callback registry for streaming
 let globalFileCallback: ((file: GeneratedFile) => void) | null = null;
@@ -39,10 +47,27 @@ export function notifyPhaseChange(phase: string) {
     }
 }
 
-// Build the graph
+// Build the graph with intelligent routing
 function buildGraph() {
     const workflow = new StateGraph(WebsiteStateAnnotation)
-        // Add all nodes - use _step suffix to avoid collision with state attributes
+        // ═══════════════════════════════════════════════════════════════
+        // PHASE 1: Intent Detection (NEW)
+        // ═══════════════════════════════════════════════════════════════
+        .addNode('intent_router', intentRouterNode)
+
+        // ═══════════════════════════════════════════════════════════════
+        // PHASE 2A: Chat Response (for questions/explanations)
+        // ═══════════════════════════════════════════════════════════════
+        .addNode('chat_response', chatResponseNode)
+
+        // ═══════════════════════════════════════════════════════════════
+        // PHASE 2B: Modification Analysis (for modifications)
+        // ═══════════════════════════════════════════════════════════════
+        .addNode('modification_analyzer', modificationAnalyzerNode)
+
+        // ═══════════════════════════════════════════════════════════════
+        // PHASE 3: Standard Creation Pipeline
+        // ═══════════════════════════════════════════════════════════════
         .addNode('blueprint_step', blueprintNode)
         .addNode('structure_step', structureNode)
         .addNode('core_step', coreNode)
@@ -51,8 +76,45 @@ function buildGraph() {
         .addNode('validation_step', validationNode)
         .addNode('repair_step', repairNode)
 
-        // Define edges - linear flow
-        .addEdge('__start__', 'blueprint_step')
+        // ═══════════════════════════════════════════════════════════════
+        // EDGES: Entry Point
+        // ═══════════════════════════════════════════════════════════════
+        .addEdge('__start__', 'intent_router')
+
+        // ═══════════════════════════════════════════════════════════════
+        // CONDITIONAL EDGES: Route based on intent
+        // ═══════════════════════════════════════════════════════════════
+        .addConditionalEdges('intent_router', (state: WebsiteState) => {
+            console.log(`\n🔀 Routing based on intent: ${state.requestIntent}`);
+
+            switch (state.requestIntent) {
+                case 'question':
+                case 'explain':
+                    console.log('   → Routing to chat_response');
+                    return 'chat_response';
+
+                case 'modify':
+                    console.log('   → Routing to modification_analyzer');
+                    return 'modification_analyzer';
+
+                case 'create':
+                default:
+                    console.log('   → Routing to blueprint_step (full creation)');
+                    return 'blueprint_step';
+            }
+        }, {
+            'chat_response': 'chat_response',
+            'modification_analyzer': 'modification_analyzer',
+            'blueprint_step': 'blueprint_step'
+        })
+
+        // Chat response goes straight to end
+        .addEdge('chat_response', END)
+
+        // Modification analyzer goes to repair for file modifications
+        .addEdge('modification_analyzer', 'repair_step')
+
+        // Standard creation pipeline edges
         .addEdge('blueprint_step', 'structure_step')
         .addEdge('structure_step', 'core_step')
         .addEdge('core_step', 'components_step')
