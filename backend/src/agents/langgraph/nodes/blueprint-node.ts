@@ -7,6 +7,7 @@ import { WebsiteState, ProjectBlueprint } from '../graph-state';
 import { storeBlueprintMemory, clearProjectMemory, generateProjectId } from '../memory-utils';
 import { fetchProjectImages, storeImagesInMemory, UnsplashImage } from '../services/image.service';
 import { PlanningService } from '../../../services/planning-fixed.service';
+import { generateDynamicTheme } from '../../../services/dynamic-trends.service';
 
 // Complete list of dependencies
 const STANDARD_DEPENDENCIES: Record<string, string> = {
@@ -126,16 +127,31 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
             console.error(` Image fetching failed: ${imgError.message} - will use gradients`);
         }
 
+        // Generate unique dynamic theme for this project
+        const dynamicTheme = generateDynamicTheme(state.userPrompt);
+        console.log(`\n Dynamic Theme Generated: ${dynamicTheme.palette.name}`);
+        console.log(`    Layout: ${dynamicTheme.layout.name}`);
+        console.log(`    Animation: ${dynamicTheme.animation.name}`);
+        console.log(`    Extended Packages: ${Object.keys(dynamicTheme.extendedPackages).join(', ')}`);
+
+        // Merge extended packages into blueprint dependencies
+        blueprint.dependencies = {
+            ...blueprint.dependencies,
+            ...dynamicTheme.extendedPackages
+        };
+
         return {
             blueprint,
             projectId,
             availableImages,
+            dynamicTheme,  // Pass theme to other nodes
             detailedContext: planBlueprint.detailedContext || '',
             workflowNodes: planBlueprint.workflow?.nodes || [],
             workflowEdges: planBlueprint.workflow?.edges || [],
             currentPhase: 'blueprint',
             messages: [
                 ` Autonomous Planning Complete: ${blueprint.projectName}`,
+                ` Theme: ${dynamicTheme.palette.name} + ${dynamicTheme.layout.name}`,
                 ` ${blueprint.pages.length} pages dynamically determined`,
                 ` ${blueprint.features.length} features identified`,
                 ` ${availableImages.length} images ready`
