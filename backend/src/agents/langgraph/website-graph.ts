@@ -85,7 +85,7 @@ function buildGraph() {
         // CONDITIONAL EDGES: Route based on intent
         // ═══════════════════════════════════════════════════════════════
         .addConditionalEdges('intent_router', (state: WebsiteState) => {
-            console.log(`\n🔀 Routing based on intent: ${state.requestIntent}`);
+            console.log(`\n Routing based on intent: ${state.requestIntent}`);
 
             switch (state.requestIntent) {
                 case 'question':
@@ -125,18 +125,18 @@ function buildGraph() {
         .addConditionalEdges('validation_step', (state: WebsiteState) => {
             // If no errors, we're done
             if (state.errors.length === 0) {
-                console.log('\n✅ Validation passed! No errors.');
+                console.log('\n Validation passed! No errors.');
                 return 'end';
             }
 
             // If max iterations reached, stop
             if (state.iterationCount >= 3) {
-                console.log('\n⚠️ Max iterations reached, stopping.');
+                console.log('\n Max iterations reached, stopping.');
                 return 'end';
             }
 
             // Otherwise, go to repair
-            console.log(`\n🔄 ${state.errors.length} errors found, going to repair...`);
+            console.log(`\n ${state.errors.length} errors found, going to repair...`);
             return 'repair_step';
         }, {
             'repair_step': 'repair_step',
@@ -159,9 +159,9 @@ export async function generateWebsite(
     onFileGenerated?: (file: GeneratedFile) => void,
     onPhaseChange?: (phase: string) => void
 ): Promise<{ files: Map<string, GeneratedFile>; errors: any[]; messages: string[] }> {
-    console.log('\n🚀 ═══════════════════════════════════════════════════');
-    console.log('🚀 STARTING LANGGRAPH WEBSITE GENERATOR');
-    console.log('🚀 ═══════════════════════════════════════════════════\n');
+    console.log('\n ═══════════════════════════════════════════════════');
+    console.log(' STARTING LANGGRAPH WEBSITE GENERATOR');
+    console.log(' ═══════════════════════════════════════════════════\n');
 
     const startTime = Date.now();
 
@@ -190,7 +190,7 @@ export async function generateWebsite(
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
         console.log('\n═══════════════════════════════════════════════════');
-        console.log('📊 GENERATION COMPLETE');
+        console.log(' GENERATION COMPLETE');
         console.log('═══════════════════════════════════════════════════');
         console.log(`   Duration: ${duration}s`);
         console.log(`   Files: ${result.files.size}`);
@@ -204,7 +204,7 @@ export async function generateWebsite(
         };
 
     } catch (error: any) {
-        console.error('\n❌ Generation failed:', error.message);
+        console.error('\n Generation failed:', error.message);
         throw error;
     } finally {
         // Clean up callbacks

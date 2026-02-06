@@ -11,9 +11,9 @@ import { notifyFileCreated, notifyPhaseChange } from '../website-graph';
 import { formatImagesForPrompt } from '../services/image.service';
 
 export async function pageNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-  console.log('\n📄 ═══════════════════════════════════════════');
-  console.log('📄 NODE: PAGES');
-  console.log('📄 ═══════════════════════════════════════════\n');
+  console.log('\n ═══════════════════════════════════════════');
+  console.log(' NODE: PAGES');
+  console.log(' ═══════════════════════════════════════════\n');
 
   // Notify phase change for streaming
   notifyPhaseChange('pages');
@@ -30,27 +30,27 @@ export async function pageNode(state: WebsiteState): Promise<Partial<WebsiteStat
   const existingContext = generateFileContext(registry);
   const memoryContext = await getAllFileMemories(state.projectId);
 
-  console.log(`   🧠 Memory context loaded: ${memoryContext.length} chars`);
+  console.log(`    Memory context loaded: ${memoryContext.length} chars`);
 
   const systemPrompt = `You are a SENIOR FRONTEND ARCHITECT generating PRODUCTION-READY, ZERO-ERROR page components.
 
 ═══════════════════════════════════════════════════════════════════════════════
-🛡️ ZERO ERROR TOLERANCE - MANDATORY DEFENSIVE CODING
+ ZERO ERROR TOLERANCE - MANDATORY DEFENSIVE CODING
 ═══════════════════════════════════════════════════════════════════════════════
 
 EVERY page MUST follow these CRITICAL rules to prevent runtime errors:
 
 **1. NEVER call .map() directly without null check:**
-   ❌ BAD: {products.map(p => ...)}
-   ✅ GOOD: {(products ?? []).map(p => ...)}
+    BAD: {products.map(p => ...)}
+    GOOD: {(products ?? []).map(p => ...)}
 
 **2. ALWAYS use optional chaining:**
-   ❌ BAD: {item.details.price}
-   ✅ GOOD: {item?.details?.price ?? 'N/A'}
+    BAD: {item.details.price}
+    GOOD: {item?.details?.price ?? 'N/A'}
 
 **3. ALWAYS provide defaults for props:**
-   ❌ BAD: const HomePage = ({ items }) => ...
-   ✅ GOOD: const HomePage = ({ items = [] }) => ...
+    BAD: const HomePage = ({ items }) => ...
+    GOOD: const HomePage = ({ items = [] }) => ...
 
 **4. DEFINE cn() utility inline in EVERY file that uses conditional classes:**
    const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -59,7 +59,7 @@ EVERY page MUST follow these CRITICAL rules to prevent runtime errors:
    import React, { useState } from 'react';
 
 ═══════════════════════════════════════════════════════════════════════════════
-🖼️ IMAGES - USE GRADIENT PLACEHOLDERS (NO EXTERNAL URLS!)
+ IMAGES - USE GRADIENT PLACEHOLDERS (NO EXTERNAL URLS!)
 ═══════════════════════════════════════════════════════════════════════════════
 
 **NEVER use external image URLs** - they cause CORS errors!
@@ -84,7 +84,7 @@ const gradients = [
 </div>
 
 ═══════════════════════════════════════════════════════════════════════════════
-🎨 VISUAL DESIGN RULES
+ VISUAL DESIGN RULES
 ═══════════════════════════════════════════════════════════════════════════════
 
 **COLOR CONTRAST:**
@@ -122,7 +122,7 @@ const gradients = [
 </div>
 
 ═══════════════════════════════════════════════════════════════════════════════
-📦 REQUIRED IMPORTS FOR EVERY PAGE
+ REQUIRED IMPORTS FOR EVERY PAGE
 ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect } from 'react';
@@ -136,7 +136,7 @@ import { ArrowRight, Check, Star } from 'lucide-react';
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
 ═══════════════════════════════════════════════════════════════════════════════
-✅ PAGE CHECKLIST (Verify EVERY page has these)
+ PAGE CHECKLIST (Verify EVERY page has these)
 ═══════════════════════════════════════════════════════════════════════════════
 
 [ ] React and useState imported
@@ -152,7 +152,7 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 [ ] default export for the page
 
 ═══════════════════════════════════════════════════════════════════════════════
-📝 SAMPLE PAGE PATTERN
+ SAMPLE PAGE PATTERN
 ═══════════════════════════════════════════════════════════════════════════════
 
 CRITICAL OUTPUT FORMAT - Each file MUST use <chirAction> tags:
@@ -247,12 +247,12 @@ NEVER use markdown. ALWAYS use <chirAction> tags.`;
 ${imagesContext}
 
 ═══════════════════════════════════════════════════════════════════════════════
-🧠 MEMORY CONTEXT (Previously Generated Components)
+ MEMORY CONTEXT (Previously Generated Components)
 ═══════════════════════════════════════════════════════════════════════════════
 ${memoryContext}
 
 ═══════════════════════════════════════════════════════════════════════════════
-📦 AVAILABLE COMPONENTS (IMPORT AND USE THESE)
+ AVAILABLE COMPONENTS (IMPORT AND USE THESE)
 ═══════════════════════════════════════════════════════════════════════════════
 ${existingContext}
 
@@ -265,7 +265,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Check, Star } from 'lucide-react';
 
 ═══════════════════════════════════════════════════════════════════════════════
-🎨 DESIGN SYSTEM
+ DESIGN SYSTEM
 ═══════════════════════════════════════════════════════════════════════════════
 - Primary: ${blueprint.designSystem.primaryColor}
 - Secondary: ${blueprint.designSystem.secondaryColor}
@@ -279,14 +279,14 @@ MANDATORY COLOR USAGE:
 - Cards: bg-white shadow-lg rounded-xl with text-slate-900
 
 ═══════════════════════════════════════════════════════════════════════════════
-📋 BLUEPRINT FEATURES TO IMPLEMENT
+ BLUEPRINT FEATURES TO IMPLEMENT
 ═══════════════════════════════════════════════════════════════════════════════
 ${blueprint.features.map(f => `✅ ${f.name}: ${f.description} [Priority: ${f.priority}]`).join('\n')}
 
 ALL of these features MUST be visible and implemented in the pages!
 
 ═══════════════════════════════════════════════════════════════════════════════
-📄 PAGES TO GENERATE
+ PAGES TO GENERATE
 ═══════════════════════════════════════════════════════════════════════════════
 ${blueprint.pages.map(page => `
 ═══ ${page.name} (src/pages/${page.name.replace(/\s+/g, '')}.tsx) ═══
@@ -307,7 +307,7 @@ MUST INCLUDE:
 `).join('\n')}
 
 ═══════════════════════════════════════════════════════════════════════════════
-⚠️ CRITICAL REQUIREMENTS (ZERO TOLERANCE)
+ CRITICAL REQUIREMENTS (ZERO TOLERANCE)
 ═══════════════════════════════════════════════════════════════════════════════
 1. VISIBLE TEXT: All text must be readable. Dark bg = light text, Light bg = dark text
 2. RESPONSIVE: Every element must work from 320px to 4K screens
@@ -319,7 +319,7 @@ MUST INCLUDE:
 8. NO APPLAYOUT WRAPPER: Pages render inside AppLayout via Outlet
 
 ═══════════════════════════════════════════════════════════════════════════════
-📱 MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
+MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
 ═══════════════════════════════════════════════════════════════════════════════
 All pages MUST be mobile-first using these Tailwind breakpoints:
 - BASE (320px+): Mobile - single column, stacked layouts
@@ -337,7 +337,7 @@ Example patterns to use:
 
 ${state.detailedContext ? `
 ═══════════════════════════════════════════════════════════════════════════════
-📋 DETAILED SPECIFICATIONS FROM PLANNING
+ DETAILED SPECIFICATIONS FROM PLANNING
 ═══════════════════════════════════════════════════════════════════════════════
 ${state.detailedContext.slice(0, 3000)}...
 ` : ''}`;
@@ -350,8 +350,8 @@ ${state.detailedContext.slice(0, 3000)}...
       await addFileWithMemory(files, registry, path, content, 'page', state.projectId);
     }
 
-    console.log(`\n✅ Page files generated: ${files.size}`);
-    files.forEach((_, path) => console.log(`   📄 ${path}`));
+    console.log(`\n Page files generated: ${files.size}`);
+    files.forEach((_, path) => console.log(`    ${path}`));
 
     return {
       files,
@@ -361,7 +361,7 @@ ${state.detailedContext.slice(0, 3000)}...
     };
 
   } catch (error: any) {
-    console.error('❌ Page generation failed:', error.message);
+    console.error(' Page generation failed:', error.message);
     throw error;
   }
 }

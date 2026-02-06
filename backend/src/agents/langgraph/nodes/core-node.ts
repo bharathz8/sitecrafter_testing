@@ -9,9 +9,9 @@ import { storeFileMemory, FileMemory } from '../memory-utils';
 import { notifyFileCreated, notifyPhaseChange } from '../website-graph';
 
 export async function coreNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-  console.log('\n🏗️ ═══════════════════════════════════════════');
-  console.log('🏗️ NODE: CORE');
-  console.log('🏗️ ═══════════════════════════════════════════\n');
+  console.log('\n ═══════════════════════════════════════════');
+  console.log(' NODE: CORE');
+  console.log(' ═══════════════════════════════════════════\n');
 
   // Notify phase change for streaming
   notifyPhaseChange('core');
@@ -53,7 +53,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 );`;
   addFile(files, registry, 'src/main.tsx', mainTsx, 'core');
-  console.log('   ✅ main.tsx created (BrowserRouter HERE)');
+  console.log('    main.tsx created (BrowserRouter HERE)');
 
   // 2. Generate page routes for App.tsx
   const routes = blueprint.pages.map(page => {
@@ -83,7 +83,7 @@ ${routes}
 
 export default App;`;
   addFile(files, registry, 'src/App.tsx', appTsx, 'core');
-  console.log('   ✅ App.tsx created (NO BrowserRouter - Routes only)');
+  console.log('    App.tsx created (NO BrowserRouter - Routes only)');
 
   // 4. Generate lib/utils.ts - with standalone cn that works without dependencies
   const utilsTsx = `// Utility functions for className merging
@@ -235,8 +235,8 @@ CRITICAL: Do NOT import BrowserRouter anywhere. Use Link and Outlet only.`;
       await addFileWithMemory(files, registry, path, content, 'core', state.projectId);
     }
 
-    console.log(`\n✅ Core files generated: ${files.size}`);
-    files.forEach((_, path) => console.log(`   📄 ${path}`));
+    console.log(`\n Core files generated: ${files.size}`);
+    files.forEach((_, path) => console.log(`    ${path}`));
 
     return {
       files,
@@ -246,7 +246,7 @@ CRITICAL: Do NOT import BrowserRouter anywhere. Use Link and Outlet only.`;
     };
 
   } catch (error: any) {
-    console.error('❌ Core generation failed:', error.message);
+    console.error(' Core generation failed:', error.message);
     throw error;
   }
 }

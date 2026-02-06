@@ -11,9 +11,9 @@ import { notifyFileCreated, notifyPhaseChange } from '../website-graph';
 import { formatImagesForPrompt } from '../services/image.service';
 
 export async function componentNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-  console.log('\n🧩 ═══════════════════════════════════════════');
-  console.log('🧩 NODE: COMPONENTS');
-  console.log('🧩 ═══════════════════════════════════════════\n');
+  console.log('\n ═══════════════════════════════════════════');
+  console.log(' NODE: COMPONENTS');
+  console.log(' ═══════════════════════════════════════════\n');
 
   // Notify phase change for streaming
   notifyPhaseChange('components');
@@ -33,23 +33,23 @@ export async function componentNode(state: WebsiteState): Promise<Partial<Websit
   const systemPrompt = `You are a SENIOR React developer generating PRODUCTION-READY, ZERO-ERROR components.
 
 ═══════════════════════════════════════════════════════════════════════════════
-🛡️ ZERO ERROR TOLERANCE - MANDATORY DEFENSIVE CODING
+ZERO ERROR TOLERANCE - MANDATORY DEFENSIVE CODING
 ═══════════════════════════════════════════════════════════════════════════════
 
 EVERY component MUST follow these CRITICAL rules to prevent runtime errors:
 
 **1. NEVER call .map() directly on a prop/state without null check:**
-   ❌ BAD: {items.map(item => ...)}
-   ✅ GOOD: {(items ?? []).map(item => ...)}
-   ✅ GOOD: {Array.isArray(items) && items.map(item => ...)}
+   BAD: {items.map(item => ...)}
+   GOOD: {(items ?? []).map(item => ...)}
+   GOOD: {Array.isArray(items) && items.map(item => ...)}
 
 **2. ALWAYS use optional chaining for nested property access:**
-   ❌ BAD: {product.details.price}
-   ✅ GOOD: {product?.details?.price ?? 'N/A'}
+   BAD: {product.details.price}
+   GOOD: {product?.details?.price ?? 'N/A'}
 
 **3. ALWAYS provide defaults for destructuring:**
-   ❌ BAD: const { items } = data;
-   ✅ GOOD: const { items = [] } = data ?? {};
+   BAD: const { items } = data;
+   GOOD: const { items = [] } = data ?? {};
 
 **4. ALWAYS define cn() utility inline at the TOP of EVERY component file:**
    // cn utility - ALWAYS define inline, never rely on import
@@ -59,7 +59,7 @@ EVERY component MUST follow these CRITICAL rules to prevent runtime errors:
    import React, { useState } from 'react';
 
 ═══════════════════════════════════════════════════════════════════════════════
-🖼️ IMAGES - GRADIENT PLACEHOLDERS (NO EXTERNAL URLS)
+IMAGES - GRADIENT PLACEHOLDERS (NO EXTERNAL URLS)
 ═══════════════════════════════════════════════════════════════════════════════
 
 **NEVER use external image URLs** - they cause CORS errors in many environments!
@@ -89,7 +89,7 @@ const gradients = [
 <div className={\`w-full h-64 bg-gradient-to-br \${gradients[index % gradients.length]}\`} />
 
 ═══════════════════════════════════════════════════════════════════════════════
-🎨 VISUAL DESIGN RULES
+ VISUAL DESIGN RULES
 ═══════════════════════════════════════════════════════════════════════════════
 
 **COLOR CONTRAST (MANDATORY - 4.5:1 ratio minimum):**
@@ -109,7 +109,7 @@ const gradients = [
 - Desktop (lg:1024px): lg:grid-cols-3, lg:text-xl
 
 ═══════════════════════════════════════════════════════════════════════════════
-📦 REQUIRED IMPORTS (ALWAYS include these)
+ REQUIRED IMPORTS (ALWAYS include these)
 ═══════════════════════════════════════════════════════════════════════════════
 
 // EVERY component file must start with:
@@ -121,7 +121,7 @@ import { LucideIcon } from 'lucide-react'; // Import specific icons as needed
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
 ═══════════════════════════════════════════════════════════════════════════════
-📐 CARD & LAYOUT PATTERNS
+ CARD & LAYOUT PATTERNS
 ═══════════════════════════════════════════════════════════════════════════════
 
 **STANDARD CARD WITH GRADIENT IMAGE:**
@@ -159,7 +159,7 @@ export const ProductCard: React.FC<CardProps> = ({ title = 'Product', descriptio
 - Card grids: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6
 
 ═══════════════════════════════════════════════════════════════════════════════
-✅ COMPONENT CHECKLIST (Verify EVERY component has these)
+ COMPONENT CHECKLIST (Verify EVERY component has these)
 ═══════════════════════════════════════════════════════════════════════════════
 
 [ ] React and useState imported
@@ -230,7 +230,7 @@ EXISTING FILES (IMPORT FROM THESE):
 ${existingContext}
 
 ═══════════════════════════════════════════════════════════════════════════════
-🎨 DESIGN SYSTEM FOR THIS PROJECT
+ DESIGN SYSTEM FOR THIS PROJECT
 ═══════════════════════════════════════════════════════════════════════════════
 - Primary Color: ${blueprint.designSystem.primaryColor} (use for CTAs, links, highlights)
 - Secondary Color: ${blueprint.designSystem.secondaryColor} (use for secondary actions)
@@ -244,7 +244,7 @@ COLOR CONTRAST RULES:
 - Muted text: text-slate-400 on dark, text-slate-600 on light
 
 ═══════════════════════════════════════════════════════════════════════════════
-📦 REQUIRED UI COMPONENTS (src/components/ui/)
+ REQUIRED UI COMPONENTS (src/components/ui/)
 ═══════════════════════════════════════════════════════════════════════════════
 ${['Button', 'Card', 'Input', 'Modal', 'Badge', 'Avatar', 'Skeleton', 'Dropdown', 'Tabs', 'Container', 'Section'].map(c => `- ${c}.tsx`).join('\n')}
 ${uiComponents.map(c => `- ${c.name}.tsx: ${c.props?.join(', ') || 'standard props'}`).join('\n')}
@@ -257,7 +257,7 @@ Each Card MUST have:
 - Responsive width
 
 ═══════════════════════════════════════════════════════════════════════════════
-🚀 FEATURE COMPONENTS (src/components/features/)
+ FEATURE COMPONENTS (src/components/features/)
 ═══════════════════════════════════════════════════════════════════════════════
 ${featureComponents.map(c => `- ${c.name}.tsx: ${c.description || c.props?.join(', ')}`).join('\n')}
 
@@ -269,7 +269,7 @@ Each feature component MUST:
 - Work with provided design system colors
 
 ═══════════════════════════════════════════════════════════════════════════════
-📱 MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
+ MOBILE-FIRST RESPONSIVE DESIGN (MANDATORY)
 ═══════════════════════════════════════════════════════════════════════════════
 All components MUST be responsive using these breakpoints:
 - BASE (320px+): Mobile - single column, larger touch targets
@@ -287,13 +287,13 @@ Example responsive patterns:
 
 ${state.detailedContext ? `
 ═══════════════════════════════════════════════════════════════════════════════
-📋 DETAILED SPECIFICATIONS FROM PLANNING
+ DETAILED SPECIFICATIONS FROM PLANNING
 ═══════════════════════════════════════════════════════════════════════════════
 ${state.detailedContext.slice(0, 2000)}...
 ` : ''}
 
 ═══════════════════════════════════════════════════════════════════════════════
-⚠️ ZERO TOLERANCE REQUIREMENTS
+ ZERO TOLERANCE REQUIREMENTS
 ═══════════════════════════════════════════════════════════════════════════════
 1. NO invisible text (verify contrast!)
 2. NO placeholder content ("Lorem ipsum", "Sample text")

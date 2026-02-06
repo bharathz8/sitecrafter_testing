@@ -84,7 +84,7 @@ Make this TypeScript-based Node.js/Express backend. Be extremely detailed with 8
 
 USER'S SINGLE REQUEST: "${requirements}"
 
-🎯 YOUR AUTONOMOUS MISSION:
+ YOUR AUTONOMOUS MISSION:
 From this ONE request, you will independently design and specify a complete, production-level application with 8-12 impressive features.
 
 ════════════════════════════════════════════════════════════════════════════
@@ -94,37 +94,37 @@ PHASE 1: AUTONOMOUS FEATURE IDEATION (Think Like a Product Manager)
 Analyze the user's request and brainstorm 8-12 features that would make this application IMPRESSIVE and COMPLETE.
 
 Categories to consider:
-📌 CORE FEATURES (Must-have, 3-4 features):
+ CORE FEATURES (Must-have, 3-4 features):
    - What are the essential functionalities?
    - What makes this application useful?
 
-🎨 ENHANCEMENT FEATURES (Nice-to-have, 2-3 features):
+ ENHANCEMENT FEATURES (Nice-to-have, 2-3 features):
    - What would improve user experience?
    - What additional value can we provide?
 
-✨ WOW FACTORS (Impressive, 2-3 features):
+ WOW FACTORS (Impressive, 2-3 features):
    - What cutting-edge features follow 2024-2025 web trends?
    - What would make users say "Wow, this is professional!"?
    - Examples: AI chatbot, real-time updates, AR preview, advanced animations, personalization
 
-🔧 TECHNICAL FEATURES (Behind-the-scenes, 1-2 features):
+ TECHNICAL FEATURES (Behind-the-scenes, 1-2 features):
    - Authentication/Authorization
    - Analytics/Monitoring
    - Performance optimization
    - SEO optimization
 
 EXAMPLE FOR "create a bakery website":
-✅ CORE: Product catalog with categories, Shopping cart, Order placement, Store locator
-✅ ENHANCEMENT: Customer reviews, Recipe blog, Newsletter signup
-✅ WOW: 3D cake customizer with AR preview, Real-time baking status tracker, AI-powered cake recommendation
-✅ TECHNICAL: User authentication for order tracking, SEO optimization
+ CORE: Product catalog with categories, Shopping cart, Order placement, Store locator
+ ENHANCEMENT: Customer reviews, Recipe blog, Newsletter signup
+ WOW: 3D cake customizer with AR preview, Real-time baking status tracker, AI-powered cake recommendation
+ TECHNICAL: User authentication for order tracking, SEO optimization
 
 ════════════════════════════════════════════════════════════════════════════
 
 PHASE 2: MODERN DESIGN TRENDS (2024-2025)
 
 Apply current web design trends:
-🎨 VISUAL TRENDS:
+ VISUAL TRENDS:
 - Glassmorphism and blur effects
 - Gradient mesh backgrounds
 - 3D elements and depth
@@ -132,7 +132,7 @@ Apply current web design trends:
 - Dark mode with vibrant accent colors
 - Neumorphism for buttons and cards
 
-🎭 UI/UX PATTERNS:
+ UI/UX PATTERNS:
 - Hero sections with animated text/gradients
 - Sticky/floating navigation with backdrop blur
 - Card-based layouts with hover effects  
@@ -140,7 +140,7 @@ Apply current web design trends:
 - Skeleton loaders for async content
 - Toast notifications for user feedback
 
-🚀 MODERN TECH:
+ MODERN TECH:
 - Framer Motion for animations
 - React Query for data fetching
 - Zustand for state management
@@ -357,14 +357,14 @@ List EVERY package you'll use with exact Nov 2025 versions:
 
 CRITICAL REQUIREMENTS - ZERO TOLERANCE:
 
-❌ ABSOLUTELY FORBIDDEN:
+ ABSOLUTELY FORBIDDEN:
 - NO "TODO" or "will implement later"
 - NO "placeholder" or "sample text goes here"
 - NO "Lorem ipsum" or generic content
 - NO partial implementations
 - NO missing features from your ideation
 
-✅ ABSOLUTELY REQUIRED:
+ ABSOLUTELY REQUIRED:
 - REAL sample data (minimum 12 items for any catalog/list)
 - COMPLETE form validation with Zod schemas
 - WORKING state management setup
@@ -753,20 +753,20 @@ Include these in EVERY project:
 REMEMBER: Think like a senior architect building for a real client with a real budget. Make it production-ready, feature-rich, accessible, beautiful, and ready to deploy. The user should feel they received more value than they expected.
 
 
-=== 🚨 CRITICAL: detailedContext STRING FORMATTING 🚨 ===
+===  CRITICAL: detailedContext STRING FORMATTING  ===
 
 The "detailedContext" field MUST be a SINGLE, CONTINUOUS STRING on ONE LINE.
 
-✅ CORRECT FORMAT:
+ CORRECT FORMAT:
 "detailedContext": "Section 1: File Structure. Create these files: src/App.tsx for main app, src/components/Header.tsx for header component. Section 2: Components. The Header component takes props: title (string), onMenuClick (function). It should render a nav element with Tailwind classes. Section 3: (continue for 3000+ words)..."
 
-❌ WRONG - DO NOT DO THIS:
+ WRONG - DO NOT DO THIS:
 "detailedContext": "Section 1: File Structure
 Create these files:
 - src/App.tsx
 - src/components/Header.tsx"
 
-⚠️ CRITICAL RULES FOR detailedContext:
+CRITICAL RULES FOR detailedContext:
 1. Write the ENTIRE 3000+ word guide as ONE continuous string
 2. NO actual line breaks - write it all in one line
 3. Use periods and commas to separate sections, NOT newlines
@@ -775,7 +775,7 @@ Create these files:
 6. Use only: letters, numbers, spaces, periods, commas, hyphens, parentheses
 7. Think of it like writing a very long paragraph
 
-⚠️ GENERAL JSON RULES:
+ GENERAL JSON RULES:
 - NO trailing commas before } or ]
 - Use double quotes for all strings
 - Ensure all brackets/braces are properly paired
@@ -857,7 +857,7 @@ CRITICAL RULES:
 
 REMEMBER: The detailedContext is passed to code generation AI. It must be SO comprehensive that the AI can generate PERFECT, PRODUCTION-READY, ERROR-FREE code with rich features, professional design, and complete functionality. Think enterprise-grade SaaS application quality.
 
-🚨 FINAL CHECK BEFORE RETURNING:
+ FINAL CHECK BEFORE RETURNING:
 1. Is detailedContext ONE continuous line with NO line breaks?
 2. Have you included all 13 sections in detailedContext?
 3. Is it at least 3000 words?
@@ -885,7 +885,7 @@ REMEMBER: The detailedContext is passed to code generation AI. It must be SO com
         const analysis = this.analyzeProject(requirements);
         nodeCount = analysis.nodeCount;
         complexity = analysis.complexity;
-        console.log(`\n🔍 PROJECT ANALYSIS (FROM FRONTEND):`);
+        console.log(`\n PROJECT ANALYSIS (FROM FRONTEND):`);
         console.log(`  Type: ${projectType.toUpperCase()} [User Selected]`);
       } else {
         // Fallback to keyword detection
@@ -893,13 +893,13 @@ REMEMBER: The detailedContext is passed to code generation AI. It must be SO com
         projectType = analysis.type;
         nodeCount = analysis.nodeCount;
         complexity = analysis.complexity;
-        console.log(`\n🔍 PROJECT ANALYSIS (DETECTED):`);
+        console.log(`\n PROJECT ANALYSIS (DETECTED):`);
         console.log(`  Type: ${projectType.toUpperCase()} [Auto-Detected]`);
       }
       console.log(`  Complexity: ${complexity.toUpperCase()} (PRODUCTION-LEVEL)`);
       console.log(`  Nodes: ${nodeCount}`);
       console.log(`  LLM will intelligently determine all features and packages needed`);
-      console.log(`\n📝 Generating production-level blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
+      console.log(`\n Generating production-level blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
 
       // Create analysis object for system prompt
       const analysisForPrompt = {
@@ -1348,28 +1348,28 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
 
       // For FULLSTACK projects, generate TWO separate contexts
       if (projectType === 'fullstack') {
-        console.log('\n🔄 FULLSTACK PROJECT: Generating separate backend and frontend contexts...');
+        console.log('\n FULLSTACK PROJECT: Generating separate backend and frontend contexts...');
 
         // Generate backend context
-        console.log('\n📦 Generating BACKEND context...');
+        console.log('\n Generating BACKEND context...');
         const backendContext = await this.generateBackendContext(requirements, blueprint);
         blueprint.backendContext = backendContext;
-        console.log(`✅ Backend context: ${backendContext.length} chars`);
+        console.log(` Backend context: ${backendContext.length} chars`);
 
         // Generate frontend context (will be enriched with backend knowledge later)
-        console.log('\n🎨 Generating FRONTEND context...');
+        console.log('\n Generating FRONTEND context...');
         const frontendContext = await this.generateFrontendContext(requirements, blueprint);
         blueprint.frontendContext = frontendContext;
-        console.log(`✅ Frontend context: ${frontendContext.length} chars`);
+        console.log(` Frontend context: ${frontendContext.length} chars`);
 
         // Set detailedContext to backend for now (Builder will use it first)
         blueprint.detailedContext = backendContext;
 
       } else if (projectType === 'frontend') {
-        console.log('\n🎨 Selecting UI components to enrich the blueprint...');
+        console.log('\n Selecting UI components to enrich the blueprint...');
 
         const detailedContextLengthBefore = blueprint.detailedContext.length;
-        console.log(`📊 detailedContext length BEFORE appending UI: ${detailedContextLengthBefore} chars`);
+        console.log(` detailedContext length BEFORE appending UI: ${detailedContextLengthBefore} chars`);
 
         const uiSelection = await UIService.selectComponents(requirements);
 
@@ -1378,7 +1378,7 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
           blueprint.detailedContext += uiSelection.formattedForPrompt;
 
           const detailedContextLengthAfter = blueprint.detailedContext.length;
-          console.log(`\n✅ APPEND OPERATION COMPLETE:`);
+          console.log(`\n APPEND OPERATION COMPLETE:`);
           console.log(`   - Added ${uiSelection.selectedComponents.length} UI components to detailedContext`);
           console.log(`   - Selected components: ${uiSelection.selectedComponents.map(c => c.name).join(', ')}`);
           console.log(`   - detailedContext length BEFORE: ${detailedContextLengthBefore} chars`);
@@ -1386,12 +1386,12 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
           console.log(`   - UI components added: ${detailedContextLengthAfter - detailedContextLengthBefore} chars`);
 
           // Show last 500 chars to verify UI components are at the end
-          console.log(`\n📋 LAST 500 CHARS OF detailedContext (showing UI components):}`);
+          console.log(`\n LAST 500 CHARS OF detailedContext (showing UI components):}`);
           console.log('─'.repeat(80));
           console.log(blueprint.detailedContext.slice(-500));
           console.log('─'.repeat(80));
         } else {
-          console.log('⚠️ No UI components selected (or selection failed)');
+          console.log(' No UI components selected (or selection failed)');
         }
       }
 

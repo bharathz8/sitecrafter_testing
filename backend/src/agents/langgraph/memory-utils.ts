@@ -9,7 +9,7 @@ import MemoryClient from 'mem0ai';
 const apiKey = process.env.mem0 || process.env.MEM0_API_KEY;
 
 if (!apiKey) {
-    console.warn('⚠️ Mem0 API key not found (mem0 or MEM0_API_KEY)');
+    console.warn(' Mem0 API key not found (mem0 or MEM0_API_KEY)');
 }
 
 const memory = apiKey ? new MemoryClient({ apiKey }) : null;
@@ -31,7 +31,7 @@ export async function storeFileMemory(
     file: FileMemory
 ): Promise<void> {
     if (!memory) {
-        console.log('   ⚠️ Mem0 not available, skipping memory store');
+        console.log('    Mem0 not available, skipping memory store');
         return;
     }
 
@@ -55,9 +55,9 @@ ${file.contentPreview ? `Preview: ${file.contentPreview}` : ''}`;
             }
         });
 
-        console.log(`   🧠 Stored in Mem0: ${file.path}`);
+        console.log(`    Stored in Mem0: ${file.path}`);
     } catch (error: any) {
-        console.error(`   ❌ Mem0 store error:`, error.message?.substring(0, 100));
+        console.error(`    Mem0 store error:`, error.message?.substring(0, 100));
     }
 }
 
@@ -85,9 +85,9 @@ Design: ${blueprint.designSystem.style} style with ${blueprint.designSystem.prim
             metadata: { type: 'blueprint', projectName: blueprint.projectName }
         });
 
-        console.log(`   🧠 Blueprint stored in Mem0`);
+        console.log(`    Blueprint stored in Mem0`);
     } catch (error: any) {
-        console.error(`   ❌ Mem0 blueprint error:`, error.message?.substring(0, 100));
+        console.error(`    Mem0 blueprint error:`, error.message?.substring(0, 100));
     }
 }
 
@@ -100,7 +100,7 @@ export async function retrieveContext(
     limit: number = 20
 ): Promise<string> {
     if (!memory) {
-        console.log('   ⚠️ Mem0 not available');
+        console.log('    Mem0 not available');
         return '';
     }
 
@@ -114,13 +114,13 @@ export async function retrieveContext(
             return '';
         }
 
-        console.log(`   🧠 Retrieved ${results.length} memories from Mem0`);
+        console.log(`    Retrieved ${results.length} memories from Mem0`);
 
         // Format memories as context
         const context = results.map((r: any) => r.memory).join('\n\n');
         return context;
     } catch (error: any) {
-        console.error(`   ❌ Mem0 search error:`, error.message?.substring(0, 100));
+        console.error(`    Mem0 search error:`, error.message?.substring(0, 100));
         return '';
     }
 }
@@ -163,10 +163,10 @@ export async function getAllFileMemories(projectId: string): Promise<string> {
             context += 'PAGES:\n' + grouped['page'].join('\n') + '\n\n';
         }
 
-        console.log(`   🧠 Loaded ${results.length} memories from Mem0`);
+        console.log(`    Loaded ${results.length} memories from Mem0`);
         return context;
     } catch (error: any) {
-        console.error(`   ❌ Mem0 getAll error:`, error.message?.substring(0, 100));
+        console.error(`    Mem0 getAll error:`, error.message?.substring(0, 100));
         return '';
     }
 }
@@ -179,9 +179,9 @@ export async function clearProjectMemory(projectId: string): Promise<void> {
 
     try {
         await memory.deleteAll({ user_id: projectId });
-        console.log(`   🧠 Cleared Mem0 memory for project: ${projectId}`);
+        console.log(`    Cleared Mem0 memory for project: ${projectId}`);
     } catch (error: any) {
-        console.error(`   ❌ Mem0 clear error:`, error.message?.substring(0, 100));
+        console.error(`    Mem0 clear error:`, error.message?.substring(0, 100));
     }
 }
 

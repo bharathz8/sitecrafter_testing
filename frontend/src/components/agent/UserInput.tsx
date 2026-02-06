@@ -236,17 +236,33 @@ export const UserInput: React.FC<UserInputProps> = ({
     return (
         <div className="border-t border-[#2e2e2e] bg-[#0a0a0a] p-4">
             <div className="flex items-end gap-3">
-                <div className="flex-1">
+                <div className="flex-1 relative">
                     <textarea
                         value={displayText}
-                        onChange={(e) => !isRecording && setMessage(e.target.value)}
+                        onChange={(e) => {
+                            if (!isRecording) {
+                                setMessage(e.target.value);
+                                // Auto-resize textarea
+                                e.target.style.height = 'auto';
+                                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                            }
+                        }}
                         onKeyDown={handleKeyDown}
                         placeholder={placeholder}
                         disabled={isProcessing}
                         readOnly={isRecording}
                         rows={1}
-                        className="w-full bg-[#1f1f1f] border border-[#2e2e2e] rounded-xl px-4 py-3 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none min-h-[48px] max-h-[200px] transition-all"
+                        className="w-full bg-[#1a1a1a] border border-[#333] rounded-2xl px-4 py-3.5 pr-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 resize-none transition-all duration-200 text-sm leading-relaxed overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+                        style={{
+                            minHeight: '52px',
+                            maxHeight: '150px',
+                        }}
                     />
+                    {displayText.length > 100 && (
+                        <span className="absolute bottom-2 right-3 text-[10px] text-gray-600">
+                            {displayText.length} chars
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">

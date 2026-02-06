@@ -42,7 +42,7 @@ export async function storeBackendKnowledge(
 ): Promise<string> {
   try {
     if (!MEM0_API_KEY) {
-      console.warn('⚠️ MEM0_API_KEY not set - skipping Mem0 storage');
+      console.warn(' MEM0_API_KEY not set - skipping Mem0 storage');
       return '';
     }
 
@@ -66,7 +66,7 @@ ${backendInfo.dataModels}
 - API Prefix: ${backendInfo.apiPrefix}
 `;
 
-    console.log(`📝 Storing backend knowledge in Mem0 for project: ${projectId}`);
+    console.log(` Storing backend knowledge in Mem0 for project: ${projectId}`);
 
     const response = await mem0Client.post('/memories/', {
       messages: [
@@ -84,11 +84,11 @@ ${backendInfo.dataModels}
     });
 
     const memoryId = response.data?.memory_id || response.data?.id || '';
-    console.log(`✅ Backend knowledge stored in Mem0 with ID: ${memoryId}`);
+    console.log(` Backend knowledge stored in Mem0 with ID: ${memoryId}`);
     return memoryId;
 
   } catch (error: any) {
-    console.error('❌ Error storing backend knowledge in Mem0:', error.message);
+    console.error(' Error storing backend knowledge in Mem0:', error.message);
     return '';
   }
 }
@@ -99,11 +99,11 @@ ${backendInfo.dataModels}
 export async function retrieveBackendKnowledge(projectId: string): Promise<string> {
   try {
     if (!MEM0_API_KEY) {
-      console.warn('⚠️ MEM0_API_KEY not set - cannot retrieve from Mem0');
+      console.warn(' MEM0_API_KEY not set - cannot retrieve from Mem0');
       return '';
     }
 
-    console.log(`🔍 Retrieving backend knowledge from Mem0 for project: ${projectId}`);
+    console.log(` Retrieving backend knowledge from Mem0 for project: ${projectId}`);
 
     // Search for memories related to this project
     const response = await mem0Client.get('/memories/', {
@@ -114,9 +114,9 @@ export async function retrieveBackendKnowledge(projectId: string): Promise<strin
     });
 
     const memories = response.data?.memories || response.data?.results || [];
-    
+
     if (memories.length === 0) {
-      console.warn(`⚠️ No backend knowledge found in Mem0 for project: ${projectId}`);
+      console.warn(` No backend knowledge found in Mem0 for project: ${projectId}`);
       return '';
     }
 
@@ -126,11 +126,11 @@ export async function retrieveBackendKnowledge(projectId: string): Promise<strin
       .filter((m: string) => m.length > 0)
       .join('\n\n---\n\n');
 
-    console.log(`✅ Retrieved backend knowledge from Mem0 (${combinedKnowledge.length} chars)`);
+    console.log(` Retrieved backend knowledge from Mem0 (${combinedKnowledge.length} chars)`);
     return combinedKnowledge;
 
   } catch (error: any) {
-    console.error('❌ Error retrieving backend knowledge from Mem0:', error.message);
+    console.error(' Error retrieving backend knowledge from Mem0:', error.message);
     return '';
   }
 }
@@ -144,11 +144,11 @@ export async function searchBackendKnowledge(
 ): Promise<string> {
   try {
     if (!MEM0_API_KEY) {
-      console.warn('⚠️ MEM0_API_KEY not set - cannot search Mem0');
+      console.warn(' MEM0_API_KEY not set - cannot search Mem0');
       return '';
     }
 
-    console.log(`🔎 Searching backend knowledge in Mem0: "${query}"`);
+    console.log(` Searching backend knowledge in Mem0: "${query}"`);
 
     const response = await mem0Client.get('/memories/search/', {
       params: {
@@ -158,9 +158,9 @@ export async function searchBackendKnowledge(
     });
 
     const results = response.data?.memories || response.data?.results || [];
-    
+
     if (results.length === 0) {
-      console.warn(`⚠️ No search results found for: "${query}"`);
+      console.warn(` No search results found for: "${query}"`);
       return '';
     }
 
@@ -169,11 +169,11 @@ export async function searchBackendKnowledge(
       .filter((r: string) => r.length > 0)
       .join('\n\n---\n\n');
 
-    console.log(`✅ Found ${results.length} relevant memories (${combinedResults.length} chars)`);
+    console.log(` Found ${results.length} relevant memories (${combinedResults.length} chars)`);
     return combinedResults;
 
   } catch (error: any) {
-    console.error('❌ Error searching backend knowledge in Mem0:', error.message);
+    console.error(' Error searching backend knowledge in Mem0:', error.message);
     return '';
   }
 }
@@ -184,11 +184,11 @@ export async function searchBackendKnowledge(
 export async function deleteBackendKnowledge(projectId: string): Promise<boolean> {
   try {
     if (!MEM0_API_KEY) {
-      console.warn('⚠️ MEM0_API_KEY not set - cannot delete from Mem0');
+      console.warn(' MEM0_API_KEY not set - cannot delete from Mem0');
       return false;
     }
 
-    console.log(`🗑️ Deleting backend knowledge from Mem0 for project: ${projectId}`);
+    console.log(` Deleting backend knowledge from Mem0 for project: ${projectId}`);
 
     // First, get all memories for this user
     const getResponse = await mem0Client.get('/memories/', {
@@ -209,11 +209,11 @@ export async function deleteBackendKnowledge(projectId: string): Promise<boolean
       }
     }
 
-    console.log(`✅ Deleted ${memories.length} memories from Mem0`);
+    console.log(` Deleted ${memories.length} memories from Mem0`);
     return true;
 
   } catch (error: any) {
-    console.error('❌ Error deleting backend knowledge from Mem0:', error.message);
+    console.error(' Error deleting backend knowledge from Mem0:', error.message);
     return false;
   }
 }

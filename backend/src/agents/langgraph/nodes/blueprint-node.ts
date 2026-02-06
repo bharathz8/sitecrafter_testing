@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Blueprint Node - Generates project blueprint using PlanningService
  * Uses autonomous multi-phase planning for dynamic feature ideation
  */
@@ -43,12 +43,12 @@ const DEV_DEPENDENCIES: Record<string, string> = {
 };
 
 export async function blueprintNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-    console.log('\n📋 ═══════════════════════════════════════════');
-    console.log('📋 NODE: BLUEPRINT (DYNAMIC PLANNING)');
-    console.log('📋 ═══════════════════════════════════════════\n');
+    console.log('\n ═══════════════════════════════════════════');
+    console.log(' NODE: BLUEPRINT (DYNAMIC PLANNING)');
+    console.log(' ═══════════════════════════════════════════\n');
 
     try {
-        console.log('🤖 Starting autonomous planning...');
+        console.log(' Starting autonomous planning...');
         console.log(`   User Request: "${state.userPrompt.slice(0, 100)}..."`);
         console.log(`   Project Type: ${state.projectType || 'frontend'}`);
 
@@ -66,7 +66,7 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         const planBlueprint = planningResponse.data.blueprint;
 
         // Use LLM to dynamically generate project-specific pages
-        console.log('   🎯 Generating unique pages with LLM...');
+        console.log('    Generating unique pages with LLM...');
         const dynamicPages = await extractPagesWithLLM(
             state.userPrompt,
             planBlueprint.detailedContext,
@@ -94,36 +94,36 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
             name: page.name.replace(/\s+/g, '')
         }));
 
-        console.log(`\n✅ Dynamic Blueprint Created: ${blueprint.projectName}`);
-        console.log(`   📄 Pages: ${blueprint.pages.length} (dynamically determined)`);
-        console.log(`   🧩 Components: ${blueprint.components.length}`);
-        console.log(`   ✨ Features: ${blueprint.features.length}`);
-        console.log(`   🎨 Workflow Nodes: ${planBlueprint.workflow?.nodes?.length || 0}`);
+        console.log(`\n Dynamic Blueprint Created: ${blueprint.projectName}`);
+        console.log(`    Pages: ${blueprint.pages.length} (dynamically determined)`);
+        console.log(`    Components: ${blueprint.components.length}`);
+        console.log(`    Features: ${blueprint.features.length}`);
+        console.log(`    Workflow Nodes: ${planBlueprint.workflow?.nodes?.length || 0}`);
 
         // Log the pages for visibility
         blueprint.pages.forEach(p => console.log(`      → ${p.name} (${p.route})`));
 
         // Generate project ID for Mem0 tracking
         const projectId = generateProjectId(blueprint.projectName);
-        console.log(`   🧠 Project ID: ${projectId}`);
+        console.log(`    Project ID: ${projectId}`);
 
         // Clear any previous memory for this project and store new blueprint
         await clearProjectMemory(projectId);
         await storeBlueprintMemory(projectId, blueprint);
 
         // Fetch images from the image microservice
-        console.log('\n🖼️  Fetching project images...');
+        console.log('\n  Fetching project images...');
         let availableImages: UnsplashImage[] = [];
         try {
             availableImages = await fetchProjectImages(state.userPrompt);
             if (availableImages.length > 0) {
                 await storeImagesInMemory(projectId, availableImages);
-                console.log(`✅ ${availableImages.length} images fetched and stored`);
+                console.log(` ${availableImages.length} images fetched and stored`);
             } else {
-                console.log('⚠️  No images fetched - will use gradient placeholders');
+                console.log(' No images fetched - will use gradient placeholders');
             }
         } catch (imgError: any) {
-            console.error(`⚠️  Image fetching failed: ${imgError.message} - will use gradients`);
+            console.error(` Image fetching failed: ${imgError.message} - will use gradients`);
         }
 
         return {
@@ -135,15 +135,15 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
             workflowEdges: planBlueprint.workflow?.edges || [],
             currentPhase: 'blueprint',
             messages: [
-                `🤖 Autonomous Planning Complete: ${blueprint.projectName}`,
-                `📄 ${blueprint.pages.length} pages dynamically determined`,
-                `✨ ${blueprint.features.length} features identified`,
-                `🖼️ ${availableImages.length} images ready`
+                ` Autonomous Planning Complete: ${blueprint.projectName}`,
+                ` ${blueprint.pages.length} pages dynamically determined`,
+                ` ${blueprint.features.length} features identified`,
+                ` ${availableImages.length} images ready`
             ]
         };
 
     } catch (error: any) {
-        console.error('❌ Blueprint generation failed:', error.message);
+        console.error(' Blueprint generation failed:', error.message);
         throw error;
     }
 }
@@ -152,12 +152,37 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
  * Extract pages using LLM - truly dynamic, project-specific page generation
  * This replaces the old keyword-based approach with intelligent LLM analysis
  */
+
+// Multiple API keys for rotation in blueprint node
+const blueprintApiKeys = [
+    process.env.gemini8,
+    process.env.gemini9,
+    process.env.gemini10,
+    process.env.gemini11,
+    process.env.gemini,
+    process.env.gemini3,
+    process.env.gemini4,
+    process.env.gemini7,
+    process.env.gemini6,
+    process.env.gemini5,
+    process.env.gemini2,
+].filter(key => key && key.length > 0) as string[];
+
+let blueprintKeyIndex = 0;
+
+function getBlueprintApiKey(): string {
+    return blueprintApiKeys[blueprintKeyIndex] || process.env.gemini2 || '';
+}
+
+function rotateBlueprintKey(): void {
+    if (blueprintApiKeys.length > 1) {
+        blueprintKeyIndex = (blueprintKeyIndex + 1) % blueprintApiKeys.length;
+        console.log(`[Blueprint] Rotated to key ${blueprintKeyIndex + 1}/${blueprintApiKeys.length}`);
+    }
+}
+
 async function extractPagesWithLLM(userPrompt: string, detailedContext: string, features: any[]): Promise<any[]> {
     const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-        apiKey: process.env.gemini2,
-        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-    });
 
     const featureNames = features.map(f => typeof f === 'string' ? f : f.name || f).join(', ');
 
@@ -170,9 +195,9 @@ IDENTIFIED FEATURES: ${featureNames}
 DETAILED CONTEXT (excerpt):
 ${detailedContext.slice(0, 6000)}
 
-═══════════════════════════════════════════════════════════════
+===================================================================
 CRITICAL RULES:
-═══════════════════════════════════════════════════════════════
+===================================================================
 
 1. Pages must be UNIQUE to THIS specific project type
 2. DO NOT use generic pages unless explicitly needed
@@ -186,7 +211,7 @@ For "ChatGPT-like AI chat bot":
 - ModelsPage (/models) - AI model selection
 - APIDocsPage (/api-docs) - API documentation
 - SettingsPage (/settings) - User preferences
-❌ NOT: CartPage, BlogPage, ServicesPage
+ NOT: CartPage, BlogPage, ServicesPage
 
 For "Artist portfolio website":
 - GalleryPage (/gallery) - Art collection grid
@@ -194,7 +219,7 @@ For "Artist portfolio website":
 - CommissionsPage (/commissions) - Commission requests
 - ExhibitionsPage (/exhibitions) - Past/upcoming shows
 - AboutArtistPage (/about) - Artist biography
-❌ NOT: CartPage, DashboardPage, BlogPage
+ NOT: CartPage, DashboardPage, BlogPage
 
 For "Cake selling bakery":
 - CakesPage (/cakes) - Cake catalog
@@ -202,7 +227,7 @@ For "Cake selling bakery":
 - FlavorPage (/flavors) - Flavor options
 - OrderStatusPage (/order-status) - Track orders
 - GalleryPage (/gallery) - Past creations
-❌ NOT: Generic ProductsPage, ServicesPage
+ NOT: Generic ProductsPage, ServicesPage
 
 For "Fitness tracking app":
 - WorkoutsPage (/workouts) - Exercise library
@@ -210,9 +235,9 @@ For "Fitness tracking app":
 - NutritionPage (/nutrition) - Meal tracking
 - ChallengesPage (/challenges) - Fitness challenges
 - ProfilePage (/profile) - User stats
-❌ NOT: BlogPage, TestimonialsPage
+ NOT: BlogPage, TestimonialsPage
 
-═══════════════════════════════════════════════════════════════
+===================================================================
 
 Now, for the project "${userPrompt}", generate 5-8 UNIQUE pages.
 
@@ -234,34 +259,47 @@ IMPORTANT:
 - Use descriptive, project-specific names (e.g., "ChatPage" not "MainPage")
 - Include 5-8 pages total`;
 
-    try {
-        const response = await openai.chat.completions.create({
-            model: "gemini-2.5-flash-lite-preview-09-2025",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a web architect who creates unique, project-specific page structures. You NEVER use generic templates. Return ONLY valid JSON arrays."
-                },
-                { role: "user", content: prompt }
-            ],
-            temperature: 0.7
-        });
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const openai = new OpenAI({
+                apiKey: getBlueprintApiKey(),
+                baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+            });
 
-        const content = response.choices[0].message.content || '[]';
+            const response = await openai.chat.completions.create({
+                model: "gemini-2.5-flash-lite-preview-09-2025",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a web architect who creates unique, project-specific page structures. You NEVER use generic templates. Return ONLY valid JSON arrays."
+                    },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7
+            });
 
-        // Extract JSON from response
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-            const pages = JSON.parse(jsonMatch[0]);
-            console.log(`   🎯 LLM generated ${pages.length} unique pages for this project`);
-            return pages;
+            const content = response.choices[0].message.content || '[]';
+
+            // Extract JSON from response
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const pages = JSON.parse(jsonMatch[0]);
+                console.log(`    LLM generated ${pages.length} unique pages for this project`);
+                return pages;
+            }
+        } catch (error: any) {
+            console.error(`[Blueprint] Attempt ${attempt} failed:`, error.message);
+            rotateBlueprintKey();
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000 * attempt));
+                continue;
+            }
         }
-    } catch (error: any) {
-        console.error('   ⚠️ LLM page extraction failed:', error.message);
     }
 
-    // Minimal fallback - ONLY if LLM fails
-    console.log('   ⚠️ Using minimal fallback pages');
+    // Minimal fallback - ONLY if all retries fail
+    console.log('    LLM page extraction failed, using minimal fallback pages');
     return [
         {
             name: 'HomePage',

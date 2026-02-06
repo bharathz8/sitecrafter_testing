@@ -67,7 +67,7 @@ Return ONLY the JSON array.`;
 
         return JSON.parse(cleanContent) as ImageKeyword[];
     } catch (error: any) {
-        console.error('❌ Failed to generate keywords:', error.message);
+        console.error(' Failed to generate keywords:', error.message);
         return [];
     }
 }
@@ -91,7 +91,7 @@ async function fetchUnsplashImage(keyword: string): Promise<{ url: string; link:
         );
 
         if (!response.ok) {
-            console.error(`   ❌ Unsplash API error for "${keyword}": ${response.status}`);
+            console.error(`    Unsplash API error for "${keyword}": ${response.status}`);
             return null;
         }
 
@@ -114,7 +114,7 @@ async function fetchUnsplashImage(keyword: string): Promise<{ url: string; link:
 
         return null;
     } catch (error: any) {
-        console.error(`   ❌ Error fetching image for "${keyword}":`, error.message);
+        console.error(`    Error fetching image for "${keyword}":`, error.message);
         return null;
     }
 }
@@ -124,28 +124,28 @@ async function fetchUnsplashImage(keyword: string): Promise<{ url: string; link:
  * This runs directly in the backend - no separate service needed
  */
 export async function fetchProjectImages(description: string): Promise<UnsplashImage[]> {
-    console.log(`🖼️  Generating images for: "${description}"`);
+    console.log(`  Generating images for: "${description}"`);
 
     // Check if Unsplash key is configured
     if (!UNSPLASH_ACCESS_KEY) {
-        console.warn('⚠️ UNSPLASH_ACCESS_KEY not set in .env - will use gradient placeholders');
+        console.warn(' UNSPLASH_ACCESS_KEY not set in .env - will use gradient placeholders');
         return [];
     }
 
     try {
         // Step 1: Generate keywords using LLM
-        console.log('   📝 Generating image keywords with LLM...');
+        console.log('    Generating image keywords with LLM...');
         const keywords = await generateKeywords(description);
 
         if (keywords.length === 0) {
-            console.warn('⚠️ No keywords generated - will use gradient placeholders');
+            console.warn(' No keywords generated - will use gradient placeholders');
             return [];
         }
 
-        console.log(`   ✅ Generated ${keywords.length} keywords`);
+        console.log(`    Generated ${keywords.length} keywords`);
 
         // Step 2: Fetch images from Unsplash
-        console.log('   🔍 Fetching images from Unsplash...');
+        console.log('    Fetching images from Unsplash...');
         const images: UnsplashImage[] = [];
 
         for (let i = 0; i < keywords.length; i++) {
@@ -168,11 +168,11 @@ export async function fetchProjectImages(description: string): Promise<UnsplashI
             await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        console.log(`   ✅ Fetched ${images.length} images successfully`);
+        console.log(`    Fetched ${images.length} images successfully`);
         return images;
 
     } catch (error: any) {
-        console.error(`❌ Failed to fetch images: ${error.message}`);
+        console.error(`    Failed to fetch images: ${error.message}`);
         return [];
     }
 }
@@ -182,7 +182,7 @@ export async function fetchProjectImages(description: string): Promise<UnsplashI
  */
 export async function storeImagesInMemory(projectId: string, images: UnsplashImage[]): Promise<void> {
     if (!memory) {
-        console.log('⚠️ Mem0 not available, skipping image storage');
+        console.log(' Mem0 not available, skipping image storage');
         return;
     }
 
@@ -198,9 +198,9 @@ export async function storeImagesInMemory(projectId: string, images: UnsplashIma
             metadata: { type: 'images', count: images.length }
         });
 
-        console.log(`   🧠 Stored ${images.length} images in Mem0`);
+        console.log(`    Stored ${images.length} images in Mem0`);
     } catch (error: any) {
-        console.error(`❌ Failed to store images in memory: ${error.message}`);
+        console.error(` Failed to store images in memory: ${error.message}`);
     }
 }
 
@@ -211,7 +211,7 @@ export function formatImagesForPrompt(images: UnsplashImage[]): string {
     if (!images.length) {
         return `
 ═══════════════════════════════════════════════════════════════════════════════
-🖼️ NO IMAGES AVAILABLE - USE GRADIENT PLACEHOLDERS
+ NO IMAGES AVAILABLE - USE GRADIENT PLACEHOLDERS
 ═══════════════════════════════════════════════════════════════════════════════
 
 Use beautiful gradient backgrounds instead of images:
@@ -231,7 +231,7 @@ Available gradient colors:
 
     return `
 ═══════════════════════════════════════════════════════════════════════════════
-🖼️ AVAILABLE IMAGES - USE THESE EXACT URLS (NO CORS ISSUES!)
+ AVAILABLE IMAGES - USE THESE EXACT URLS (NO CORS ISSUES!)
 ═══════════════════════════════════════════════════════════════════════════════
 
 The following ${images.length} images are available. Use these EXACT URLs:

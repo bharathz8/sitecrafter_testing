@@ -28,13 +28,13 @@ export async function repairNode(state: WebsiteState): Promise<Partial<WebsiteSt
 
     const errors = state.errors;
     if (errors.length === 0) {
-        console.log('   ✅ No errors to fix!');
+        console.log('    No errors to fix!');
         return { currentPhase: 'repair' };
     }
 
     // Check iteration limit
     if (state.iterationCount >= 3) {
-        console.log('   ⚠️ Max iterations reached');
+        console.log('    Max iterations reached');
         return {
             isComplete: true,
             currentPhase: 'repair',
@@ -48,7 +48,7 @@ export async function repairNode(state: WebsiteState): Promise<Partial<WebsiteSt
     // Handle Router duplication specially (no LLM needed)
     const routerError = errors.find(e => e.type === 'router_duplicate');
     if (routerError) {
-        console.log('   🔧 Fixing Router duplication...');
+        console.log('    Fixing Router duplication...');
         const appFile = files.get('src/App.tsx');
         if (appFile && appFile.content.includes('BrowserRouter')) {
             let fixed = appFile.content
@@ -58,7 +58,7 @@ export async function repairNode(state: WebsiteState): Promise<Partial<WebsiteSt
                 .replace(/<\/BrowserRouter>/g, '');
 
             files.set('src/App.tsx', { ...appFile, content: fixed });
-            console.log('   ✅ Removed BrowserRouter from App.tsx');
+            console.log('    Removed BrowserRouter from App.tsx');
         }
     }
 
@@ -110,12 +110,12 @@ Return COMPLETE fixed file.`;
                     // Stream repaired file to frontend
                     notifyFileCreated(repairedFile);
 
-                    console.log(`   ✅ Fixed: ${path}`);
+                    console.log(`    Fixed: ${path}`);
                     fixedCount++;
                 }
             }
         } catch (error: any) {
-            console.error(`   ❌ Failed to fix ${path}:`, error.message?.substring(0, 80));
+            console.error(`    Failed to fix ${path}:`, error.message?.substring(0, 80));
         }
 
         await delay(1000);

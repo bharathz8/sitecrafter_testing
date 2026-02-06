@@ -130,6 +130,39 @@ export const WebContainerProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     setPreviewUrl(url);
                     setIsRunning(true);
                     setIsInstalling(false);
+
+                    // Extract session ID from URL for cross-tab communication
+                    // URL format: https://xxx--port--sessionId.local-credentialless.webcontainer-api.io
+                    const urlMatch = url.match(/--(\w+)\.local-credentialless/);
+                    const sessionId = urlMatch ? urlMatch[1] : 'latest';
+
+                    // Store preview URL in localStorage for cross-tab access
+                    localStorage.setItem(`webcontainer_preview_${sessionId}`, url);
+                    localStorage.setItem('webcontainer_latest_preview', url);
+                    localStorage.setItem('webcontainer_session_id', sessionId);
+                    console.log(`📡 Preview URL stored for session: ${sessionId}`);
+
+                    // Broadcast to other tabs using BroadcastChannel
+                    if ('BroadcastChannel' in window) {
+                        const channel = new BroadcastChannel('webcontainer_session');
+                        channel.postMessage({
+                            type: 'PREVIEW_URL_AVAILABLE',
+                            sessionId: sessionId,
+                            previewUrl: url
+                        });
+
+                        // Also listen for requests from other tabs
+                        channel.onmessage = (event) => {
+                            if (event.data.type === 'PREVIEW_URL_REQUEST') {
+                                console.log('📡 Received preview URL request, responding...');
+                                channel.postMessage({
+                                    type: 'PREVIEW_URL_RESPONSE',
+                                    sessionId: sessionId,
+                                    previewUrl: url
+                                });
+                            }
+                        };
+                    }
                 });
 
                 appendOutput('✅ WebContainer booted');

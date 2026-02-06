@@ -10,8 +10,8 @@ import { COMPLETE_REACT_TEMPLATE } from "./deafult/react-complete";
 import { nodeprompt } from "./deafult/node";
 import { QUALITY_REQUIREMENTS, FRONTEND_QUALITY_CHECKLIST, BACKEND_QUALITY_CHECKLIST } from './prompts/quality-enforcement';
 import { parseBackendCode, generateAPISpecification } from './utils/backend-parser';
-import { storeBackendKnowledge, retrieveBackendKnowledge, formatBackendInfoForMem0 } from './services/mem0.service';
 import { OpenAI } from "openai";
+import { storeBackendKnowledge, retrieveBackendKnowledge, formatBackendInfoForMem0 } from './services/mem0.service';
 import authRoutes from './routes/auth';
 import googleAuthRoutes from './routes/googleAuth';
 import './config/passport';
@@ -22,7 +22,6 @@ import { generateCompleteFullstack } from './endpoints/fullstack-complete';
 import { PRODUCTION_FRONTEND_PROMPT, PRODUCTION_GENERATION_INSTRUCTIONS } from './prompts/production-frontend';
 import { PACKAGE_VERIFICATION_PROMPT, PACKAGE_GENERATION_RULES } from './prompts/package-verification';
 import { UI_UX_DESIGN_PROMPT, DESIGN_IMPLEMENTATION_RULES } from './prompts/ui-design';
-import { GenerationPipeline } from './agents';
 import { generateWebsite, GeneratedFile } from './agents/langgraph';
 import { fixCodeError, analyzeCode } from './agents/langgraph/services/error-fixer.service';
 import Project from './models/project';
@@ -41,7 +40,7 @@ const app: Application = express();
 
 const client = new OpenAI({
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-  apiKey: process.env.gemini3
+  apiKey: process.env.gemini6
 });
 
 const openrouter = new OpenAI({
@@ -163,19 +162,19 @@ app.post("/chat", async (req, res) => {
 
     const messages = req.body.messages;
 
-    console.log('\n🔵 /CHAT ENDPOINT CALLED');
-    console.log(`📨 Received ${messages.length} messages from frontend`);
+    console.log('\n /CHAT ENDPOINT CALLED');
+    console.log(` Received ${messages.length} messages from frontend`);
 
     // Log each message to see if detailedContext (with UI components) is included
     messages.forEach((msg: Message, index: number) => {
-      console.log(`\n📬 Message ${index + 1}:`);
+      console.log(`\n Message ${index + 1}:`);
       console.log(`   Role: ${msg.role}`);
       console.log(`   Content length: ${msg.content?.length || 0} chars`);
 
       // Check if this message contains UI components
       if (msg.content && msg.content.includes('COMPULSORY USE ALL THESE UI COMPONENTS')) {
-        console.log('   ✅ CONTAINS UI COMPONENTS!');
-        console.log('   📋 Last 500 chars of this message:');
+        console.log('    CONTAINS UI COMPONENTS!');
+        console.log('    Last 500 chars of this message:');
         console.log('   ' + '─'.repeat(76));
         console.log('   ' + String(msg.content).slice(-500).split('\n').join('\n   '));
         console.log('   ' + '─'.repeat(76));
@@ -205,7 +204,7 @@ ${PRODUCTION_GENERATION_INSTRUCTIONS}`;
       })),
     ];
 
-    console.log(`\n🤖 Sending ${chatMessages.length} messages to LLM with PRODUCTION-LEVEL FRONTEND PROMPT...\n`);
+    console.log(`\n Sending ${chatMessages.length} messages to LLM with PRODUCTION-LEVEL FRONTEND PROMPT...\n`);
 
     const response = await client.chat.completions.create({
       model: "gemini-2.5-pro",
@@ -224,66 +223,7 @@ ${PRODUCTION_GENERATION_INSTRUCTIONS}`;
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// NEW: Multi-Step Agentic Generation Endpoint
-// Uses 7-phase pipeline with verification and self-correction
-// ═══════════════════════════════════════════════════════════════════════════
-
-app.post("/chat/agentic", async (req: Request, res: Response) => {
-  try {
-    const { prompt, projectType = 'frontend' } = req.body;
-
-    if (!prompt) {
-      res.status(400).json({ error: 'Prompt is required' });
-      return;
-    }
-
-    console.log('\n🚀 ═══════════════════════════════════════════════════');
-    console.log('🚀 AGENTIC GENERATION ENDPOINT CALLED');
-    console.log('🚀 ═══════════════════════════════════════════════════');
-    console.log(`📝 Prompt: ${prompt}`);
-    console.log(`🎯 Project Type: ${projectType}`);
-
-    // Get all available API keys for rate limit rotation
-    const apiKeys = [
-      process.env.gemini3,
-      process.env.gemini2,
-      process.env.gemini,
-      process.env.gemini4
-    ].filter(Boolean) as string[];
-
-    console.log(`🔑 Using ${apiKeys.length} API keys for rate limit rotation`);
-
-    // Create and execute pipeline
-    const pipeline = new GenerationPipeline(prompt, projectType, apiKeys);
-
-    // Execute the full pipeline
-    const files = await pipeline.execute();
-
-    // Convert to chirAction XML format for frontend
-    const xmlOutput = pipeline.toChirArtifactXml();
-
-    console.log(`\n✅ Generation complete: ${files.length} files`);
-
-    res.json({
-      success: true,
-      response: xmlOutput,
-      stats: {
-        filesGenerated: files.length,
-        blueprint: pipeline.getState().blueprint
-      }
-    });
-
-  } catch (error: any) {
-    console.error('❌ Agentic generation error:', error);
-    res.status(500).json({
-      error: 'Generation failed',
-      message: error.message
-    });
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// NEW: LangGraph-based Generation Endpoint
+// LangGraph-based Generation Endpoint
 // Uses stateful graph with proper context passing and repair loops
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -296,11 +236,11 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
       return;
     }
 
-    console.log('\n🚀 ═══════════════════════════════════════════════════');
-    console.log('🚀 LANGGRAPH GENERATION ENDPOINT CALLED');
-    console.log('🚀 ═══════════════════════════════════════════════════');
-    console.log(`📝 Prompt: ${prompt}`);
-    console.log(`🎯 Project Type: ${projectType}`);
+    console.log('\n ═══════════════════════════════════════════════════');
+    console.log(' LANGGRAPH GENERATION ENDPOINT CALLED');
+    console.log(' ═══════════════════════════════════════════════════');
+    console.log(` Prompt: ${prompt}`);
+    console.log(` Project Type: ${projectType}`);
 
     const result = await generateWebsite(prompt, projectType);
 
@@ -317,7 +257,7 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
 
     const xmlOutput = `<chirArtifact id="generated-project" title="${projectName}">\n${xmlContent}</chirArtifact>`;
 
-    console.log(`\n✅ LangGraph generation complete: ${result.files.size} files`);
+    console.log(`\n LangGraph generation complete: ${result.files.size} files`);
 
     res.json({
       success: true,
@@ -330,7 +270,7 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error('❌ LangGraph generation error:', error);
+    console.error(' LangGraph generation error:', error);
     res.status(500).json({
       error: 'Generation failed',
       message: error.message
@@ -356,10 +296,24 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
-  console.log('\n🌊 ═══════════════════════════════════════════════════');
-  console.log('🌊 SSE STREAM: LangGraph Generation Started');
-  console.log('🌊 ═══════════════════════════════════════════════════');
-  console.log(`📝 Prompt: ${prompt}`);
+  // Helper function for phase messages
+  function getPhaseMessage(phase: string): string {
+    const messages: Record<string, string> = {
+      'blueprint': 'Creating project blueprint...',
+      'structure': 'Setting up project structure...',
+      'core': 'Generating core files (main.tsx, App.tsx, layouts)...',
+      'components': 'Building UI components...',
+      'pages': 'Creating page components...',
+      'validation': 'Validating generated code...',
+      'repair': 'Fixing validation issues...'
+    };
+    return messages[phase] || `Processing ${phase}...`;
+  }
+
+  console.log('\n ═══════════════════════════════════════════════════');
+  console.log('SSE STREAM: LangGraph Generation Started');
+  console.log(' ═══════════════════════════════════════════════════');
+  console.log(` Prompt: ${prompt}`);
 
   // Helper to send SSE events
   const sendEvent = (type: string, data: any) => {
@@ -390,7 +344,7 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
             content: file.content,
             phase: currentPhase
           });
-          console.log(`   🌊 Streamed: ${file.path}`);
+          console.log(`    Streamed: ${file.path}`);
         }
       },
       // Callback when phase changes
@@ -400,7 +354,7 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
           phase,
           message: getPhaseMessage(phase)
         });
-        console.log(`   🌊 Phase: ${phase}`);
+        console.log(`    Phase: ${phase}`);
       }
     );
 
@@ -411,87 +365,17 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
       message: `🎉 Generated ${result.files.size} files successfully!`
     });
 
-    console.log(`\n✅ SSE Stream complete: ${result.files.size} files sent`);
+    console.log(`\n SSE Stream complete: ${result.files.size} files sent`);
     res.end();
 
   } catch (error: any) {
-    console.error('❌ SSE Stream error:', error);
+    console.error(' SSE Stream error:', error);
     sendEvent('error', {
       message: error.message || 'Generation failed'
     });
     res.end();
   }
 });
-
-// Helper function for phase messages
-function getPhaseMessage(phase: string): string {
-  const messages: Record<string, string> = {
-    'blueprint': 'Creating project blueprint...',
-    'structure': 'Setting up project structure...',
-    'core': 'Generating core files (main.tsx, App.tsx, layouts)...',
-    'components': 'Building UI components...',
-    'pages': 'Creating page components...',
-    'validation': 'Validating generated code...',
-    'repair': 'Fixing validation issues...'
-  };
-  return messages[phase] || `Processing ${phase}...`;
-}
-
-// SSE streaming version for real-time updates
-app.get("/chat/agentic/stream", async (req: Request, res: Response) => {
-  const prompt = req.query.prompt as string;
-  const projectType = (req.query.projectType as string) || 'frontend';
-
-  if (!prompt) {
-    res.status(400).json({ error: 'Prompt is required' });
-    return;
-  }
-
-  // Set SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  console.log('\n🌊 SSE Stream started for agentic generation');
-
-  const apiKeys = [
-    process.env.gemini3,
-    process.env.gemini2,
-    process.env.gemini,
-    process.env.gemini4
-  ].filter(Boolean) as string[];
-
-  const pipeline = new GenerationPipeline(prompt, projectType as any, apiKeys);
-
-  // Stream events to client
-  pipeline.on('phase', (phase: string, message: string) => {
-    res.write(`data: ${JSON.stringify({ type: 'phase', phase, message })}\n\n`);
-  });
-
-  pipeline.on('file', (file: any) => {
-    res.write(`data: ${JSON.stringify({ type: 'file', path: file.path })}\n\n`);
-  });
-
-  pipeline.on('progress', (current: number, total: number, message: string) => {
-    res.write(`data: ${JSON.stringify({ type: 'progress', current, total, message })}\n\n`);
-  });
-
-  pipeline.on('error', (error: any) => {
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
-  });
-
-  try {
-    await pipeline.execute();
-
-    const xmlOutput = pipeline.toChirArtifactXml();
-    res.write(`data: ${JSON.stringify({ type: 'complete', response: xmlOutput })}\n\n`);
-    res.end();
-  } catch (error: any) {
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
-    res.end();
-  }
-});
-
 
 //testing mem0
 
@@ -710,26 +594,26 @@ app.post("/build/frontend-with-mem0", async (req: Request, res: Response) => {
   try {
     const { projectId, frontendContext } = req.body;
 
-    console.log('\n🧠 /BUILD/FRONTEND-WITH-MEM0 ENDPOINT CALLED');
-    console.log(`🆔 Project ID: ${projectId}`);
-    console.log(`🎨 Frontend context: ${frontendContext?.length || 0} chars`);
+    console.log('\n /BUILD/FRONTEND-WITH-MEM0 ENDPOINT CALLED');
+    console.log(`Project ID: ${projectId}`);
+    console.log(` Frontend context: ${frontendContext?.length || 0} chars`);
 
     // Step 1: Retrieve backend knowledge from Mem0
-    console.log('\n🔍 STEP 1: Retrieving backend knowledge from Mem0...');
+    console.log('\n STEP 1: Retrieving backend knowledge from Mem0...');
     const backendKnowledge = await retrieveBackendKnowledge(projectId);
 
     if (!backendKnowledge) {
-      console.warn('⚠️ No backend knowledge found in Mem0 for this project');
+      console.warn(' No backend knowledge found in Mem0 for this project');
       res.status(400).json({
         error: 'Backend knowledge not found. Please generate backend first using /build/separate'
       });
       return;
     }
 
-    console.log(`✅ Retrieved backend knowledge (${backendKnowledge.length} chars)`);
+    console.log(` Retrieved backend knowledge (${backendKnowledge.length} chars)`);
 
     // Step 2: Generate Frontend with Mem0 Backend Knowledge
-    console.log('\n🎨 STEP 2: Generating frontend with Mem0 backend knowledge...');
+    console.log('\n STEP 2: Generating frontend with Mem0 backend knowledge...');
 
     const frontendContextWithMem0 = `${QUALITY_REQUIREMENTS}
 
@@ -771,16 +655,16 @@ CRITICAL INSTRUCTIONS:
     });
 
     const frontendCode = frontendResponse.choices[0].message.content || '';
-    console.log(`✅ Frontend code generated: ${frontendCode.length} chars`);
+    console.log(` Frontend code generated: ${frontendCode.length} chars`);
 
     // Debug: Check what we're actually returning
     if (!frontendCode || frontendCode.length === 0) {
-      console.error('❌ WARNING: Frontend code is empty!');
+      console.error(' WARNING: Frontend code is empty!');
       console.error('Frontend response structure:', JSON.stringify(frontendResponse, null, 2).substring(0, 1000));
     }
 
-    console.log('\n✅ FRONTEND GENERATION WITH MEM0 COMPLETE!\n');
-    console.log(`🎨 Frontend: ${frontendCode.length} chars`);
+    console.log('\n FRONTEND GENERATION WITH MEM0 COMPLETE!\n');
+    console.log(` Frontend: ${frontendCode.length} chars`);
 
     // Return frontend code
     res.json({
@@ -799,13 +683,13 @@ app.post("/build/fullstack", async (req: Request, res: Response) => {
   try {
     const { backendContext, frontendContext, projectId } = req.body;
 
-    console.log('\n🔄 /BUILD/FULLSTACK ENDPOINT CALLED');
-    console.log(`📦 Backend context: ${backendContext?.length || 0} chars`);
-    console.log(`🎨 Frontend context: ${frontendContext?.length || 0} chars`);
-    console.log(`🆔 Project ID: ${projectId}`);
+    console.log('\n /BUILD/FULLSTACK ENDPOINT CALLED');
+    console.log(` Backend context: ${backendContext?.length || 0} chars`);
+    console.log(` Frontend context: ${frontendContext?.length || 0} chars`);
+    console.log(` Project ID: ${projectId}`);
 
     // Step 1: Generate Backend Code
-    console.log('\n📦 STEP 1: Generating backend code...');
+    console.log('\n STEP 1: Generating backend code...');
 
     const enhancedBackendContext = `${QUALITY_REQUIREMENTS}
 
@@ -847,10 +731,10 @@ CRITICAL INSTRUCTIONS:
     });
 
     const backendCode = backendResponse.choices[0].message.content || '';
-    console.log(`✅ Backend code generated: ${backendCode.length} chars`);
+    console.log(` Backend code generated: ${backendCode.length} chars`);
 
     // Step 2: Extract API information from backend code
-    console.log('\n🔍 STEP 2: Extracting API context from backend code...');
+    console.log('\n STEP 2: Extracting API context from backend code...');
 
     // Parse backend code into structured specification
     console.log('   - Parsing backend code into API specification...');
@@ -863,7 +747,7 @@ CRITICAL INSTRUCTIONS:
     console.log(`   - Features: ${backendSpec.features.join(', ')}`);
 
     // Step 3: Create enriched frontend context with backend knowledge
-    console.log('\n🎨 STEP 3: Generating frontend with backend knowledge...');
+    console.log('\n STEP 3: Generating frontend with backend knowledge...');
 
     // Send structured API specification instead of raw code
     // This avoids Gemini's content filter while providing complete integration details
@@ -907,17 +791,17 @@ CRITICAL INSTRUCTIONS:
     });
 
     const frontendCode = frontendResponse.choices[0].message.content || '';
-    console.log(`✅ Frontend code generated: ${frontendCode.length} chars`);
+    console.log(` Frontend code generated: ${frontendCode.length} chars`);
 
     // Debug: Check what we're actually returning
     if (!frontendCode || frontendCode.length === 0) {
-      console.error('❌ WARNING: Frontend code is empty!');
+      console.error(' WARNING: Frontend code is empty!');
       console.error('Frontend response structure:', JSON.stringify(frontendResponse, null, 2).substring(0, 1000));
     }
 
-    console.log('\n✅ FULLSTACK GENERATION COMPLETE!\n');
-    console.log(`📦 Sending backend: ${backendCode.length} chars`);
-    console.log(`🎨 Sending frontend: ${frontendCode.length} chars`);
+    console.log('\n FULLSTACK GENERATION COMPLETE!\n');
+    console.log(` Sending backend: ${backendCode.length} chars`);
+    console.log(` Sending frontend: ${frontendCode.length} chars`);
 
     // Return both backend and frontend code
     res.json({
@@ -977,36 +861,36 @@ function extractBackendStructure(code: string): string {
 
   // Check for authentication
   if (code.includes('jwt') || code.includes('JWT') || code.includes('jsonwebtoken')) {
-    structure.push('✅ Authentication: JWT-based auth detected');
+    structure.push(' Authentication: JWT-based auth detected');
   }
   if (code.includes('bcrypt')) {
-    structure.push('✅ Password Hashing: bcrypt detected');
+    structure.push(' Password Hashing: bcrypt detected');
   }
 
   // Check for validation
   if (code.includes('zod') || code.includes('Zod')) {
-    structure.push('✅ Validation: Zod schema validation');
+    structure.push(' Validation: Zod schema validation');
   }
   if (code.includes('joi') || code.includes('Joi')) {
-    structure.push('✅ Validation: Joi schema validation');
+    structure.push(' Validation: Joi schema validation');
   }
 
   // Check for architecture
   if (code.includes('controller') || code.includes('Controller')) {
-    structure.push('✅ Architecture: MVC/Layered (controllers detected)');
+    structure.push(' Architecture: MVC/Layered (controllers detected)');
   }
   if (code.includes('service') || code.includes('Service')) {
-    structure.push('✅ Architecture: Service layer detected');
+    structure.push(' Architecture: Service layer detected');
   }
 
   // Check for middleware
   if (code.includes('middleware') || code.includes('Middleware')) {
-    structure.push('✅ Middleware: Custom middleware detected');
+    structure.push(' Middleware: Custom middleware detected');
   }
 
   // Check for database
   if (code.includes('mongoose')) {
-    structure.push('✅ Database: MongoDB with Mongoose');
+    structure.push(' Database: MongoDB with Mongoose');
   }
 
   return structure.length > 0 ? structure.join('\n') : 'Backend structure analysis pending...';
@@ -1037,11 +921,11 @@ app.post('/api/fix-error', async (req: Request, res: Response) => {
 
     const result = await fixCodeError(error, filePath, fileContent);
 
-    console.log(`   ✅ Fix generated successfully`);
+    console.log(`    Fix generated successfully`);
     res.json(result);
 
   } catch (error: any) {
-    console.error('❌ Error fix failed:', error.message);
+    console.error(' Error fix failed:', error.message);
     res.status(500).json({
       error: 'Failed to fix error',
       details: error.message
@@ -1064,7 +948,7 @@ app.post('/api/analyze-code', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`\n🔍 CODE ANALYSIS REQUEST (${files.length} files)`);
+    console.log(`\n CODE ANALYSIS REQUEST (${files.length} files)`);
 
     const issues = await analyzeCode(files);
 
@@ -1072,7 +956,7 @@ app.post('/api/analyze-code', async (req: Request, res: Response) => {
     res.json({ issues });
 
   } catch (error: any) {
-    console.error('❌ Code analysis failed:', error.message);
+    console.error(' Code analysis failed:', error.message);
     res.status(500).json({
       error: 'Failed to analyze code',
       details: error.message
@@ -1100,7 +984,7 @@ app.post('/api/projects', async (req: Request, res: Response) => {
     // Generate name from prompt if not provided
     const projectName = name || prompt.slice(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Untitled Project';
 
-    console.log(`\n💾 SAVING PROJECT: ${projectName}`);
+    console.log(`\n SAVING PROJECT: ${projectName}`);
     console.log(`   Files: ${files.length}`);
 
     const project = new Project({
@@ -1116,7 +1000,7 @@ app.post('/api/projects', async (req: Request, res: Response) => {
 
     await project.save();
 
-    console.log(`   ✅ Project saved with ID: ${project._id}`);
+    console.log(`    Project saved with ID: ${project._id}`);
 
     res.json({
       success: true,
@@ -1125,7 +1009,7 @@ app.post('/api/projects', async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error('❌ Failed to save project:', error.message);
+    console.error(' Failed to save project:', error.message);
     res.status(500).json({ error: 'Failed to save project', details: error.message });
   }
 });
@@ -1150,12 +1034,12 @@ app.get('/api/projects', async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
-    console.log(`📋 Retrieved ${projects.length} projects`);
+    console.log(` Retrieved ${projects.length} projects`);
 
     res.json({ projects });
 
   } catch (error: any) {
-    console.error('❌ Failed to get projects:', error.message);
+    console.error(' Failed to get projects:', error.message);
     res.status(500).json({ error: 'Failed to get projects', details: error.message });
   }
 });
@@ -1175,12 +1059,12 @@ app.get('/api/projects/:projectId', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`📂 Retrieved project: ${project.name} (${project.files.length} files)`);
+    console.log(` Retrieved project: ${project.name} (${project.files.length} files)`);
 
     res.json({ project });
 
   } catch (error: any) {
-    console.error('❌ Failed to get project:', error.message);
+    console.error(' Failed to get project:', error.message);
     res.status(500).json({ error: 'Failed to get project', details: error.message });
   }
 });
@@ -1209,7 +1093,7 @@ app.post('/api/projects/:projectId/chat', async (req: Request, res: Response) =>
       return;
     }
 
-    console.log(`\n🧠 INTELLIGENT CHAT REQUEST`);
+    console.log(`\n INTELLIGENT CHAT REQUEST`);
     console.log(`   Project: ${project.name}`);
     console.log(`   Message: ${message.slice(0, 100)}...`);
 
@@ -1247,7 +1131,7 @@ Respond with ONE WORD ONLY: question, explain, or modify`;
     });
 
     const intent = intentResponse.choices[0].message.content?.toLowerCase().trim() || 'modify';
-    console.log(`   🎯 Detected Intent: ${intent}`);
+    console.log(`    Detected Intent: ${intent}`);
 
     // Handle based on intent
     if (intent === 'question' || intent === 'explain') {
@@ -1331,7 +1215,7 @@ Answer the user's question specifically:
     project.fileCount = project.files.length;
     await project.save();
 
-    console.log(`   ✅ Applied ${modifiedFiles.length} modifications`);
+    console.log(`    Applied ${modifiedFiles.length} modifications`);
 
     res.json({
       success: true,
@@ -1343,7 +1227,7 @@ Answer the user's question specifically:
     });
 
   } catch (error: any) {
-    console.error('❌ Chat failed:', error.message);
+    console.error(' Chat failed:', error.message);
     res.status(500).json({ error: 'Chat failed', details: error.message });
   }
 });
@@ -1368,7 +1252,7 @@ app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) 
       return;
     }
 
-    console.log(`\n🔧 MODIFICATION REQUEST`);
+    console.log(`\n MODIFICATION REQUEST`);
     console.log(`   Project: ${project.name}`);
     console.log(`   Request: ${modificationRequest.slice(0, 100)}...`);
 
@@ -1403,7 +1287,7 @@ app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) 
     project.fileCount = project.files.length;
     await project.save();
 
-    console.log(`   ✅ Applied ${modifiedFiles.length} modifications`);
+    console.log(`    Applied ${modifiedFiles.length} modifications`);
 
     res.json({
       success: true,
@@ -1413,7 +1297,7 @@ app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) 
     });
 
   } catch (error: any) {
-    console.error('❌ Modification failed:', error.message);
+    console.error(' Modification failed:', error.message);
     res.status(500).json({ error: 'Modification failed', details: error.message });
   }
 });
@@ -1462,11 +1346,11 @@ app.patch('/api/projects/:projectId/files', async (req: Request, res: Response) 
     project.fileCount = project.files.length;
     await project.save();
 
-    console.log(`📝 Updated ${updatedCount} file(s) in project: ${project.name}`);
+    console.log(` Updated ${updatedCount} file(s) in project: ${project.name}`);
     res.json({ success: true, updatedCount });
 
   } catch (error: any) {
-    console.error('❌ Failed to update files:', error.message);
+    console.error(' Failed to update files:', error.message);
     res.status(500).json({ error: 'Failed to update files', details: error.message });
   }
 });
@@ -1486,11 +1370,11 @@ app.delete('/api/projects/:projectId', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`🗑️ Deleted project: ${result.name}`);
+    console.log(` Deleted project: ${result.name}`);
     res.json({ success: true });
 
   } catch (error: any) {
-    console.error('❌ Failed to delete project:', error.message);
+    console.error(' Failed to delete project:', error.message);
     res.status(500).json({ error: 'Failed to delete project', details: error.message });
   }
 });
@@ -1508,7 +1392,7 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
       return;
     }
 
-    console.log(`\n📦 ZIP UPLOAD: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
+    console.log(`\n ZIP UPLOAD: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
 
     // Extract zip contents
     const zip = new AdmZip(req.file.buffer);
@@ -1582,7 +1466,7 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
 
     await project.save();
 
-    console.log(`   ✅ Imported "${projectName}" with ${files.length} files`);
+    console.log(`    Imported "${projectName}" with ${files.length} files`);
 
     res.json({
       success: true,
@@ -1593,7 +1477,7 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
     });
 
   } catch (error: any) {
-    console.error('❌ Upload failed:', error.message);
+    console.error(' Upload failed:', error.message);
     res.status(500).json({ error: 'Upload failed', details: error.message });
   }
 });

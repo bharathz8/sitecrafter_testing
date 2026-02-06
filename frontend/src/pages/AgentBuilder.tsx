@@ -142,6 +142,10 @@ export const AgentBuilder: React.FC = () => {
     const [pendingPrompt, setPendingPrompt] = useState<string>('');
     const [projectId, setProjectId] = useState<string | null>(null);
 
+    // Refs to track current values for callbacks (avoid stale closures)
+    const projectIdRef = useRef<string | null>(null);
+    const filesCountRef = useRef<number>(0);
+
     const abortControllerRef = useRef<AbortController | null>(null);
     const [searchParams] = useSearchParams();
     const [isLoadingProject, setIsLoadingProject] = useState(false);
@@ -159,7 +163,19 @@ export const AgentBuilder: React.FC = () => {
         if (projectId) {
             localStorage.setItem('lastProjectId', projectId);
         }
+        // Keep ref in sync with state
+        projectIdRef.current = projectId;
     }, [projectId]);
+
+    // Keep files count ref in sync
+    useEffect(() => {
+        filesCountRef.current = files.length;
+    }, [files.length]);
+
+    // Keep filesRef in sync with files state for error fixing
+    useEffect(() => {
+        filesRef.current = files;
+    }, [files]);
 
     // Function to load a project from the API
     const loadProject = async (id: string) => {
@@ -551,7 +567,11 @@ export const AgentBuilder: React.FC = () => {
                     }
 
                     setFixCount(prev => prev + 1);
+                    // Add to fixed set but remove after a delay to allow re-checking for NEW errors
                     fixedFilesRef.current.add(errorKey);
+                    setTimeout(() => {
+                        fixedFilesRef.current.delete(errorKey);
+                    }, 15000); // Allow re-attempting after 15 seconds for new errors
 
                     addMessage('success', `✅ Fixed error in ${targetFile.path}`);
                     fixSuccess = true;
@@ -566,23 +586,33 @@ export const AgentBuilder: React.FC = () => {
         }
 
         // After successful fix, schedule a re-check for more errors
-        // Only continue if it's a DIFFERENT file to avoid infinite loops
+        // Check for any errors (same or different file) but with a longer delay for same file
         if (fixSuccess) {
+            // First check after 3 seconds for errors in OTHER files
             setTimeout(() => {
-                // Re-parse terminal output to check for more errors
+                const newErrorInfo = parseError(terminalOutput);
+                if (newErrorInfo && newErrorInfo.file && newErrorInfo.file !== errorFile) {
+                    console.log('🔄 More errors detected in different file:', newErrorInfo.file);
+                    fixCodeError(newErrorInfo.file, newErrorInfo.error);
+                }
+            }, 3000);
+
+            // Second check after 8 seconds for potentially NEW errors in same file
+            setTimeout(() => {
                 const newErrorInfo = parseError(terminalOutput);
                 if (newErrorInfo && newErrorInfo.file) {
-                    // Only fix if it's a different file than the one we just fixed
-                    if (newErrorInfo.file !== errorFile) {
-                        console.log('🔄 More errors detected in different file:', newErrorInfo.file);
+                    const newErrorKey = `${newErrorInfo.file}:${newErrorInfo.error.slice(0, 100)}`;
+                    // Only fix if it's a NEW error (different error key)
+                    if (!fixedFilesRef.current.has(newErrorKey)) {
+                        console.log('🔄 New error detected, attempting fix:', newErrorInfo.file);
                         fixCodeError(newErrorInfo.file, newErrorInfo.error);
                     } else {
-                        console.log('⏳ Same file still shows errors, waiting for cooldown...');
+                        console.log('✅ No new errors to fix');
                     }
                 } else {
                     console.log('✅ No more errors detected in terminal output');
                 }
-            }, 3000); // Wait 3 seconds for terminal to update
+            }, 8000); // Wait longer before re-checking same file
         }
 
         return fixSuccess;
@@ -628,7 +658,7 @@ export const AgentBuilder: React.FC = () => {
     useEffect(() => {
         const handleRuntimeError = (event: MessageEvent) => {
             if (event.data?.type !== 'RUNTIME_ERROR') return;
-            if (!isRunning || fixingRef.current || isFixing) return;
+            if (!isRunning) return;
             if (fixAttempts.current >= MAX_FIX_ATTEMPTS) return;
 
             const { message, stack, errorType } = event.data;
@@ -639,6 +669,27 @@ export const AgentBuilder: React.FC = () => {
 
             if (filePath) {
                 const errorContext = `Runtime Error (${errorType})\n${message}\n\nStack trace:\n${stack}`;
+                const errorKey = `${filePath}:${errorContext.slice(0, 100)}`;
+
+                // Check if already fixed (but allow new errors on same file)
+                if (fixedFilesRef.current.has(errorKey)) {
+                    console.log('Skipping already-fixed error:', filePath);
+                    return;
+                }
+
+                // If currently fixing, queue this error for later instead of dropping
+                if (fixingRef.current || isFixing) {
+                    console.log('Currently fixing, queuing error for later:', filePath);
+                    setTimeout(() => {
+                        // Re-check if still needs fixing after delay
+                        if (!fixedFilesRef.current.has(errorKey)) {
+                            fixCodeError(filePath, errorContext);
+                        }
+                    }, 3000);
+                    return;
+                }
+
+                // Immediate fix
                 setTimeout(() => {
                     fixCodeError(filePath, errorContext);
                 }, 1500);
@@ -656,15 +707,25 @@ export const AgentBuilder: React.FC = () => {
         // Add user message
         addMessage('user', userMessage);
 
+        // Use refs to get the CURRENT values (avoid stale closures)
+        const currentProjectId = projectIdRef.current;
+        const currentFilesCount = filesCountRef.current;
+
+        console.log('📨 handleSendMessage check:', {
+            projectId: currentProjectId,
+            filesCount: currentFilesCount,
+            isFollowUp: !!(currentProjectId && currentFilesCount > 0)
+        });
+
         // Check if this is a follow-up (project already exists)
-        if (projectId && files.length > 0) {
+        if (currentProjectId && currentFilesCount > 0) {
             setIsProcessing(true);
             setStatusMessage('Understanding your request...');
             addMessage('thinking', '🧠 Analyzing your message...');
 
             try {
                 // Use the new intelligent chat endpoint
-                const response = await axios.post(`${BACKEND_URL}/api/projects/${projectId}/chat`, {
+                const response = await axios.post(`${BACKEND_URL}/api/projects/${currentProjectId}/chat`, {
                     message: userMessage,
                 });
 
@@ -755,7 +816,7 @@ export const AgentBuilder: React.FC = () => {
         } finally {
             setIsProcessing(false);
         }
-    }, [addMessage, updatePhase, projectId, files.length, updateFile]);
+    }, [addMessage, updatePhase, updateFile]);
 
     // Handle stop
     const handleStop = useCallback(() => {

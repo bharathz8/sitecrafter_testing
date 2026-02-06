@@ -7,8 +7,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Multiple API keys for rotation
 const apiKeys = [
-
-
+    process.env.gemini8,
+    process.env.gemini9,
+    process.env.gemini10,
+    process.env.gemini11,
     process.env.gemini,
     process.env.gemini3,
     process.env.gemini4,
@@ -23,11 +25,11 @@ const apiKeys = [
 let currentKeyIndex = 0;
 const MODEL = 'gemini-3-flash-preview';
 
-console.log(`🔑 LangGraph using ${apiKeys.length} Gemini API keys`);
-console.log(`📦 Model: ${MODEL}`);
+console.log(` LangGraph using ${apiKeys.length} Gemini API keys`);
+console.log(` Model: ${MODEL}`);
 
 if (apiKeys.length === 0) {
-    console.warn('⚠️ No Gemini API keys set!');
+    console.warn(' No Gemini API keys set!');
 }
 
 function getCurrentApiKey(): string {
@@ -37,7 +39,7 @@ function getCurrentApiKey(): string {
 function rotateApiKey(): void {
     if (apiKeys.length > 1) {
         currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        console.log(`   🔄 Rotated to key ${currentKeyIndex + 1}/${apiKeys.length}`);
+        console.log(` Rotated to key ${currentKeyIndex + 1}/${apiKeys.length}`);
     }
 }
 
@@ -55,7 +57,7 @@ export async function invokeLLM(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`🤖 LLM attempt ${attempt}/${maxRetries} (Key ${currentKeyIndex + 1}/${apiKeys.length})...`);
+            console.log(` LLM attempt ${attempt}/${maxRetries} (Key ${currentKeyIndex + 1}/${apiKeys.length})...`);
 
             const genAI = createClient();
             const model = genAI.getGenerativeModel({
@@ -67,21 +69,21 @@ export async function invokeLLM(
             const content = result.response.text() || '';
 
             if (content.length === 0) {
-                console.log(`   ⚠️ Empty response`);
+                console.log(` Empty response`);
                 rotateApiKey();
                 await delay(2000);
                 continue;
             }
 
-            console.log(`   ✅ Received ${content.length} chars`);
+            console.log(` Received ${content.length} chars`);
             return content;
 
         } catch (error: any) {
             lastError = error;
-            console.error(`   ❌ Error:`, error.message?.substring(0, 100) || error.message);
+            console.error(` Error:`, error.message?.substring(0, 100) || error.message);
 
             if (error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-                console.log(`   ⏳ Rate limited, rotating key...`);
+                console.log(` Rate limited, rotating key...`);
                 rotateApiKey();
                 await delay(3000 + (attempt * 1000));
                 continue;
@@ -114,7 +116,7 @@ function delay(ms: number): Promise<void> {
 export function parseChirActions(response: string): { path: string; content: string }[] {
     const files: { path: string; content: string }[] = [];
 
-    console.log(`   📝 Preview: ${response.substring(0, 300).replace(/\n/g, '\\n')}`);
+    console.log(`    Preview: ${response.substring(0, 300).replace(/\n/g, '\\n')}`);
 
     const patterns = [
         /<chirAction\s+type="file"\s+filePath="([^"]+)">([\s\S]*?)<\/chirAction>/g,
@@ -132,14 +134,14 @@ export function parseChirActions(response: string): { path: string; content: str
             }
 
             if (content.length > 0 && !files.some(f => f.path === filePath)) {
-                console.log(`   📄 ${filePath} (${content.length} chars)`);
+                console.log(`    ${filePath} (${content.length} chars)`);
                 files.push({ path: filePath, content });
             }
         }
         if (files.length > 0) break;
     }
 
-    console.log(`   🔍 Parsed ${files.length} files`);
+    console.log(` Parsed ${files.length} files`);
     return files;
 }
 

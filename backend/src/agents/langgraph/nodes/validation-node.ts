@@ -7,9 +7,9 @@ import { WebsiteState, ValidationError } from '../graph-state';
 import { notifyPhaseChange } from '../website-graph';
 
 export async function validationNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-    console.log('\n🔍 ═══════════════════════════════════════════');
-    console.log('🔍 NODE: VALIDATION');
-    console.log('🔍 ═══════════════════════════════════════════\n');
+    console.log('\n ═══════════════════════════════════════════');
+    console.log(' NODE: VALIDATION');
+    console.log(' ═══════════════════════════════════════════\n');
 
     // Notify phase change for streaming
     notifyPhaseChange('validation');
@@ -125,7 +125,7 @@ export async function validationNode(state: WebsiteState): Promise<Partial<Websi
         }
     });
 
-    console.log(`\n🔍 Validation complete:`);
+    console.log(`\n Validation complete:`);
     console.log(`   Errors: ${errors.filter(e => e.severity === 'error').length}`);
     console.log(`   Warnings: ${errors.filter(e => e.severity === 'warning').length}`);
 

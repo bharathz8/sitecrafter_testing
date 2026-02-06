@@ -8,9 +8,9 @@ import { extractExports, extractImports } from '../llm-utils';
 import { notifyFileCreated, notifyPhaseChange } from '../website-graph';
 
 export async function structureNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-  console.log('\n📁 ═══════════════════════════════════════════');
-  console.log('📁 NODE: STRUCTURE');
-  console.log('📁 ═══════════════════════════════════════════\n');
+  console.log('\n ═══════════════════════════════════════════');
+  console.log(' NODE: STRUCTURE');
+  console.log(' ═══════════════════════════════════════════\n');
 
   // Notify phase change for streaming
   notifyPhaseChange('structure');
@@ -41,7 +41,7 @@ export async function structureNode(state: WebsiteState): Promise<Partial<Websit
   };
 
   addFile(files, registry, 'package.json', JSON.stringify(packageJson, null, 2), 'structure');
-  console.log('   📦 package.json created with', Object.keys(packageJson.dependencies).length, 'dependencies');
+  console.log('    package.json created with', Object.keys(packageJson.dependencies).length, 'dependencies');
 
   // 2. tsconfig.json
   const tsconfig = {
@@ -183,8 +183,8 @@ body {
   // 9. src/vite-env.d.ts
   addFile(files, registry, 'src/vite-env.d.ts', '/// <reference types="vite/client" />', 'structure');
 
-  console.log(`\n✅ Structure files generated: ${files.size}`);
-  files.forEach((_, path) => console.log(`   📄 ${path}`));
+  console.log(`\n Structure files generated: ${files.size}`);
+  files.forEach((_, path) => console.log(`    ${path}`));
 
   return {
     files,

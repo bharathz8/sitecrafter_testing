@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Error Fixer Service
  * Uses gemini-2.5-flash-lite-preview-09-2025 for fixing code errors
  * Includes API key rotation for rate limit handling
@@ -11,6 +11,10 @@ const ERROR_FIX_MODEL = 'gemini-2.5-flash-lite-preview-09-2025';
 
 // Multiple API keys for rotation
 const apiKeys = [
+    process.env.gemini8,
+    process.env.gemini9,
+    process.env.gemini10,
+    process.env.gemini11,
     process.env.gemini7,
     process.env.gemini6,
     process.env.gemini5,
@@ -22,8 +26,8 @@ const apiKeys = [
 
 let currentKeyIndex = 0;
 
-console.log(`🔧 Error Fixer using ${apiKeys.length} API keys`);
-console.log(`📦 Error Fix Model: ${ERROR_FIX_MODEL}`);
+console.log(` Error Fixer using ${apiKeys.length} API keys`);
+console.log(` Error Fix Model: ${ERROR_FIX_MODEL}`);
 
 function getCurrentApiKey(): string {
     return apiKeys[currentKeyIndex] || '';
@@ -32,7 +36,7 @@ function getCurrentApiKey(): string {
 function rotateApiKey(): void {
     if (apiKeys.length > 1) {
         currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        console.log(`   🔄 Error Fixer rotated to key ${currentKeyIndex + 1}/${apiKeys.length}`);
+        console.log(`    Error Fixer rotated to key ${currentKeyIndex + 1}/${apiKeys.length}`);
     }
 }
 
@@ -114,7 +118,7 @@ ${fileContent}
 
 ## Fixed Code:`;
 
-            console.log(`   🔧 [Attempt ${attempt + 1}/${maxRetries}] Fixing ${filePath}...`);
+            console.log(`    [Attempt ${attempt + 1}/${maxRetries}] Fixing ${filePath}...`);
 
             const result = await model.generateContent(prompt);
             const response = result.response;
@@ -130,13 +134,13 @@ ${fileContent}
                 fixedCode = lines.join('\n');
             }
 
-            console.log(`   ✅ Fixed ${filePath} (${fixedCode.length} chars)`);
+            console.log(`    Fixed ${filePath} (${fixedCode.length} chars)`);
 
             return { fixedCode, success: true };
 
         } catch (err: any) {
             lastError = err;
-            console.error(`   ❌ Error fix attempt ${attempt + 1} failed:`, err.message?.slice(0, 100));
+            console.error(`    Error fix attempt ${attempt + 1} failed:`, err.message?.slice(0, 100));
 
             // Check for rate limit error
             if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('rate')) {
@@ -148,7 +152,7 @@ ${fileContent}
         }
     }
 
-    console.error(`   ❌ All ${maxRetries} attempts failed for ${filePath}`);
+    console.error(`    All ${maxRetries} attempts failed for ${filePath}`);
     throw lastError || new Error('Failed to fix code');
 }
 
@@ -191,7 +195,7 @@ ${filesContent}
 
         return JSON.parse(responseText);
     } catch (err: any) {
-        console.error('   ❌ Code analysis failed:', err.message);
+        console.error('    Code analysis failed:', err.message);
         return [];
     }
 }
