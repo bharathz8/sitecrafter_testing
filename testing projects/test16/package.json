@@ -1,9 +1,9 @@
 {
-  "name": "enterprise-portal-framework",
+  "name": "cosmic-purple-farm",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A multi-page, feature-rich, enterprise-grade frontend application blueprint utilizing modern React architecture, comprehensive state management, and a unique, high-contrast design system optimized for accessibility and performance.",
+  "description": "An enterprise-grade, multi-page frontend application showcasing a farm's offerings with a unique 'Cosmic Purple' design theme, 3D elements, and advanced animations.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -27,7 +27,18 @@
     "axios": "^1.7.9",
     "sonner": "^1.7.3",
     "date-fns": "^4.1.0",
-    "gsap": "^3.12.5"
+    "gsap": "^3.12.5",
+    "stripe": "^14.0.0",
+    "@stripe/stripe-js": "^2.4.0",
+    "react-hot-toast": "^2.4.1",
+    "swiper": "^11.0.5",
+    "three": "^0.170.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/postprocessing": "^2.16.0",
+    "leva": "^0.9.35",
+    "@types/three": "^0.170.0",
+    "postprocessing": "^6.35.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

@@ -1,0 +1,16 @@
+src/components/3d/AboutScene3D.tsx(217,17): error TS1117: An object literal cannot have multiple properties with the same name.
+src/components/3d/AboutScene3D.tsx(274,29): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/components/3d/FeaturesScene3D.tsx(255,27): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/components/3d/HeroScene3D.tsx(236,27): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/components/3d/NavBar3D.tsx(56,9): error TS2339: Property 'meshDistortMaterial' does not exist on type 'JSX.IntrinsicElements'.
+src/components/3d/NavBar3D.tsx(80,9): error TS2339: Property 'meshWobbleMaterial' does not exist on type 'JSX.IntrinsicElements'.
+src/components/3d/NavBar3D.tsx(229,27): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/components/3d/ShowcaseScene3D.tsx(192,23): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/components/3d/TestimonialsScene3D.tsx(249,23): error TS2322: Type '{ children: Element[]; disableNormalPass: true; }' is not assignable to type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'.
+  Property 'disableNormalPass' does not exist on type 'IntrinsicAttributes & Omit<EffectComposerProps & RefAttributes<EffectComposer>, "ref"> & { ...; }'. Did you mean 'enableNormalPass'?
+src/pages/ContactUsPage.tsx(106,38): error TS2304: Cannot find name 'cn'.

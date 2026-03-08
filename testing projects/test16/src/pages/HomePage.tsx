@@ -1,141 +1,138 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/Button';
-import { Hero } from '@/components/features/Hero';
-import { FeatureGrid } from '@/components/features/FeatureGrid';
-import { ArrowRight, Shield, Zap, Globe, Lock } from 'lucide-react';
+import { Canvas } from '@react-three/fiber';
+import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
+import LoadingScreen3D from '@/components/3d/LoadingScreen3D';
+import NavBar3D from '@/components/3d/NavBar3D';
+import Footer3D from '@/components/3d/Footer3D';
+import { useNavigate } from 'react-router-dom';
 
-// cn utility - ALWAYS define inline
-const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+const HeroScene3D = lazy(() => import('@/components/3d/HeroScene3D'));
+const FeaturesScene3D = lazy(() => import('@/components/3d/FeaturesScene3D'));
+const ShowcaseScene3D = lazy(() => import('@/components/3d/ShowcaseScene3D'));
+const TestimonialsScene3D = lazy(() => import('@/components/3d/TestimonialsScene3D'));
+const BackgroundScene3D = lazy(() => import('@/components/3d/BackgroundScene3D'));
+
+const features = [
+  { title: 'Nebula Soil', desc: 'Enriched with cosmic minerals for faster growth.' },
+  { title: 'Starlight Irrigation', desc: 'Pure filtered water harvested from lunar dew.' },
+  { title: 'Quantum Harvest', desc: 'Precision picking at the peak of purple ripeness.' }
+];
 
 const HomePage = () => {
-  const features = [
-    {
-      title: 'Secure Infrastructure',
-      description: 'Military-grade encryption for all portal communications and data storage.',
-      icon: <Lock className="w-6 h-6" />,
-    },
-    {
-      title: 'Real-time Analytics',
-      description: 'Instant insights into tactical operations and resource management.',
-      icon: <Zap className="w-6 h-6" />,
-    },
-    {
-      title: 'Global Connectivity',
-      description: 'Seamless integration across international command centers and units.',
-      icon: <Globe className="w-6 h-6" />,
-    },
-    {
-      title: 'Strategic Defense',
-      description: 'Advanced threat detection and automated response protocols.',
-      icon: <Shield className="w-6 h-6" />,
-    },
-  ];
-
-  const heroImage = "https://images.unsplash.com/photo-1630165213345-e5e25d423790?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDczNjF8MHwxfHNlYXJjaHwxfHxJbmRpYW4lMjBOYXRpb25hbCUyMEZsYWclMjBmbHV0dGVyaW5nJTIwYXQlMjBoaWdoJTIwYWx0aXR1ZGV8ZW58MHx8fHwxNzY3ODAxMDAyfDA&ixlib=rb-4.1.0&q=80&w=1080";
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <Hero 
-        title="Commanding the Future of Defense Technology"
-        subtitle="Empowering the Indian Armed Forces with next-generation enterprise solutions for tactical superiority and operational excellence."
-        ctaText="Explore Solutions"
-        ctaLink="/products"
-        imageUrl={heroImage}
-      />
+    <LoadingScreen3D>
+      <NavBar3D />
 
-      {/* Feature Section */}
-      <section className="py-20 bg-slate-50">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">Core Framework Capabilities</h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Our enterprise portal provides a unified interface for mission-critical operations, ensuring every unit stays connected and informed.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {(features ?? []).map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-6">
-                  {feature?.icon}
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{feature?.title ?? 'Feature'}</h3>
-                <p className="text-slate-600 leading-relaxed">{feature?.description ?? 'Description'}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="fixed inset-0 w-full h-screen bg-black overflow-hidden">
+        <Suspense fallback={<div className="w-full h-full bg-black" />}>
+          <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]}>
+            <color attach="background" args={['#050505']} />
 
-      {/* Mission Section */}
-      <section className="py-24 bg-slate-900 text-white overflow-hidden">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Protecting the Sovereignty of Data</h2>
-              <p className="text-slate-300 text-lg mb-8 leading-relaxed">
-                In the modern battlefield, information is the most valuable asset. The Enterprise Portal Framework is designed to safeguard this asset with uncompromising security and high-availability architecture.
-              </p>
-              <ul className="space-y-4 mb-10">
-                {[
-                  'End-to-end encrypted data pipelines',
-                  'Multi-factor biometric authentication',
-                  'Distributed ledger for audit trails',
-                  'Low-latency edge computing support'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
-                      <ArrowRight className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-slate-200">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-                View Security Protocols
-              </Button>
-            </div>
-            <div className="flex-1 relative">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <img 
-                  src="https://images.unsplash.com/photo-1647154929385-6670c0191743?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDczNjF8MHwxfHNlYXJjaHwxfHxNaWxpdGFyeSUyMG9mZmljZXIlMjB1c2luZyUyMHNlY3VyZSUyMGxhcHRvcHxlbnwwfHx8fDE3Njc4MDA5OTl8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                  alt="Military officer using secure laptop"
-                  className="w-full h-auto object-cover"
-                />
-                <div className="absolute inset-0 bg-indigo-900/20 mix-blend-multiply" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
 
-      {/* CTA Section */}
-      <section className="py-20 bg-indigo-600">
-        <div className="container mx-auto px-4 max-w-7xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Modernize Your Operations?</h2>
-          <p className="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto">
-            Join the elite units already leveraging our framework for superior tactical coordination.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="bg-white text-indigo-600 hover:bg-slate-100">
-              Request a Demo
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-              Contact Sales
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
+            <ScrollControls pages={5} damping={0.1}>
+              <BackgroundScene3D />
+              <Scroll>
+                <HeroScene3D />
+                <group position={[0, -10, 0]}>
+                  <FeaturesScene3D />
+                </group>
+                <group position={[0, -20, 0]}>
+                  <ShowcaseScene3D />
+                </group>
+                <group position={[0, -30, 0]}>
+                  <TestimonialsScene3D />
+                </group>
+              </Scroll>
+
+              <Scroll html>
+                <section className="h-screen w-screen flex items-center justify-center relative">
+                  <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    className="text-center px-4 pointer-events-auto"
+                  >
+                    <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tighter drop-shadow-2xl">
+                      COSMIC <span className="text-[#f472b6]">PURPLE</span> FARM
+                    </h1>
+                    <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10 font-light">
+                      Cultivating the future of organic produce under the glow of the purple aurora.
+                    </p>
+                    <button
+                      onClick={() => navigate('/products')}
+                      className="px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-bold hover:bg-[#f472b6] transition-all duration-500 hover:scale-105 active:scale-95 shadow-2xl"
+                    >
+                      EXPLORE THE HARVEST
+                    </button>
+                  </motion.div>
+                </section>
+
+                <section className="h-screen w-screen flex flex-col items-center justify-center px-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full pointer-events-auto">
+                    {features.map((feature, idx) => (
+                      <motion.div
+                        key={idx}
+                        whileHover={{ y: -10 }}
+                        className="p-8 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-xl"
+                      >
+                        <div className="w-12 h-12 rounded-full mb-6 flex items-center justify-center bg-[#fb7185]">
+                          <span className="text-white font-bold">{idx + 1}</span>
+                        </div>
+                        <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
+                        <p className="text-white/60 leading-relaxed">{feature.desc}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="h-screen w-screen flex items-center justify-end px-12 md:px-24">
+                  <div className="max-w-xl text-right pointer-events-auto">
+                    <h2 className="text-5xl font-bold text-white mb-6">PREMIUM <br />SELECTIONS</h2>
+                    <p className="text-lg text-white/70 mb-8">
+                      Every fruit is hand-inspected for cosmic brilliance and nutrient density.
+                    </p>
+                    <button
+                      onClick={() => navigate('/farm-tour')}
+                      className="px-10 py-4 bg-[#fb7185] rounded-xl text-white font-bold hover:shadow-[0_0_30px_rgba(251,113,133,0.5)] transition-all"
+                    >
+                      TAKE THE TOUR
+                    </button>
+                  </div>
+                </section>
+
+                <section className="h-screen w-screen flex items-center justify-center">
+                  <div className="bg-white/5 backdrop-blur-2xl p-12 rounded-3xl border border-white/10 max-w-3xl text-center mx-4 pointer-events-auto">
+                    <div className="text-5xl mb-6 text-[#fda4af]">"</div>
+                    <p className="text-2xl md:text-3xl text-white italic mb-8">
+                      "The purple strawberries from Cosmic Farm literally changed my perception of flavor. It's like eating a star."
+                    </p>
+                    <div className="font-bold text-[#f472b6]">DR. ELARA VANCE</div>
+                    <div className="text-white/40 text-sm tracking-widest uppercase">Astrobotanist</div>
+                  </div>
+                </section>
+
+                <section className="w-screen">
+                  <Footer3D />
+                </section>
+              </Scroll>
+            </ScrollControls>
+
+            <Environment preset="city" />
+
+            <EffectComposer>
+              <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} />
+              <Vignette eskil={false} offset={0.1} darkness={0.8} />
+              <Noise opacity={0.04} />
+            </EffectComposer>
+          </Canvas>
+        </Suspense>
+      </div>
+    </LoadingScreen3D>
   );
 };
 

@@ -15,7 +15,7 @@ const openai2 = new OpenAI({
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
 });
 
-const PLANNING_MODEL = "gemini-2.5-flash-lite-preview-09-2025"; // Single model for planning
+const PLANNING_MODEL = "gemini-2.5-flash-lite"; // Single model for planning
 
 interface ProjectAnalysis {
   type: 'frontend' | 'backend' | 'fullstack';
@@ -80,7 +80,7 @@ Make this TypeScript-based Node.js/Express backend. Be extremely detailed with 8
   }
 
 
-  private static async generateFrontendContext(requirements: string, blueprint: ProjectBlueprint): Promise<string> {
+  private static async generateFrontendContext(requirements: string, blueprint: ProjectBlueprint, enable3D: boolean = false): Promise<string> {
     const frontendPrompt = `🤖 YOU ARE AN AUTONOMOUS AI AGENT - ELITE FULL-STACK ARCHITECT
 
 USER'S SINGLE REQUEST: "${requirements}"
@@ -422,12 +422,15 @@ BEGIN YOUR ULTRA-DETAILED SPECIFICATION NOW:`;
 
     let frontendContext = response.choices[0].message.content || blueprint.detailedContext;
 
-    // Add UI components
-    console.log('   - Selecting UI components...');
-    const uiSelection = await UIService.selectComponents(requirements);
-    if (uiSelection.selectedComponents.length > 0) {
-      frontendContext += "\n\n" + uiSelection.formattedForPrompt;
-      console.log(`   - Added ${uiSelection.selectedComponents.length} UI components`);
+    if (!enable3D) {
+      console.log('   - Selecting UI components...');
+      const uiSelection = await UIService.selectComponents(requirements);
+      if (uiSelection.selectedComponents.length > 0) {
+        frontendContext += "\n\n" + uiSelection.formattedForPrompt;
+        console.log(`   - Added ${uiSelection.selectedComponents.length} UI components`);
+      }
+    } else {
+      console.log('[Planning] 3D mode: skipping 2D UI component selection');
     }
 
     return frontendContext;
@@ -870,7 +873,8 @@ REMEMBER: The detailedContext is passed to code generation AI. It must be SO com
   static async generateBlueprint(
     requirements: string,
     retryCount: number = 0,
-    projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack'
+    projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack',
+    enable3D: boolean = false
   ): Promise<PlanningResponse> {
     const MAX_RETRIES = 3;
 
@@ -1378,7 +1382,7 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
 
         // Generate frontend context (will be enriched with backend knowledge later)
         console.log('\n Generating FRONTEND context...');
-        const frontendContext = await this.generateFrontendContext(requirements, blueprint);
+        const frontendContext = await this.generateFrontendContext(requirements, blueprint, enable3D);
         blueprint.frontendContext = frontendContext;
         console.log(` Frontend context: ${frontendContext.length} chars`);
 
@@ -1386,32 +1390,34 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
         blueprint.detailedContext = backendContext;
 
       } else if (projectType === 'frontend') {
-        console.log('\n Selecting UI components to enrich the blueprint...');
-
-        const detailedContextLengthBefore = blueprint.detailedContext.length;
-        console.log(` detailedContext length BEFORE appending UI: ${detailedContextLengthBefore} chars`);
-
-        const uiSelection = await UIService.selectComponents(requirements);
-
-        if (uiSelection.selectedComponents.length > 0) {
-          // Append UI components to detailedContext at the end
-          blueprint.detailedContext += uiSelection.formattedForPrompt;
-
-          const detailedContextLengthAfter = blueprint.detailedContext.length;
-          console.log(`\n APPEND OPERATION COMPLETE:`);
-          console.log(`   - Added ${uiSelection.selectedComponents.length} UI components to detailedContext`);
-          console.log(`   - Selected components: ${uiSelection.selectedComponents.map(c => c.name).join(', ')}`);
-          console.log(`   - detailedContext length BEFORE: ${detailedContextLengthBefore} chars`);
-          console.log(`   - detailedContext length AFTER: ${detailedContextLengthAfter} chars`);
-          console.log(`   - UI components added: ${detailedContextLengthAfter - detailedContextLengthBefore} chars`);
-
-          // Show last 500 chars to verify UI components are at the end
-          console.log(`\n LAST 500 CHARS OF detailedContext (showing UI components):}`);
-          console.log('─'.repeat(80));
-          console.log(blueprint.detailedContext.slice(-500));
-          console.log('─'.repeat(80));
+        if (enable3D) {
+          console.log('[Planning] 3D mode: skipping 2D UI component selection for frontend project');
         } else {
-          console.log(' No UI components selected (or selection failed)');
+          console.log('\n Selecting UI components to enrich the blueprint...');
+
+          const detailedContextLengthBefore = blueprint.detailedContext.length;
+          console.log(` detailedContext length BEFORE appending UI: ${detailedContextLengthBefore} chars`);
+
+          const uiSelection = await UIService.selectComponents(requirements);
+
+          if (uiSelection.selectedComponents.length > 0) {
+            blueprint.detailedContext += uiSelection.formattedForPrompt;
+
+            const detailedContextLengthAfter = blueprint.detailedContext.length;
+            console.log(`\n APPEND OPERATION COMPLETE:`);
+            console.log(`   - Added ${uiSelection.selectedComponents.length} UI components to detailedContext`);
+            console.log(`   - Selected components: ${uiSelection.selectedComponents.map(c => c.name).join(', ')}`);
+            console.log(`   - detailedContext length BEFORE: ${detailedContextLengthBefore} chars`);
+            console.log(`   - detailedContext length AFTER: ${detailedContextLengthAfter} chars`);
+            console.log(`   - UI components added: ${detailedContextLengthAfter - detailedContextLengthBefore} chars`);
+
+            console.log(`\n LAST 500 CHARS OF detailedContext (showing UI components):}`);
+            console.log('─'.repeat(80));
+            console.log(blueprint.detailedContext.slice(-500));
+            console.log('─'.repeat(80));
+          } else {
+            console.log(' No UI components selected (or selection failed)');
+          }
         }
       }
 
@@ -1426,7 +1432,7 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
       if (retryCount < MAX_RETRIES) {
         console.log(`Error occurred, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
         await new Promise(resolve => setTimeout(resolve, 1500));
-        return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend);
+        return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend, enable3D);
       }
 
       return {

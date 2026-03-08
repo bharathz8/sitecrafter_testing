@@ -1,0 +1,33 @@
+{
+    "name": "rag-3d-backend",
+    "version": "1.0.0",
+    "description": "RAG pipeline backend for 3D web development documentation (React Three Fiber, Drei, Three.js)",
+    "main": "dist/server.js",
+    "scripts": {
+        "dev": "ts-node src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js"
+    },
+    "dependencies": {
+        "@google/genai": "^1.43.0",
+        "@google/generative-ai": "^0.21.0",
+        "@langchain/community": "^1.1.20",
+        "@langchain/core": "^1.1.29",
+        "@langchain/google-genai": "^0.1.12",
+        "@types/cheerio": "^0.22.35",
+        "axios": "^1.7.9",
+        "cheerio": "^1.2.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
+        "hnswlib-node": "^3.0.0",
+        "langchain": "^0.3.15"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.12.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.7.3"
+    }
+}

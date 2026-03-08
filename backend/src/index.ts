@@ -25,9 +25,11 @@ import { UI_UX_DESIGN_PROMPT, DESIGN_IMPLEMENTATION_RULES } from './prompts/ui-d
 import { generateWebsite, GeneratedFile } from './agents/langgraph';
 import { fixCodeError, analyzeCode } from './agents/langgraph/services/error-fixer.service';
 import Project from './models/project';
+import User from './models/user';
 import { analyzeModificationRequest, applyModifications } from './services/modification.service';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
+import { ingestDocumentation, queryDocumentation, generateComponent, testPipeline } from './rag/rag-3d';
 dotenv.config();
 
 // Configure multer for file uploads (memory storage)
@@ -81,6 +83,77 @@ app.use(passport.session());
 // Auth routes
 app.use('/auth', authRoutes);
 app.use('/auth', googleAuthRoutes);
+
+app.post("/ingest-3d", async (_req: Request, res: Response) => {
+  try {
+    const result = await ingestDocumentation();
+    res.json({ success: true, urlsProcessed: result.urlsProcessed, chunksStored: result.chunksStored });
+  } catch (err: any) {
+    console.error("[ingest-3d] Error:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/query-3d", async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body;
+    if (!query || typeof query !== "string" || query.trim().length === 0) {
+      res.status(400).json({ success: false, error: "Body must include a non-empty 'query' string." });
+      return;
+    }
+    const result = await queryDocumentation(query);
+    res.json({ success: true, query: result.query, retrievedChunks: result.retrievedChunks, context: result.context, sources: result.sources });
+  } catch (err: any) {
+    console.error("[query-3d] Error:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/generate-3d", async (req: Request, res: Response) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
+      res.status(400).json({ success: false, error: "Body must include a non-empty 'prompt' string." });
+      return;
+    }
+    const result = await generateComponent(prompt);
+    res.json({ success: true, prompt: result.prompt, component: result.component, sources: result.sources });
+  } catch (err: any) {
+    console.error("[generate-3d] Error:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get("/test-3d", async (_req: Request, res: Response) => {
+  try {
+    const result = await testPipeline();
+    res.json({ success: true, chunksRetrieved: result.chunksRetrieved, status: result.chunksRetrieved > 0 ? "RAG pipeline working" : "Run /ingest-3d first" });
+  } catch (err: any) {
+    console.error("[test-3d] Error:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Migration endpoint - adds userId to existing users (run once)
+app.post('/api/migrate-users', async (req: Request, res: Response) => {
+  try {
+    const { randomUUID } = await import('crypto');
+    const usersWithoutUserId = await User.find({ userId: { $exists: false } });
+
+    let migrated = 0;
+    for (const user of usersWithoutUserId) {
+      user.userId = randomUUID();
+      await user.save();
+      migrated++;
+    }
+
+    console.log(`Migrated ${migrated} users with new userId`);
+    res.json({ success: true, migratedCount: migrated });
+  } catch (error: any) {
+    console.error('Migration failed:', error.message);
+    res.status(500).json({ error: 'Migration failed', details: error.message });
+  }
+});
 
 // Gemini AI setup
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -282,7 +355,7 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
 // NEW SSE STREAMING ENDPOINT FOR REAL-TIME FILE UPDATES
 // ═══════════════════════════════════════════════════════════════════════════
 app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
-  const { prompt, projectType = 'frontend' } = req.body;
+  const { prompt, projectType = 'frontend', enable3D = false } = req.body;
 
   if (!prompt) {
     res.status(400).json({ error: 'Prompt is required' });
@@ -305,7 +378,17 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
       'components': 'Building UI components...',
       'pages': 'Creating page components...',
       'validation': 'Validating generated code...',
-      'repair': 'Fixing validation issues...'
+      'repair': 'Fixing validation issues...',
+      'crawl_3d': 'Crawling 3D documentation (Three.js, R3F, Drei)...',
+      'crawl_3d_complete': '3D documentation ready',
+      'identify_3d': 'Identifying required 3D modules...',
+      'identify_3d_complete': '3D modules identified',
+      'rag_3d_context': 'Building RAG context from 3D documentation...',
+      'rag_3d_complete': '3D RAG context ready',
+      'generate_3d_components': 'Generating 3D React components...',
+      'generate_3d_complete': '3D components generated',
+      'tsc_validation': 'Running TypeScript validation and auto-fixing errors...',
+      'tsc_validation_complete': 'TypeScript validation complete',
     };
     return messages[phase] || `Processing ${phase}...`;
   }
@@ -314,6 +397,7 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
   console.log('SSE STREAM: LangGraph Generation Started');
   console.log(' ═══════════════════════════════════════════════════');
   console.log(` Prompt: ${prompt}`);
+  console.log(` 3D Mode: ${enable3D}`);
 
   // Helper to send SSE events
   const sendEvent = (type: string, data: any) => {
@@ -335,7 +419,6 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
     const result = await generateWebsite(
       prompt,
       projectType,
-      // Callback when a file is generated
       (file: GeneratedFile) => {
         if (!sentFiles.has(file.path)) {
           sentFiles.add(file.path);
@@ -347,7 +430,6 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
           console.log(`    Streamed: ${file.path}`);
         }
       },
-      // Callback when phase changes
       (phase: string) => {
         currentPhase = phase;
         sendEvent('phase', {
@@ -355,7 +437,8 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
           message: getPhaseMessage(phase)
         });
         console.log(`    Phase: ${phase}`);
-      }
+      },
+      enable3D
     );
 
     // Send completion
@@ -1016,25 +1099,28 @@ app.post('/api/projects', async (req: Request, res: Response) => {
 
 /**
  * GET /api/projects
- * Get all projects (filtered by sessionId or userId)
+ * Get all projects (filtered by userId for logged-in users, or sessionId for anonymous)
  */
 app.get('/api/projects', async (req: Request, res: Response) => {
   try {
     const { sessionId, userId } = req.query;
 
-    // Build query to match either sessionId OR userId
-    const orConditions: any[] = [];
-    if (sessionId) orConditions.push({ sessionId });
-    if (userId) orConditions.push({ userId });
-
-    const query = orConditions.length > 0 ? { $or: orConditions } : {};
+    // Build query: userId takes priority (logged-in user), otherwise use sessionId (anonymous)
+    let query: any = {};
+    if (userId) {
+      // Logged-in user: show only their projects
+      query = { userId };
+    } else if (sessionId) {
+      // Anonymous user: show session-based projects
+      query = { sessionId };
+    }
 
     const projects = await Project.find(query)
       .select('_id name prompt fileCount status createdAt updatedAt')
       .sort({ createdAt: -1 })
       .limit(50);
 
-    console.log(` Retrieved ${projects.length} projects`);
+    console.log(` Retrieved ${projects.length} projects for ${userId ? 'user: ' + userId : 'session: ' + sessionId}`);
 
     res.json({ projects });
 
@@ -1122,7 +1208,7 @@ IMPORTANT:
 Respond with ONE WORD ONLY: question, explain, or modify`;
 
     const intentResponse = await client.chat.completions.create({
-      model: "gemini-2.5-flash-lite-preview-09-2025",
+      model: "gemini-2.5-flash-lite",
       messages: [
         { role: "system", content: "You are an intent classifier. Respond with only one word." },
         { role: "user", content: intentPrompt }
@@ -1160,7 +1246,7 @@ Answer the user's question specifically:
 - If something doesn't exist, say so clearly`;
 
       const answerResponse = await client.chat.completions.create({
-        model: "gemini-2.5-flash-lite-preview-09-2025",
+        model: "gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: "You answer questions about web projects. Be specific about file locations." },
           { role: "user", content: answerPrompt }

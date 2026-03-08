@@ -49,7 +49,7 @@ export const ProjectHistory: React.FC = () => {
             const user = localStorage.getItem('user');
             if (user) {
                 const parsed = JSON.parse(user);
-                return parsed._id || parsed.id;
+                return parsed.userId || parsed.id || parsed._id;
             }
         } catch { }
         return null;
@@ -62,16 +62,20 @@ export const ProjectHistory: React.FC = () => {
     const fetchProjects = async () => {
         try {
             setLoading(true);
-            const sessionId = getSessionId();
             const userId = getUserId();
+            const sessionId = getSessionId();
+            const token = localStorage.getItem('token');
 
-            // Build query with both sessionId and userId
-            let queryParams = `sessionId=${sessionId}`;
-            if (userId) {
-                queryParams += `&userId=${userId}`;
+            const queryParams = userId
+                ? `userId=${userId}`
+                : `sessionId=${sessionId}`;
+
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await axios.get(`${BACKEND_URL}/api/projects?${queryParams}`);
+            const response = await axios.get(`${BACKEND_URL}/api/projects?${queryParams}`, { headers });
             setProjects(response.data.projects || []);
         } catch (err: any) {
             setError(err.message || 'Failed to load projects');

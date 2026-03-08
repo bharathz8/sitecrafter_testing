@@ -9,6 +9,7 @@ import { invokeLLM, parseChirActions, extractExports, extractImports } from '../
 import { storeFileMemory, getAllFileMemories, FileMemory } from '../memory-utils';
 import { notifyFileCreated, notifyPhaseChange } from '../website-graph';
 import { formatImagesForPrompt } from '../services/image.service';
+import { getMemoryContext } from '../project-memory';
 
 export async function pageNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
   console.log('\n ═══════════════════════════════════════════');
@@ -32,7 +33,40 @@ export async function pageNode(state: WebsiteState): Promise<Partial<WebsiteStat
 
   console.log(`    Memory context loaded: ${memoryContext.length} chars`);
 
-  const systemPrompt = `You are a SENIOR FRONTEND ARCHITECT generating PRODUCTION-READY, ZERO-ERROR page components.
+  const is3D = state.enable3D === true;
+
+  const systemPrompt = is3D
+    ? `You are a SENIOR THREE.JS / REACT THREE FIBER ARCHITECT generating PRODUCTION-READY, ZERO-ERROR 3D page components.
+
+CRITICAL 3D CONSTRAINTS:
+- NEVER import from @/components/ui/ (Button, Card, Input, Badge, etc. DO NOT EXIST)
+- NEVER import from lucide-react
+- NEVER use Tailwind UI component patterns -- this is a PURE 3D project
+- Use native HTML <button>, <a>, <div> for any HTML overlays inside <Scroll html>
+- All 3D scenes are placed inside <Canvas> with <ScrollControls> and <Scroll>
+- Scene components are lazy-loaded and placed at Y offsets inside <Scroll>
+- HTML overlays go in <Scroll html> as full-height sections
+- Use framer-motion for HTML animations, NOT for 3D objects
+- Import Three.js types and R3F hooks only
+- Every page must have a default export
+- ALL interactive HTML elements in <Scroll html> need pointer-events-auto
+- Define cn inline if needed: const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+
+═══════════════════════════════════════════════════════════════════════════════
+ CRITICAL OUTPUT FORMAT - MANDATORY
+═══════════════════════════════════════════════════════════════════════════════
+
+You MUST wrap each file in <chirAction> tags. NEVER use markdown code blocks.
+Format:
+
+<chirAction type="file" filePath="src/pages/PageName.tsx">
+// file content here
+</chirAction>
+
+Every page file MUST be wrapped in its own <chirAction> tag with the correct filePath.
+NEVER use \`\`\`tsx or any markdown formatting. ONLY <chirAction> tags.
+`
+    : `You are a SENIOR FRONTEND ARCHITECT generating PRODUCTION-READY, ZERO-ERROR page components.
 
 ═══════════════════════════════════════════════════════════════════════════════
  ZERO ERROR TOLERANCE - MANDATORY DEFENSIVE CODING
@@ -193,7 +227,7 @@ const gradients = [
   ))}
 </div>
 
-═══════════════════════════════════════════════════════════════════════════════
+${is3D ? '' : `═══════════════════════════════════════════════════════════════════════════════
  REQUIRED IMPORTS FOR EVERY PAGE
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -201,10 +235,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-// Import specific icons as needed
 import { ArrowRight, Check, Star } from 'lucide-react';
 
-// cn utility - ALWAYS define inline
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -236,16 +268,14 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ArrowRight, Star } from 'lucide-react';
 
-// cn utility - ALWAYS define inline
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
-// Gradient colors for variety
 const gradients = [
   'from-indigo-500 to-purple-600',
   'from-rose-500 to-orange-500',
   'from-emerald-500 to-teal-500',
   'from-blue-500 to-cyan-500',
-];
+];`}
 
 // Sample data with all properties defined
 const products = [
@@ -309,7 +339,21 @@ const HomePage = () => {
 export default HomePage;
 </chirAction>
 
-NEVER use markdown. ALWAYS use <chirAction> tags.`;
+NEVER use markdown. ALWAYS use <chirAction> tags.
+
+═══════════════════════════════════════════════════════════════════════════════
+ CRITICAL OUTPUT FORMAT - MANDATORY
+═══════════════════════════════════════════════════════════════════════════════
+
+You MUST wrap each file in <chirAction> tags. NEVER use markdown code blocks.
+Format:
+
+<chirAction type="file" filePath="src/pages/PageName.tsx">
+// file content here
+</chirAction>
+
+Every page file MUST be wrapped in its own <chirAction> tag with the correct filePath.
+NEVER use \`\`\`tsx or any markdown formatting. ONLY <chirAction> tags.`;
 
   // Format available images for the prompt
   const imagesContext = formatImagesForPrompt(state.availableImages || []);
@@ -374,13 +418,22 @@ ${memoryContext}
 ═══════════════════════════════════════════════════════════════════════════════
 ${existingContext}
 
-IMPORT PATTERNS:
+${is3D ? `IMPORT PATTERNS (3D PROJECT -- NO 2D UI COMPONENTS):
+import React, { Suspense, lazy } from 'react';
+import { motion } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
+import { ScrollControls, Scroll, Environment } from '@react-three/drei';
+import { useNavigate } from 'react-router-dom';
+const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+
+DO NOT IMPORT: Button, Card, Input, Badge from @/components/ui/ -- THOSE FILES DO NOT EXIST
+DO NOT IMPORT: lucide-react -- NOT INSTALLED` : `IMPORT PATTERNS:
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Star } from 'lucide-react';
+import { ArrowRight, Check, Star } from 'lucide-react';`}
 
 ═══════════════════════════════════════════════════════════════════════════════
  BLUEPRINT FEATURES TO IMPLEMENT
@@ -400,7 +453,7 @@ Description: ${page.description}
 REQUIRED SECTIONS (3-5 minimum):
 ${page.sections?.map((s, i) => `${i + 1}. ${s}`).join('\n') || '1. Hero Section\n2. Features Grid\n3. Content Section\n4. CTA Section'}
 
-Uses components: ${page.components?.join(', ') || 'Button, Card, Badge'}
+Uses components: ${is3D ? 'Canvas, ScrollControls, Scroll, Environment, EffectComposer, framer-motion' : page.components?.join(', ') || 'Button, Card, Badge'}
 
 MUST INCLUDE:
 - Responsive layout (mobile/tablet/desktop)
@@ -418,7 +471,7 @@ MUST INCLUDE:
 3. WORKING IMAGES: Use provided Unsplash URLs or gradient fallbacks
 4. REAL CONTENT: No placeholder text, create meaningful content for ${blueprint.projectName}
 5. ALL FEATURES: Implement every feature from blueprint
-6. PROPER IMPORTS: Import components from @/components/ui/ and @/components/features/
+6. PROPER IMPORTS: ${is3D ? 'Import 3D scenes from @/components/3d/ -- DO NOT import from @/components/ui/' : 'Import components from @/components/ui/ and @/components/features/'}
 7. DEFAULT EXPORT: Each page must have export default PageName;
 8. NO APPLAYOUT WRAPPER: Pages render inside AppLayout via Outlet
 
@@ -440,11 +493,11 @@ Example patterns to use:
 - Container: container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl
 
 ${state.detailedContext ? `
-═══════════════════════════════════════════════════════════════════════════════
- DETAILED SPECIFICATIONS FROM PLANNING
-═══════════════════════════════════════════════════════════════════════════════
+
 ${state.detailedContext.slice(0, 3000)}...
-` : ''}`;
+` : ''}
+
+${build3DPageContext(state)}`;
 
   try {
     const response = await invokeLLM(systemPrompt, userPrompt, 0.7);
@@ -497,4 +550,141 @@ async function addFileWithMemory(
     phase,
     contentPreview: content.substring(0, 300)
   });
+}
+
+function build3DPageContext(state: WebsiteState): string {
+  if (!state.enable3D) return '';
+
+  const memory = state.projectMemory;
+  const instructions = memory?.threeDImportInstructions || '';
+  const paths = memory?.threeDComponentPaths || [];
+
+  const brainContext = memory ? getMemoryContext(memory) : '';
+
+  const hasLoader = true;
+  const hasNavBar = true;
+  const hasFooter = true;
+
+  const scenePaths = paths.filter(p =>
+    !p.includes('LoadingScreen3D') && !p.includes('NavBar3D') && !p.includes('Footer3D')
+  );
+
+  if (scenePaths.length === 0) {
+    const defaultScenes = ['HeroScene3D', 'FeaturesScene3D', 'ShowcaseScene3D', 'BackgroundScene3D'];
+    for (const s of defaultScenes) {
+      scenePaths.push(`src/components/3d/${s}.tsx`);
+    }
+  }
+
+  const sceneImports = scenePaths.map(p => {
+    const name = p.split('/').pop()?.replace('.tsx', '') || '';
+    const importPath = '@/' + p.replace(/^src\//, '').replace('.tsx', '');
+    return `const ${name} = lazy(() => import('${importPath}'));`;
+  }).join('\n');
+
+  const sceneNames = scenePaths.map(p => p.split('/').pop()?.replace('.tsx', '') || '');
+
+  const directImports = [
+    `import LoadingScreen3D from '@/components/3d/LoadingScreen3D';`,
+    `import NavBar3D from '@/components/3d/NavBar3D';`,
+    `import Footer3D from '@/components/3d/Footer3D';`,
+  ].join('\n');
+
+  const scrollScenes = sceneNames.map((name, i) => {
+    if (i === 0) return `                <${name} />`;
+    return `                <group position={[0, ${i * -10}, 0]}>\n                  <${name} />\n                </group>`;
+  }).join('\n');
+
+  const numPages = Math.max(sceneNames.length + 1, 4);
+
+  return `
+
+=== PURE 3D PAGE ARCHITECTURE ===
+
+=== MANDATORY RULES (READ FIRST) ===
+
+1. EVERY page MUST import NavBar3D and render <NavBar3D /> OUTSIDE Canvas (before the fixed div)
+2. EVERY page MUST import Footer3D and render <Footer3D /> INSIDE <Scroll html> as the LAST section
+3. EVERY page MUST import LoadingScreen3D and wrap the entire return in <LoadingScreen3D>
+4. Page owns the SINGLE Canvas -- scenes do NOT have their own Canvas
+5. Scene components are placed inside <Scroll> at Y offsets: 0, -10, -20, -30...
+6. HTML text overlays go in <Scroll html> as full-height sections with motion.div
+7. EffectComposer goes INSIDE Canvas, AFTER ScrollControls (not inside scenes)
+8. NEVER import from lucide-react
+9. NEVER use disableNormalPass -- use enableNormalPass={false} if needed
+10. Import cn from @/lib/utils if using cn()
+11. pointer-events-auto on interactive HTML elements inside Scroll html
+12. Each HTML section: h-screen w-screen, centered content
+
+=== REQUIRED IMPORTS ===
+
+import React, { Suspense, lazy } from 'react';
+import { motion } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
+import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
+${directImports}
+import { useNavigate } from 'react-router-dom';
+
+${sceneImports}
+
+${instructions}
+
+=== PAGE STRUCTURE (follow this EXACTLY) ===
+
+const Page = () => {
+  const navigate = useNavigate();
+
+  return (
+    ${hasLoader ? '<LoadingScreen3D>' : ''}
+      ${hasNavBar ? '<NavBar3D />' : ''}
+
+      <div className="fixed inset-0 w-full h-screen bg-black overflow-hidden">
+        <Suspense fallback={<div className="w-full h-full bg-black" />}>
+          <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]}>
+            <color attach="background" args={['#050505']} />
+            <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
+
+            <ScrollControls pages={${numPages}} damping={0.1}>
+              <Scroll>
+${scrollScenes}
+              </Scroll>
+
+              <Scroll html>
+                {/* Each section = one screen height of HTML overlay */}
+                <section className="h-screen w-screen flex items-center justify-center">
+                  <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} className="text-center px-4 pointer-events-auto">
+                    <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tighter">HERO TITLE</h1>
+                    <p className="text-xl text-white/80 max-w-2xl mx-auto mb-10">Hero subtitle text</p>
+                    <button onClick={() => navigate('/next')} className="px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-bold hover:bg-[accent] transition-all duration-500 hover:scale-105">CTA</button>
+                  </motion.div>
+                </section>
+
+                {/* More sections for features, showcase, etc. */}
+                <section className="h-screen w-screen flex items-center justify-center px-4">
+                  {/* Feature cards with glassmorphism */}
+                </section>
+
+                ${hasFooter ? `<section className="w-screen">
+                  <Footer3D />
+                </section>` : ''}
+              </Scroll>
+            </ScrollControls>
+
+            <Environment preset="city" />
+
+            <EffectComposer>
+              <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} />
+              <Vignette eskil={false} offset={0.1} darkness={0.8} />
+              <Noise opacity={0.04} />
+            </EffectComposer>
+          </Canvas>
+        </Suspense>
+      </div>
+    </LoadingScreen3D>
+  );
+};
+
+${brainContext ? `PROJECT BRAIN CONTEXT:\n${brainContext}` : ''}
+`;
 }

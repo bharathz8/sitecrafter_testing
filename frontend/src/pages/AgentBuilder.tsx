@@ -14,7 +14,7 @@ import { BACKEND_URL } from '../config';
 import { useWebContainer } from '../hooks/useWebContainer.tsx';
 import { parseStackTrace } from '../utils/errorReporter';
 import type { ProjectBlueprint } from '../types/planning.types';
-import { ArrowLeft, Sparkles, Loader2, Zap, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Zap, FolderOpen, MessageSquare, Layers, Box } from 'lucide-react';
 import type { FileSystemTree } from '@webcontainer/api';
 // import { WebContainerTerminal } from '../components/terminal/WebContainerTerminal';
 
@@ -152,6 +152,8 @@ export const AgentBuilder: React.FC = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const [searchParams] = useSearchParams();
     const [isLoadingProject, setIsLoadingProject] = useState(false);
+    const [activeMobilePanel, setActiveMobilePanel] = useState<'chat' | 'preview'>('chat');
+    const [enable3D, setEnable3D] = useState(false);
 
     // Load project from URL parameter on mount
     useEffect(() => {
@@ -285,11 +287,24 @@ export const AgentBuilder: React.FC = () => {
         return sessionId;
     };
 
+    // Get user ID from localStorage (if logged in)
+    const getUserId = () => {
+        try {
+            const user = localStorage.getItem('user');
+            if (user) {
+                const parsed = JSON.parse(user);
+                return parsed.userId || parsed.id || parsed._id;
+            }
+        } catch { }
+        return null;
+    };
+
     // Save project to MongoDB
     const saveProject = useCallback(async (collectedFiles: { path: string; content: string }[]) => {
         try {
             const response = await axios.post(`${BACKEND_URL}/api/projects`, {
                 sessionId: getSessionId(),
+                userId: getUserId(),
                 prompt: pendingPrompt,
                 files: collectedFiles,
                 blueprint: blueprint,
@@ -297,7 +312,7 @@ export const AgentBuilder: React.FC = () => {
 
             if (response.data.success) {
                 setProjectId(response.data.projectId);
-                addMessage('success', `💾 Project saved: ${response.data.name}`);
+                addMessage('success', `Project saved: ${response.data.name}`);
                 console.log('Project saved with ID:', response.data.projectId);
             }
         } catch (err) {
@@ -474,7 +489,7 @@ export const AgentBuilder: React.FC = () => {
                 // Generate a simple component using LLM
                 const response = await fetch(`${BACKEND_URL}/api/fix-error`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                     body: JSON.stringify({
                         error: `Create a new React component for: ${componentName}. The file path is ${filePath}. Make it a functional TypeScript component with proper props interface and modern styling using Tailwind CSS.`,
                         filePath: filePath,
@@ -536,7 +551,7 @@ export const AgentBuilder: React.FC = () => {
 
                 const response = await fetch(`${BACKEND_URL}/api/fix-error`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                     body: JSON.stringify({
                         error: errorText,
                         filePath: targetFile.path,
@@ -846,8 +861,8 @@ export const AgentBuilder: React.FC = () => {
 
             const response = await fetch(`${BACKEND_URL}/chat/langgraph-stream`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, projectType: 'frontend' }),
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                body: JSON.stringify({ prompt, projectType: 'frontend', enable3D }),
                 signal: abortControllerRef.current.signal
             });
 
@@ -879,13 +894,18 @@ export const AgentBuilder: React.FC = () => {
                                 setStatusMessage(data.message);
                             } else if (data.type === 'complete') {
                                 setStatus('complete');
-                                addMessage('success', `✅ Generated ${totalFiles} files!`);
+                                addMessage('success', `Generated ${totalFiles} files!`);
                                 if (collected.length > 0) {
+                                    // Save to MongoDB IMMEDIATELY (don't wait for WebContainer)
+                                    // This runs in parallel with mounting files
+                                    saveProject(collected).catch(err => {
+                                        console.error('Failed to save project:', err);
+                                    });
+
+                                    // Mount files and start dev server (these take time)
                                     const fsTree = toWebContainerFS(collected);
                                     await mountFiles(fsTree);
                                     await startDevServer();
-                                    // Save project to MongoDB
-                                    await saveProject(collected);
                                 }
                             }
                         } catch { }
@@ -941,35 +961,34 @@ export const AgentBuilder: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-[#0a0a0a] text-white relative">
             {/* Header */}
-            <header className="flex items-center justify-between px-4 py-3 border-b border-[#2e2e2e] bg-[#141414]">
-                <div className="flex items-center gap-4">
+            <header className="flex items-center justify-between px-2 py-2 md:px-4 md:py-3 border-b border-[#2e2e2e] bg-[#141414]">
+                <div className="flex items-center gap-2 md:gap-4">
                     <button
-                        onClick={() => navigate('/dashboard')}
-                        className="p-2 hover:bg-[#2e2e2e] rounded-lg transition-colors"
+                        onClick={() => navigate('/')}
+                        className="p-1.5 md:p-2 hover:bg-[#2e2e2e] rounded-lg transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-gray-400" />
+                        <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-teal-600 flex items-center justify-center">
-                            <Sparkles className="w-4 h-4 text-white" />
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gradient-to-br from-amber-500 to-teal-600 flex items-center justify-center">
+                            <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
                         </div>
-                        <span className="font-semibold text-gray-100">SiteCrafter Agent</span>
+                        <span className="font-semibold text-sm md:text-base text-gray-100">SiteCrafter Agent</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {/* WebContainer Status */}
-                    <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 md:gap-4">
+                    <div className="hidden sm:flex items-center gap-2 text-xs">
                         {isPreWarmed && !isPreWarming && (
                             <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 rounded-full text-amber-500">
                                 <Zap className="w-3 h-3" />
-                                Ready
+                                <span className="hidden md:inline">Ready</span>
                             </span>
                         )}
                         {isFixing && (
                             <span className="flex items-center gap-1 px-2 py-1 bg-orange-500/10 rounded-full text-orange-500">
                                 <Loader2 className="w-3 h-3 animate-spin" />
-                                Auto-fixing...
+                                <span className="hidden md:inline">Auto-fixing...</span>
                             </span>
                         )}
                         {fixCount > 0 && (
@@ -979,16 +998,27 @@ export const AgentBuilder: React.FC = () => {
                         )}
                     </div>
 
-                    {/* My Projects Button */}
                     <button
-                        onClick={() => navigate('/projects')}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-all"
+                        id="toggle-3d"
+                        onClick={() => setEnable3D(prev => !prev)}
+                        className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm transition-all ${enable3D
+                                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-300'
+                            }`}
                     >
-                        <FolderOpen className="w-4 h-4" />
-                        My Projects
+                        <Box className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">3D</span>
                     </button>
 
-                    <span className="text-xs text-gray-500">Powered by LangGraph + Gemini</span>
+                    <button
+                        onClick={() => navigate('/projects')}
+                        className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs md:text-sm text-gray-300 hover:text-white transition-all"
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        <span className="hidden sm:inline">My Projects</span>
+                    </button>
+
+                    <span className="hidden md:inline text-xs text-gray-500"></span>
                 </div>
             </header>
 
@@ -1003,9 +1033,39 @@ export const AgentBuilder: React.FC = () => {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Mobile Panel Toggle */}
+                <div className="flex md:hidden border-b border-[#2e2e2e] bg-[#141414]">
+                    <button
+                        onClick={() => setActiveMobilePanel('chat')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeMobilePanel === 'chat'
+                            ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
+                            : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Chat
+                    </button>
+                    <button
+                        onClick={() => setActiveMobilePanel('preview')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeMobilePanel === 'preview'
+                            ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
+                            : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                    >
+                        <Layers className="w-4 h-4" />
+                        Preview
+                        {files.length > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                                {files.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
                 <div className="flex-1 flex overflow-hidden">
                     {/* Chat Panel - Left Side */}
-                    <div className="w-1/2 flex flex-col border-r border-[#2e2e2e]">
+                    <div className={`${activeMobilePanel === 'chat' ? 'flex' : 'hidden'
+                        } md:flex w-full md:w-1/2 flex-col border-r border-[#2e2e2e]`}>
                         <ChatPanel
                             messages={messages}
                             phases={phases}
@@ -1019,7 +1079,8 @@ export const AgentBuilder: React.FC = () => {
                     </div>
 
                     {/* Preview Panel - Right Side */}
-                    <div className="w-1/2 flex flex-col">
+                    <div className={`${activeMobilePanel === 'preview' ? 'flex' : 'hidden'
+                        } md:flex w-full md:w-1/2 flex-col`}>
                         <PreviewPanel
                             files={fileTree}
                             selectedFile={selectedFile}

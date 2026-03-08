@@ -40,7 +40,7 @@ function rotateApiKey(): void {
   }
 }
 
-const UI_SELECTION_MODEL = "gemini-2.5-flash-lite-preview-09-2025";
+const UI_SELECTION_MODEL = "gemini-2.5-flash-lite";
 
 interface UIComponent {
   name: string;
@@ -106,6 +106,7 @@ export class UIService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        rotateApiKey();
         console.log(`[UIService] Selecting UI components (attempt ${attempt}/${maxRetries}, key ${currentKeyIndex + 1}/${apiKeys.length})...`);
 
         const analysisPrompt = `You are an elite UI/UX design expert selecting components for a PRODUCTION-LEVEL, PREMIUM web application.

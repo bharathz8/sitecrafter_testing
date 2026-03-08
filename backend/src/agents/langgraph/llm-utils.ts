@@ -1,11 +1,5 @@
-/**
- * LLM Utility - Google Gemini integration for LangGraph nodes
- * Using gemini-2.5-flash model with API key rotation
- */
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Multiple API keys for rotation
 const apiKeys = [
     process.env.gemini13,
     process.env.gemini12,
@@ -59,6 +53,7 @@ export async function invokeLLM(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
+            rotateApiKey();
             console.log(` LLM attempt ${attempt}/${maxRetries} (Key ${currentKeyIndex + 1}/${apiKeys.length})...`);
 
             const genAI = createClient();
@@ -120,13 +115,13 @@ export function parseChirActions(response: string): { path: string; content: str
 
     console.log(`    Preview: ${response.substring(0, 300).replace(/\n/g, '\\n')}`);
 
-    const patterns = [
+    const contentPatterns = [
         /<chirAction\s+type="file"\s+filePath="([^"]+)">([\s\S]*?)<\/chirAction>/g,
         /<chirAction\s+filePath="([^"]+)"\s+type="file">([\s\S]*?)<\/chirAction>/g,
         /<chirAction[^>]*filePath="([^"]+)"[^>]*>([\s\S]*?)<\/chirAction>/g,
     ];
 
-    for (const pattern of patterns) {
+    for (const pattern of contentPatterns) {
         for (const match of response.matchAll(pattern)) {
             let filePath = match[1].trim();
             let content = match[2].replace(/^```\w*\s*/gm, '').replace(/```\s*$/gm, '').trim();
@@ -141,6 +136,37 @@ export function parseChirActions(response: string): { path: string; content: str
             }
         }
         if (files.length > 0) break;
+    }
+
+    if (files.length === 0) {
+        console.log(`    No chirAction tags found, trying markdown code block fallback...`);
+
+        const mdPattern = /```(?:tsx?|jsx?|javascript|typescript)\s*\n\s*(?:\/\/\s*(src\/[^\n]+\.tsx?))\s*\n([\s\S]*?)```/g;
+        for (const match of response.matchAll(mdPattern)) {
+            let filePath = match[1].trim();
+            let content = match[2].trim();
+
+            if (!filePath.startsWith('src/') && filePath.includes('/')) {
+                filePath = 'src/' + filePath;
+            }
+
+            if (content.length > 0 && !files.some(f => f.path === filePath)) {
+                console.log(`    [fallback] ${filePath} (${content.length} chars)`);
+                files.push({ path: filePath, content });
+            }
+        }
+
+        if (files.length === 0) {
+            const blockPattern = /(?:#{1,4}\s+)?(?:[`*]*)?(?:File:\s*)?(?:[`*]*)?(src\/\S+\.tsx?)(?:[`*]*)?[^\n]*\n\s*```(?:tsx?|jsx?)\s*\n([\s\S]*?)```/g;
+            for (const match of response.matchAll(blockPattern)) {
+                let filePath = match[1].trim();
+                let content = match[2].trim();
+                if (content.length > 0 && !files.some(f => f.path === filePath)) {
+                    console.log(`    [fallback-header] ${filePath} (${content.length} chars)`);
+                    files.push({ path: filePath, content });
+                }
+            }
+        }
     }
 
     console.log(` Parsed ${files.length} files`);

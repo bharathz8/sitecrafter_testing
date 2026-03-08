@@ -7,7 +7,9 @@ import { WebsiteState, ProjectBlueprint } from '../graph-state';
 import { storeBlueprintMemory, clearProjectMemory, generateProjectId } from '../memory-utils';
 import { fetchProjectImages, storeImagesInMemory, UnsplashImage } from '../services/image.service';
 import { PlanningService } from '../../../services/planning-fixed.service';
+import { Planning3DService } from '../../../services/planning-3d.service';
 import { generateDynamicTheme } from '../../../services/dynamic-trends.service';
+import { initProjectMemory } from '../project-memory';
 
 // Complete list of dependencies
 const STANDARD_DEPENDENCIES: Record<string, string> = {
@@ -28,6 +30,15 @@ const STANDARD_DEPENDENCIES: Record<string, string> = {
     "sonner": "^1.7.3",
     "date-fns": "^4.1.0",
     "gsap": "^3.12.5"
+};
+
+const THREE_JS_DEPENDENCIES: Record<string, string> = {
+    "three": "^0.170.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/postprocessing": "^2.16.3",
+    "leva": "^0.9.35",
+    "@types/three": "^0.170.0"
 };
 
 const DEV_DEPENDENCIES: Record<string, string> = {
@@ -53,12 +64,24 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         console.log(`   User Request: "${state.userPrompt.slice(0, 100)}..."`);
         console.log(`   Project Type: ${state.projectType || 'frontend'}`);
 
-        // Use PlanningService for autonomous multi-phase planning
-        const planningResponse = await PlanningService.generateBlueprint(
-            state.userPrompt,
-            0, // retry count
-            state.projectType || 'frontend'
-        );
+        const is3D = state.enable3D || false;
+
+        let planningResponse;
+        if (is3D) {
+            console.log(' [Blueprint] 3D MODE: Using Planning3DService');
+            planningResponse = await Planning3DService.generateBlueprint(
+                state.userPrompt,
+                0,
+                state.projectType || 'frontend'
+            );
+        } else {
+            planningResponse = await PlanningService.generateBlueprint(
+                state.userPrompt,
+                0,
+                state.projectType || 'frontend',
+                false
+            );
+        }
 
         if (!planningResponse.success || !planningResponse.data) {
             throw new Error(planningResponse.error || 'Planning failed');
@@ -86,7 +109,22 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
             pages: dynamicPages,
             components: extractComponentsFromContext(planBlueprint.detailedContext),
             designSystem: extractDesignSystem(planBlueprint.detailedContext),
-            dependencies: { ...STANDARD_DEPENDENCIES }
+            dependencies: is3D
+                ? {
+                    "react": "^18.3.1",
+                    "react-dom": "^18.3.1",
+                    "react-router-dom": "^7.1.1",
+                    "framer-motion": "^11.14.4",
+                    "clsx": "^2.1.1",
+                    "tailwind-merge": "^2.5.5",
+                    "gsap": "^3.12.5",
+                    "three": "^0.170.0",
+                    "@react-three/fiber": "^8.17.10",
+                    "@react-three/drei": "^9.117.3",
+                    "@react-three/postprocessing": "^2.16.3",
+                    "leva": "^0.9.35",
+                }
+                : { ...STANDARD_DEPENDENCIES }
         };
 
         // Ensure page names are valid
@@ -134,17 +172,59 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         console.log(`    Animation: ${dynamicTheme.animation.name}`);
         console.log(`    Extended Packages: ${Object.keys(dynamicTheme.extendedPackages).join(', ')}`);
 
-        // Merge extended packages into blueprint dependencies
+        if (state.enable3D) {
+            const BLOCKED_2D_PACKAGES = new Set([
+                'stripe', '@stripe/stripe-js', '@stripe/react-stripe-js',
+                'swiper', 'react-hot-toast', 'sonner',
+                'recharts', '@radix-ui/react-icons', 'lucide-react',
+                'react-icons', '@heroicons/react',
+                'embla-carousel-react', 'react-slick', 'slick-carousel',
+            ]);
+            const filtered: Record<string, string> = {};
+            for (const [pkg, ver] of Object.entries(dynamicTheme.extendedPackages)) {
+                if (!BLOCKED_2D_PACKAGES.has(pkg)) {
+                    filtered[pkg] = ver as string;
+                } else {
+                    console.log(`    [blueprint] Filtered 2D package: ${pkg}`);
+                }
+            }
+            dynamicTheme.extendedPackages = filtered;
+        }
+
         blueprint.dependencies = {
             ...blueprint.dependencies,
             ...dynamicTheme.extendedPackages
         };
 
+        if (state.enable3D) {
+            blueprint.dependencies = {
+                ...blueprint.dependencies,
+                ...THREE_JS_DEPENDENCIES,
+                '@react-three/postprocessing': '^2.16.0',
+                'postprocessing': '^6.35.0',
+            };
+
+            blueprint.components = [];
+            blueprint.features = blueprint.features || [];
+
+            console.log(`[blueprint] Pure 3D architecture: cleared 2D components, injected 3D + postprocessing deps`);
+            console.log(`[blueprint] 3D dependencies: ${Object.keys(THREE_JS_DEPENDENCIES).join(', ')}, @react-three/postprocessing`);
+        }
+
+        const stateWithBlueprint = { ...state, blueprint, dynamicTheme } as WebsiteState;
+        const projectMemory = initProjectMemory(stateWithBlueprint);
+        if (state.enable3D) {
+            projectMemory.threeDDependencies = { ...THREE_JS_DEPENDENCIES };
+            projectMemory.narrativeStyle = `Create an immersive, cinematic 3D experience for: ${state.userPrompt.slice(0, 300)}`;
+        }
+        console.log(`[blueprint] Project brain initialized (3D=${projectMemory.is3D})`);
+
         return {
             blueprint,
             projectId,
             availableImages,
-            dynamicTheme,  // Pass theme to other nodes
+            dynamicTheme,
+            projectMemory,
             detailedContext: planBlueprint.detailedContext || '',
             workflowNodes: planBlueprint.workflow?.nodes || [],
             workflowEdges: planBlueprint.workflow?.edges || [],
@@ -154,8 +234,9 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
                 ` Theme: ${dynamicTheme.palette.name} + ${dynamicTheme.layout.name}`,
                 ` ${blueprint.pages.length} pages dynamically determined`,
                 ` ${blueprint.features.length} features identified`,
-                ` ${availableImages.length} images ready`
-            ]
+                ` ${availableImages.length} images ready`,
+                state.enable3D ? ` 3D dependencies injected into blueprint` : ''
+            ].filter(Boolean)
         };
 
     } catch (error: any) {
@@ -278,13 +359,14 @@ IMPORTANT:
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
+            rotateBlueprintKey();
             const openai = new OpenAI({
                 apiKey: getBlueprintApiKey(),
                 baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
             });
 
             const response = await openai.chat.completions.create({
-                model: "gemini-2.5-flash-lite-preview-09-2025",
+                model: "gemini-2.5-flash-lite",
                 messages: [
                     {
                         role: "system",

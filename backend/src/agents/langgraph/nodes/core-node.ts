@@ -116,7 +116,53 @@ export function truncate(text: string, maxLength: number): string {
 }`;
   addFile(files, registry, 'src/lib/utils.ts', utilsTsx, 'core');
 
-  // 5. Now generate layout components via LLM
+  if (state.enable3D) {
+    console.log('    [3D MODE] Generating 3D-specific App.tsx and AppLayout (NO 2D header/footer)');
+
+    const app3DTsx = `import { Routes, Route } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
+${pageImports}
+
+function App() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+${routes}
+      </Route>
+    </Routes>
+  );
+}
+
+export default App;`;
+    addFile(files, registry, 'src/App.tsx', app3DTsx, 'core');
+    console.log('    App.tsx created (3D mode - Routes with 3D AppLayout)');
+
+    const appLayout3D = `import React from 'react';
+import { Outlet } from 'react-router-dom';
+
+const AppLayout = () => {
+  return (
+    <div style={{ background: '#000', color: '#fff', position: 'relative' }}>
+      <Outlet />
+    </div>
+  );
+};
+
+export default AppLayout;`;
+    addFile(files, registry, 'src/components/layout/AppLayout.tsx', appLayout3D, 'core');
+    console.log('    AppLayout.tsx created (3D mode - minimal, pages own nav/footer)');
+
+    console.log(`\n Core files generated (3D): ${files.size}`);
+    files.forEach((_, path) => console.log(`    ${path}`));
+
+    return {
+      files,
+      fileRegistry: registry,
+      currentPhase: 'core',
+      messages: [`Core created (3D): ${files.size} files - No 2D Header/Footer`]
+    };
+  }
+
   const systemPrompt = `You are a senior React developer generating layout components.
 
 RULES:

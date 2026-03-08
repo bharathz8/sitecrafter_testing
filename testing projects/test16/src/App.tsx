@@ -1,18 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import HomePage from '@/pages/HomePage';
-import ProductsPage from '@/pages/ProductsPage';
-import ServicesPage from '@/pages/ServicesPage';
-import AboutPage from '@/pages/AboutPage';
-import ContactPage from '@/pages/ContactPage';
-import DashboardPage from '@/pages/DashboardPage';
-import BlogPage from '@/pages/BlogPage';
-import PortfolioPage from '@/pages/PortfolioPage';
-import TestimonialsPage from '@/pages/TestimonialsPage';
-import LoginPage from '@/pages/LoginPage';
-import ProfilePage from '@/pages/ProfilePage';
-import CartPage from '@/pages/CartPage';
-import SearchPage from '@/pages/SearchPage';
+import FarmTourPage from '@/pages/FarmTourPage';
+import ProductsCatalogPage from '@/pages/ProductsCatalogPage';
+import AboutUsPage from '@/pages/AboutUsPage';
+import ContactUsPage from '@/pages/ContactUsPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
 function App() {
@@ -20,18 +12,10 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/blog" element={<BlogPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/testimonials" element={<TestimonialsPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/search" element={<SearchPage />} />
+        <Route path="/farm-tour" element={<FarmTourPage />} />
+        <Route path="/products" element={<ProductsCatalogPage />} />
+        <Route path="/about" element={<AboutUsPage />} />
+        <Route path="/contact" element={<ContactUsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -1,13 +1,13 @@
 ﻿/**
  * Error Fixer Service
- * Uses gemini-2.5-flash-lite-preview-09-2025 for fixing code errors
+ * Uses gemini-2.5-flash-lite for fixing code errors
  * Includes API key rotation for rate limit handling
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Error fix specific model - lighter and faster for quick fixes
-const ERROR_FIX_MODEL = 'gemini-2.5-flash-lite-preview-09-2025';
+const ERROR_FIX_MODEL = 'gemini-2.5-flash-lite';
 
 // Multiple API keys for rotation
 const apiKeys = [
@@ -53,6 +53,7 @@ export async function fixCodeError(
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
+            rotateApiKey();
             const genAI = new GoogleGenerativeAI(getCurrentApiKey());
             const model = genAI.getGenerativeModel({ model: ERROR_FIX_MODEL });
 

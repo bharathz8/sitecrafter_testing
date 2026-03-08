@@ -345,7 +345,25 @@ ${state.detailedContext.slice(0, 2000)}...
 2. NO placeholder content ("Lorem ipsum", "Sample text")
 3. NO broken images (use Unsplash URLs or gradients)
 4. NO fixed widths - everything responsive
-5. ALL components must work on 320px to 2560px screens`;
+5. ALL components must work on 320px to 2560px screens
+
+${state.enable3D ? `
+
+3D-ENABLED PROJECT -- VISUAL COHERENCE
+
+This project includes 3D React Three Fiber components. Standard UI components MUST complement the 3D aesthetic:
+
+STYLE ADJUSTMENTS FOR 3D PROJECTS:
+- Use glass-morphism: bg-white/10 backdrop-blur-xl border border-white/20
+- Semi-transparent cards: bg-slate-900/60 backdrop-blur-lg
+- Buttons with subtle glow: shadow-[0_0_15px_rgba(99,102,241,0.3)]
+- Text should be high-contrast (text-white) since backgrounds may be dark 3D scenes
+- Use border-white/10 for subtle dividers
+- Prefer dark color schemes that match immersive 3D environments
+- Add hover:bg-white/20 transitions for interactive elements on glass surfaces
+
+DO NOT generate any 3D/Three.js code in these components. Only adjust the 2D styling.
+` : ''}`;
 
   try {
     const response = await invokeLLM(systemPrompt, userPrompt, 0.7);

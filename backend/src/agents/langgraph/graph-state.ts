@@ -79,6 +79,30 @@ export interface ValidationError {
     suggestedFix?: string;
 }
 
+export interface ProjectMemory {
+    projectName: string;
+    siteType: string;
+    colorPalette: {
+        primary: string;
+        secondary: string;
+        accent: string;
+        background: string;
+        text: string;
+    };
+    typography: { heading: string; body: string };
+    designTokens: Record<string, string>;
+    sections: string[];
+    componentsGenerated: string[];
+    pagesGenerated: string[];
+    is3D: boolean;
+    threeDModules: string[];
+    ragContext: string;
+    threeDDependencies: Record<string, string>;
+    threeDComponentPaths: string[];
+    threeDImportInstructions: string;
+    narrativeStyle: string;
+}
+
 // Graph State Annotation - defines how state is merged between nodes
 export const WebsiteStateAnnotation = Annotation.Root({
     // Input
@@ -240,6 +264,26 @@ export const WebsiteStateAnnotation = Annotation.Root({
         features: string[];
         fileStructure: string[];
     } | null>({
+        reducer: (_, newVal) => newVal,
+        default: () => null
+    }),
+
+    enable3D: Annotation<boolean>({
+        reducer: (_, newVal) => newVal,
+        default: () => false
+    }),
+
+    threeDModules: Annotation<string[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
+    }),
+
+    ragContext: Annotation<string>({
+        reducer: (_, newVal) => newVal,
+        default: () => ''
+    }),
+
+    projectMemory: Annotation<ProjectMemory | null>({
         reducer: (_, newVal) => newVal,
         default: () => null
     })
