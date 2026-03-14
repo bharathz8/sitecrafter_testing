@@ -15,7 +15,7 @@ interface BackendKnowledge {
   apiPrefix: string;
 }
 
-const MEM0_API_KEY = process.env.mem0 || 'm0-EBjkPh1TnU0KtjWtunxAeYU9EtslrGfiqm0TymPa';
+const MEM0_API_KEY = process.env.mem0 || '';
 const MEM0_API_URL = 'https://api.mem0.ai/v1';
 
 const mem0Client = axios.create({
