@@ -65,12 +65,19 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         console.log(`   Project Type: ${state.projectType || 'frontend'}`);
 
         const is3D = state.enable3D || false;
+        const effectivePrompt = (is3D && state.expandedPrompt && state.expandedPrompt.length > 100)
+            ? state.expandedPrompt
+            : state.userPrompt;
+
+        if (is3D && state.expandedPrompt && state.expandedPrompt.length > 100) {
+            console.log(`   [Blueprint] Using EXPANDED prompt (${state.expandedPrompt.length} chars)`);
+        }
 
         let planningResponse;
         if (is3D) {
             console.log(' [Blueprint] 3D MODE: Using Planning3DService');
             planningResponse = await Planning3DService.generateBlueprint(
-                state.userPrompt,
+                effectivePrompt,
                 0,
                 state.projectType || 'frontend'
             );

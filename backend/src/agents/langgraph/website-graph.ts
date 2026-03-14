@@ -15,6 +15,7 @@ import { identify3DModulesNode } from './nodes/identify-3d-modules-node';
 import { rag3DContextNode } from './nodes/rag-3d-context-node';
 import { generate3DComponentNode } from './nodes/generate-3d-component-node';
 import { tscValidationNode } from './nodes/tsc-validation-node';
+import { promptExpansionNode } from './nodes/prompt-expansion-node';
 
 let globalFileCallback: ((file: GeneratedFile) => void) | null = null;
 let globalPhaseCallback: ((phase: string) => void) | null = null;
@@ -45,6 +46,7 @@ function buildGraph() {
         .addNode('chat_response', chatResponseNode)
         .addNode('modification_analyzer', modificationAnalyzerNode)
 
+        .addNode('prompt_expansion', promptExpansionNode)
         .addNode('blueprint_step', blueprintNode)
 
         .addNode('crawl_3d', crawl3DModulesNode)
@@ -75,17 +77,24 @@ function buildGraph() {
 
                 case 'create':
                 default:
+                    if (state.enable3D) {
+                        console.log('   -> 3D create: routing to prompt_expansion first');
+                        return 'prompt_expansion';
+                    }
                     console.log('   -> Routing to blueprint_step (full creation)');
                     return 'blueprint_step';
             }
         }, {
             'chat_response': 'chat_response',
             'modification_analyzer': 'modification_analyzer',
+            'prompt_expansion': 'prompt_expansion',
             'blueprint_step': 'blueprint_step'
         })
 
         .addEdge('chat_response', END)
         .addEdge('modification_analyzer', END)
+
+        .addEdge('prompt_expansion', 'blueprint_step')
 
         .addConditionalEdges('blueprint_step', (state: WebsiteState) => {
             if (state.enable3D) {

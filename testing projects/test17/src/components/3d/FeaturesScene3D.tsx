@@ -1,9 +1,8 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { 
   Float, 
   Sparkles, 
-  ContactShadows, 
   MeshDistortMaterial, 
   MeshWobbleMaterial, 
   useScroll 
@@ -11,80 +10,80 @@ import {
 import * as THREE from 'three';
 
 /**
- * FeaturesScene3D Component
- * 
- * An immersive 3D scene designed for the "Featured Articles" section.
- * Features organic, fiery-dark geometric forms that respond to scroll and interaction.
- * 
- * TYPE 1: 3D SCENE COMPONENT
+ * FeatureItem handles individual interactive 3D objects with hover states 
+ * and smooth lerped animations.
  */
-
 const FeatureItem = ({ 
   position, 
   color, 
-  type = 'icosahedron', 
-  distort = 0.3, 
-  speed = 2 
+  geometry, 
+  materialType = 'physical',
+  index 
 }: { 
   position: [number, number, number], 
   color: string, 
-  type?: 'icosahedron' | 'torusKnot' | 'dodecahedron' | 'sphere',
-  distort?: number,
-  speed?: number
+  geometry: React.ReactNode,
+  materialType?: 'distort' | 'wobble' | 'physical',
+  index: number
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [hovered, setHovered] = useState(false);
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const [hovered, setHover] = useState(false);
 
   useFrame((state) => {
     if (!meshRef.current) return;
     
-    // Smooth hover scaling
-    const targetScale = hovered ? 1.4 : 1;
+    // Smooth scale lerp on hover
+    const targetScale = hovered ? 1.3 : 1;
     meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     
-    // Subtle additional rotation
-    meshRef.current.rotation.x += 0.005;
-    meshRef.current.rotation.y += 0.005;
+    // Subtle individual rotation based on index and time
+    const t = state.clock.getElapsedTime();
+    meshRef.current.rotation.x = Math.sin(t * 0.5 + index) * 0.2;
+    meshRef.current.rotation.y = Math.cos(t * 0.3 + index) * 0.2;
   });
 
   return (
-    <Float speed={speed} rotationIntensity={1.5} floatIntensity={2}>
+    <Float speed={1.5 + index * 0.2} rotationIntensity={1} floatIntensity={1.5}>
       <mesh
         ref={meshRef}
         position={position}
         onPointerOver={() => {
-          setHovered(true);
+          setHover(true);
           document.body.style.cursor = 'pointer';
         }}
         onPointerOut={() => {
-          setHovered(false);
+          setHover(false);
           document.body.style.cursor = 'default';
         }}
       >
-        {type === 'icosahedron' && <icosahedronGeometry args={[1, 2]} />}
-        {type === 'torusKnot' && <torusKnotGeometry args={[0.6, 0.2, 128, 32]} />}
-        {type === 'dodecahedron' && <dodecahedronGeometry args={[0.8, 0]} />}
-        {type === 'sphere' && <sphereGeometry args={[0.8, 32, 32]} />}
-
-        {type === 'icosahedron' ? (
+        {geometry}
+        {materialType === 'distort' && (
           <MeshDistortMaterial 
             color={color} 
-            speed={speed} 
-            distort={distort} 
-            emissive={color}
-            emissiveIntensity={0.5}
-            metalness={0.8}
-            roughness={0.2}
+            speed={3} 
+            distort={0.4} 
+            emissive={color} 
+            emissiveIntensity={0.5} 
           />
-        ) : (
+        )}
+        {materialType === 'wobble' && (
           <MeshWobbleMaterial 
             color={color} 
-            speed={speed} 
-            factor={distort} 
+            speed={2} 
+            factor={0.6} 
+            emissive={color} 
+            emissiveIntensity={0.3} 
+          />
+        )}
+        {materialType === 'physical' && (
+          <meshPhysicalMaterial 
+            color={color}
             emissive={color}
-            emissiveIntensity={0.4}
-            metalness={0.9}
+            emissiveIntensity={0.8}
             roughness={0.1}
+            metalness={0.9}
+            clearcoat={1}
+            reflectivity={1}
           />
         )}
       </mesh>
@@ -92,86 +91,122 @@ const FeatureItem = ({
   );
 };
 
+/**
+ * FeaturesScene3D: An immersive 3D fragment showcasing key features.
+ * Responds to scroll position and contains interactive floral-cyberpunk elements.
+ */
 export const FeaturesScene3D = () => {
-  const groupRef = useRef<THREE.Group>(null);
+  const groupRef = useRef<THREE.Group>(null!);
   const scroll = useScroll();
-  const { viewport } = useThree();
 
-  // Features data: Positioned in a circular arrangement
+  // Create a circular layout for the features
   const features = useMemo(() => [
-    { pos: [-3, 1.5, 0], color: "#ef4444", type: "icosahedron" as const, distort: 0.4, speed: 2.5 },
-    { pos: [3, 1.5, -1], color: "#f97316", type: "torusKnot" as const, distort: 0.3, speed: 1.8 },
-    { pos: [-2.5, -1.8, 1], color: "#fbbf24", type: "dodecahedron" as const, distort: 0.2, speed: 2.2 },
-    { pos: [2.8, -2, 0.5], color: "#ef4444", type: "sphere" as const, distort: 0.5, speed: 3.0 },
-    { pos: [0, 0, -2], color: "#f97316", type: "icosahedron" as const, distort: 0.3, speed: 1.5 },
+    {
+      type: 'distort' as const,
+      color: '#f472b6', // Primary Pink
+      geometry: <icosahedronGeometry args={[0.8, 2]} />,
+      position: [3, 0, 0] as [number, number, number]
+    },
+    {
+      type: 'physical' as const,
+      color: '#fb7185', // Secondary Coral
+      geometry: <torusKnotGeometry args={[0.5, 0.2, 128, 32]} />,
+      position: [1.5, 2.5, -1] as [number, number, number]
+    },
+    {
+      type: 'wobble' as const,
+      color: '#fda4af', // Accent Rose
+      geometry: <dodecahedronGeometry args={[0.7, 0]} />,
+      position: [-1.5, 2.5, -1] as [number, number, number]
+    },
+    {
+      type: 'physical' as const,
+      color: '#f472b6',
+      geometry: <sphereGeometry args={[0.6, 32, 32]} />,
+      position: [-3, 0, 0] as [number, number, number]
+    },
+    {
+      type: 'distort' as const,
+      color: '#fb7185',
+      geometry: <octahedronGeometry args={[0.8, 0]} />,
+      position: [0, -2.5, -1] as [number, number, number]
+    }
   ], []);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!groupRef.current) return;
-
-    // Get scroll offset (0 to 1)
-    const offset = scroll.offset;
-
-    // Zoom-burst effect: Group moves forward and expands as user scrolls
-    groupRef.current.position.z = offset * 10;
-    groupRef.current.rotation.z = offset * Math.PI * 0.5;
     
-    // Subtle parallax based on mouse
-    const mouseX = (state.mouse.x * viewport.width) / 10;
-    const mouseY = (state.mouse.y * viewport.height) / 10;
-    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, mouseX, 0.1);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, mouseY, 0.1);
+    // Rotate the entire group based on scroll position
+    // scroll.offset goes from 0 to 1
+    const rotationY = scroll.offset * Math.PI * 2;
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, rotationY, 0.05);
+    
+    // Subtle breathing scale for the whole group
+    const scale = 1 + Math.sin(Date.now() * 0.001) * 0.05;
+    groupRef.current.scale.set(scale, scale, scale);
   });
 
   return (
     <>
       {/* Cinematic Lighting */}
-      <ambientLight intensity={0.2} />
+      <ambientLight intensity={0.4} />
       <spotLight 
         position={[10, 10, 10]} 
         angle={0.15} 
         penumbra={1} 
         intensity={2} 
-        color="#ef4444" 
+        color="#f472b6" 
         castShadow 
       />
-      <pointLight position={[-10, -10, -10]} intensity={1} color="#fbbf24" />
-      <pointLight position={[0, 5, 5]} intensity={0.5} color="#f97316" />
+      <pointLight position={[-10, -10, -10]} intensity={1} color="#fda4af" />
+      <directionalLight position={[0, 5, 5]} intensity={0.5} color="#ffffff" />
 
-      {/* Atmospheric Effects */}
-      <fog attach="fog" args={["#1c1917", 5, 25]} />
-      <Sparkles 
-        count={80} 
-        scale={15} 
-        size={2} 
-        speed={0.4} 
-        color="#fbbf24" 
-        opacity={0.6}
-      />
+      {/* Atmospheric Fog */}
+      <fog attach="fog" args={["#000", 5, 25]} />
 
-      {/* Main Content Group */}
+      {/* Main Feature Group */}
       <group ref={groupRef}>
-        {features.map((f, i) => (
+        {features.map((feature, i) => (
           <FeatureItem 
-            key={i} 
-            position={f.pos} 
-            color={f.color} 
-            type={f.type} 
-            distort={f.distort}
-            speed={f.speed}
+            key={i}
+            index={i}
+            position={feature.position}
+            color={feature.color}
+            geometry={feature.geometry}
+            materialType={feature.type}
           />
         ))}
       </group>
 
-      {/* Ground shadows for depth */}
-      <ContactShadows 
-        position={[0, -4, 0]} 
-        opacity={0.4} 
-        scale={20} 
-        blur={2.5} 
-        far={4.5} 
-        color="#000000" 
+      {/* Ambient Visual Effects */}
+      <Sparkles 
+        count={50} 
+        scale={12} 
+        size={2} 
+        speed={0.4} 
+        color="#f472b6" 
+        opacity={0.6}
       />
+      
+      <Sparkles 
+        count={30} 
+        scale={15} 
+        size={1.5} 
+        speed={0.2} 
+        color="#fda4af" 
+        opacity={0.4}
+      />
+
+      {/* Floor Depth */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5, 0]} receiveShadow>
+        <planeGeometry args={[100, 100]} />
+        <meshStandardMaterial 
+          color="#050505" 
+          transparent 
+          opacity={0.5} 
+          roughness={1}
+        />
+      </mesh>
     </>
   );
 };

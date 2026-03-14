@@ -1,9 +1,9 @@
 {
-  "name": "aethelgard's-arboretum:-a-sage-serenity-3d-experience",
+  "name": "neon-cyberpunk-expedition",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "An award-winning, immersive 3D web experience crafted with React Three Fiber, Three.js, and Drei, showcasing a 'Sage Serenity' theme of organic light. This project features cinematic 3D scenes, scroll-driven storytelling, interactive elements, and professional HTML overlays with glassmorphism, aiming for Awwwards, FWA, and CSS Design Awards.",
+  "description": "An award-winning, immersive 3D web experience showcasing a fictional tech company's innovations with a Neon Cyberpunk theme. The experience features a multi-page architecture driven by scroll, dramatic lighting, interactive 3D elements, and sleek glassmorphism overlays, all optimized for peak performance.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

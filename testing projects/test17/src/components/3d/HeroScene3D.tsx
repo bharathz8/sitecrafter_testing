@@ -1,109 +1,95 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { 
   Float, 
   Sparkles, 
   ContactShadows, 
   MeshDistortMaterial, 
   MeshWobbleMaterial, 
-  useScroll,
-  Icosahedron,
-  Sphere,
-  TorusKnot
+  useScroll 
 } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
  * HeroScene3D Component
- * An immersive, cinematic 3D experience for Aethelgard's Arboretum.
- * Features:
- * - Procedural organic geometry (The Arboretum Core)
- * - Scroll-driven rotation and translation
- * - Interactive hover states with smooth lerping
- * - Fiery-dark cinematic lighting and fog
+ * An immersive, cinematic 3D experience for the "Neon Cyberpunk Expedition".
+ * Features procedural geometry, scroll-driven choreography, and interactive hover states.
  */
 export const HeroScene3D = () => {
   const scroll = useScroll();
-  const { viewport } = useThree();
+  const mainGroup = useRef<THREE.Group>(null);
   
-  // Refs for animation
-  const groupRef = useRef<THREE.Group>(null!);
-  const coreRef = useRef<THREE.Mesh>(null!);
-  const ringRef = useRef<THREE.Mesh>(null!);
-  const orbitRef = useRef<THREE.Group>(null!);
+  // Refs for interactive elements
+  const coreRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  const orbitalRef = useRef<THREE.Group>(null);
 
-  // Hover states
+  // Interaction states
   const [hovered, setHovered] = useState(false);
 
-  // Memoized positions for orbiting "seeds"
-  const seeds = useMemo(() => {
-    return Array.from({ length: 5 }).map((_, i) => ({
+  // Procedural positions for floating debris
+  const debrisPositions = useMemo(() => {
+    return Array.from({ length: 15 }, () => ({
       position: [
-        Math.sin(i * (Math.PI * 2) / 5) * 3,
-        Math.cos(i * (Math.PI * 2) / 5) * 3,
-        (Math.random() - 0.5) * 2
+        (Math.random() - 0.5) * 15,
+        (Math.random() - 0.5) * 15,
+        (Math.random() - 0.5) * 10
       ] as [number, number, number],
-      speed: 1 + Math.random(),
-      factor: 0.2 + Math.random() * 0.4
+      scale: Math.random() * 0.4 + 0.1,
+      speed: Math.random() * 2
     }));
   }, []);
 
   useFrame((state, delta) => {
-    const scrollOffset = scroll.offset;
+    if (!mainGroup.current) return;
 
-    // 1. Scroll-driven animations
-    // Rotate the entire group based on scroll
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, scrollOffset * Math.PI * 2, 0.1);
-    groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, scrollOffset * -10, 0.1);
-    
-    // 2. Continuous idle animations
-    const time = state.clock.getElapsedTime();
-    
-    // Core breathing and rotation
-    coreRef.current.rotation.x += delta * 0.2;
-    coreRef.current.rotation.z += delta * 0.3;
-    
-    // Orbiting group rotation
-    orbitRef.current.rotation.z -= delta * 0.15;
-    
-    // 3. Interaction: Smooth scale lerp on hover
-    const targetScale = hovered ? 1.2 : 1;
-    coreRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+    // 1. Scroll-driven animation
+    const offset = scroll.offset; // 0 to 1
+    mainGroup.current.rotation.y = THREE.MathUtils.lerp(mainGroup.current.rotation.y, offset * Math.PI * 2, 0.1);
+    mainGroup.current.position.z = THREE.MathUtils.lerp(mainGroup.current.position.z, offset * -5, 0.1);
 
-    // 4. Parallax effect based on mouse
-    const mouseX = (state.mouse.x * viewport.width) / 4;
-    const mouseY = (state.mouse.y * viewport.height) / 4;
-    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, mouseX, 0.05);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, mouseY, 0.05);
+    // 2. Interactive Hover Lerp
+    if (coreRef.current) {
+      const targetScale = hovered ? 1.3 : 1;
+      coreRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+    }
+
+    // 3. Constant subtle rotations
+    if (orbitalRef.current) {
+      orbitalRef.current.rotation.z += delta * 0.2;
+      orbitalRef.current.rotation.y += delta * 0.1;
+    }
+
+    if (ringRef.current) {
+      ringRef.current.rotation.x += delta * 0.5;
+    }
   });
 
   return (
     <>
-      {/* Cinematic Atmosphere */}
-      <color attach="background" args={["#050505"]} />
-      <fog attach="fog" args={["#050505", 5, 20]} />
-      
-      {/* Lighting Rig */}
+      {/* Cinematic Lighting */}
       <ambientLight intensity={0.2} />
       <spotLight 
-        position={[10, 10, 10]} 
-        angle={0.15} 
+        position={[10, 15, 10]} 
+        angle={0.3} 
         penumbra={1} 
         intensity={2} 
-        color="#ef4444" 
-        castShadow
+        castShadow 
+        color="#f472b6" 
       />
-      <pointLight position={[-10, -10, -10]} intensity={1} color="#fbbf24" />
-      <pointLight position={[0, 5, 0]} intensity={1.5} color="#f97316" />
+      <pointLight position={[-10, -10, -10]} color="#fb7185" intensity={1.5} />
+      <pointLight position={[0, 5, 5]} color="#fda4af" intensity={0.8} />
 
-      {/* Main Scene Group */}
-      <group ref={groupRef}>
+      {/* Atmospheric Fog */}
+      <fog attach="fog" args={["#050505", 8, 25]} />
+
+      {/* Main Experience Group */}
+      <group ref={mainGroup}>
         
-        {/* The Central Arboretum Core */}
-        <Float speed={1.5} rotationIntensity={0.5} floatIntensity={0.5}>
-          <Icosahedron 
-            ref={coreRef} 
-            args={[1, 3]} 
+        {/* Central Hero Object: The Cyber-Core */}
+        <Float speed={1.5} rotationIntensity={0.5} floatIntensity={1}>
+          <mesh 
+            ref={coreRef}
             onPointerOver={() => {
               setHovered(true);
               document.body.style.cursor = "pointer";
@@ -113,66 +99,78 @@ export const HeroScene3D = () => {
               document.body.style.cursor = "default";
             }}
           >
+            <icosahedronGeometry args={[1.2, 4]} />
             <MeshDistortMaterial 
-              color="#ef4444" 
+              color="#f472b6" 
               speed={3} 
               distort={0.4} 
-              roughness={0.2} 
-              metalness={0.8}
-              emissive="#ef4444"
+              radius={1}
+              emissive="#f472b6"
               emissiveIntensity={0.2}
+              roughness={0.1}
+              metalness={0.8}
             />
-          </Icosahedron>
+          </mesh>
         </Float>
 
-        {/* The Serenity Ring */}
-        <Float speed={2} rotationIntensity={2} floatIntensity={1}>
-          <TorusKnot ref={ringRef} args={[2, 0.02, 128, 32]}>
+        {/* Orbiting Tech Ring */}
+        <Float speed={2} rotationIntensity={2} floatIntensity={0.5}>
+          <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.5, 0.02, 16, 100]} />
             <meshPhysicalMaterial 
-              color="#fbbf24" 
-              roughness={0} 
-              metalness={1} 
-              emissive="#fbbf24"
-              emissiveIntensity={0.5}
+              color="#fda4af" 
+              emissive="#fda4af" 
+              emissiveIntensity={2} 
+              toneMapped={false} 
             />
-          </TorusKnot>
+          </mesh>
         </Float>
 
-        {/* Orbiting Seeds */}
-        <group ref={orbitRef}>
-          {seeds.map((seed, i) => (
-            <Float key={i} speed={seed.speed} floatIntensity={seed.factor}>
-              <Sphere position={seed.position} args={[0.2, 32, 32]}>
-                <MeshWobbleMaterial 
-                  color="#f97316" 
-                  speed={seed.speed} 
-                  factor={seed.factor} 
-                  roughness={0.1}
-                />
-              </Sphere>
-            </Float>
+        {/* Orbital Data Particles */}
+        <group ref={orbitalRef}>
+          {debrisPositions.map((item, i) => (
+            <mesh key={i} position={item.position} scale={item.scale}>
+              <sphereGeometry args={[1, 16, 16]} />
+              <MeshWobbleMaterial 
+                color={i % 2 === 0 ? "#f472b6" : "#fb7185"} 
+                speed={item.speed} 
+                factor={0.4} 
+              />
+            </mesh>
           ))}
         </group>
 
-        {/* Atmospheric Particles */}
+        {/* Background Depth Elements */}
         <Sparkles 
           count={60} 
-          scale={12} 
+          scale={15} 
           size={2} 
           speed={0.4} 
-          color="#fbbf24" 
+          color="#f472b6" 
           opacity={0.6}
+        />
+
+        {/* Grounding Shadows */}
+        <ContactShadows 
+          position={[0, -4, 0]} 
+          opacity={0.4} 
+          scale={20} 
+          blur={2.5} 
+          far={4.5} 
+          color="#000000" 
         />
       </group>
 
-      {/* Grounding Shadows */}
-      <ContactShadows 
-        position={[0, -3.5, 0]} 
-        opacity={0.4} 
-        scale={15} 
-        blur={2} 
-        far={4.5} 
-      />
+      {/* Subtle Starfield for Cyberpunk Vibe */}
+      <group rotation={[0, 0, Math.PI / 4]}>
+        <Sparkles 
+          count={40} 
+          scale={20} 
+          size={1} 
+          speed={0.1} 
+          color="#ffffff" 
+        />
+      </group>
     </>
   );
 };

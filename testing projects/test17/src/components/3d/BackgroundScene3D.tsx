@@ -1,158 +1,156 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Float, Sparkles, MeshDistortMaterial, useScroll } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Float, Sparkles, useScroll, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
  * BackgroundScene3D
- * Type 1: 3D Scene Component
  * 
- * An immersive, ambient background layer featuring floating organic geometries,
- * cinematic lighting, and scroll-reactive parallax effects.
+ * An immersive, ambient 3D background layer for the Neon Cyberpunk Expedition.
+ * Features floating geometric shapes with a "floral-light" aesthetic.
+ * Uses parallax scrolling and organic distortions to create a high-end cinematic feel.
  * 
- * Theme: Fiery-Dark (Aethelgard's Arboretum)
+ * Type: TYPE 1: 3D SCENE COMPONENT
  */
 export const BackgroundScene3D = () => {
-  const groupRef = useRef<THREE.Group>(null);
+  const { viewport } = useThree();
   const scroll = useScroll();
+  const groupRef = useRef<THREE.Group>(null!);
 
-  // Generate random data for floating geometry
-  const shapes = useMemo(() => {
-    return Array.from({ length: 12 }).map((_, i) => ({
+  // Generate a collection of floating elements with varying properties
+  // We use useMemo to ensure these values are stable across renders
+  const elements = useMemo(() => {
+    return Array.from({ length: 16 }).map((_, i) => ({
+      // Spread positions across the viewport width and deep into the Z-axis
       position: [
-        (Math.random() - 0.5) * 15,
-        (Math.random() - 0.5) * 15,
-        -2 - Math.random() * 6,
+        (Math.random() - 0.5) * viewport.width * 2.5,
+        (Math.random() - 0.5) * viewport.height * 5,
+        -2 - Math.random() * 6 // Depth range -2 to -8 as requested
       ] as [number, number, number],
-      scale: 0.4 + Math.random() * 0.8,
-      speed: 0.5 + Math.random(),
-      distort: 0.2 + Math.random() * 0.4,
-      color: i % 3 === 0 ? "#ef4444" : i % 3 === 1 ? "#f97316" : "#fbbf24",
-      type: i % 3, // 0: Icosahedron, 1: TorusKnot, 2: Sphere
+      rotation: [
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      ] as [number, number, number],
+      scale: 0.3 + Math.random() * 0.8,
+      speed: 0.2 + Math.random() * 0.5,
+      // Cycle through theme colors: #f472b6 (primary), #fb7185 (secondary), #fda4af (accent)
+      color: i % 3 === 0 ? "#f472b6" : i % 3 === 1 ? "#fb7185" : "#fda4af",
+      type: i % 4 // used to determine geometry type
     }));
-  }, []);
+  }, [viewport]);
 
   useFrame((state) => {
     if (!groupRef.current) return;
 
-    // Subtle parallax based on scroll position
-    // offset is 0 at top, 1 at bottom
+    // 1. SCROLL PARALLAX
+    // scroll.offset ranges from 0 to 1 based on page scroll position
     const scrollOffset = scroll.offset;
+    const targetY = scrollOffset * viewport.height * 3;
+    
+    // Smoothly interpolate the group position for a cinematic parallax effect
     groupRef.current.position.y = THREE.MathUtils.lerp(
       groupRef.current.position.y,
-      scrollOffset * 5,
-      0.1
+      targetY,
+      0.05
     );
 
-    // Continuous floating rotation
-    groupRef.current.rotation.z += 0.001;
-    groupRef.current.rotation.y += 0.0005;
+    // 2. AMBIENT ROTATION
+    const time = state.clock.getElapsedTime();
+    groupRef.current.rotation.z = Math.sin(time * 0.1) * 0.02;
+    groupRef.current.rotation.y = Math.cos(time * 0.05) * 0.02;
   });
 
   return (
     <>
-      {/* Cinematic Lighting */}
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} color="#ef4444" />
-      <pointLight position={[-10, -10, -5]} intensity={1} color="#fbbf24" />
+      {/* 
+          CINEMATIC LIGHTING 
+          Designed for the "floral-light" theme with Neon Cyberpunk accents
+      */}
+      <ambientLight intensity={0.4} />
       <spotLight 
-        position={[0, 5, 10]} 
+        position={[15, 20, 5]} 
         angle={0.3} 
         penumbra={1} 
-        intensity={2} 
-        color="#f97316" 
-        castShadow 
+        intensity={2.5} 
+        color="#f472b6" 
       />
+      <pointLight position={[-10, -10, -5]} intensity={1.5} color="#fb7185" />
+      <pointLight position={[0, 5, -10]} intensity={0.8} color="#fda4af" />
       
-      {/* Background Fog for Depth */}
-      <fog attach="fog" args={["#1c1917", 5, 25]} />
+      {/* Fog creates depth and blends the 3D scene with the HTML background color (#fdf2f8) */}
+      <fog attach="fog" args={["#fdf2f8", 5, 22]} />
 
-      {/* Floating Elements Group */}
       <group ref={groupRef}>
-        {shapes.map((shape, index) => (
-          <Float 
-            key={index} 
-            speed={shape.speed} 
-            rotationIntensity={1.5} 
-            floatIntensity={2}
-            position={shape.position}
+        {elements.map((el, i) => (
+          <Float
+            key={i}
+            speed={el.speed * 2.5}
+            rotationIntensity={2}
+            floatIntensity={1.5}
+            position={el.position}
           >
-            <mesh 
-              scale={shape.scale}
-              onPointerOver={() => { document.body.style.cursor = "pointer" }}
-              onPointerOut={() => { document.body.style.cursor = "default" }}
-            >
-              {shape.type === 0 && <icosahedronGeometry args={[1, 2]} />}
-              {shape.type === 1 && <torusKnotGeometry args={[0.6, 0.2, 64, 16]} />}
-              {shape.type === 2 && <sphereGeometry args={[0.8, 32, 32]} />}
+            <mesh rotation={el.rotation} scale={el.scale}>
+              {/* Variety of geometries for a tech-organic hybrid look */}
+              {el.type === 0 && <icosahedronGeometry args={[1, 2]} />}
+              {el.type === 1 && <torusKnotGeometry args={[0.6, 0.2, 64, 12]} />}
+              {el.type === 2 && <sphereGeometry args={[0.8, 32, 32]} />}
+              {el.type === 3 && <dodecahedronGeometry args={[0.9, 0]} />}
 
-              <MeshDistortMaterial
-                color={shape.color}
-                speed={shape.speed * 2}
-                distort={shape.distort}
-                radius={1}
-                emissive={shape.color}
-                emissiveIntensity={0.2}
-                transparent
-                opacity={0.35}
-                roughness={0.1}
-                metalness={0.8}
-              />
+              {/* 
+                  Hybrid Materials: 
+                  Alternating between MeshDistortMaterial for organic "floral" feel
+                  and meshPhysicalMaterial for "cyberpunk" sleek glass/metal feel.
+              */}
+              {i % 2 === 0 ? (
+                <MeshDistortMaterial
+                  color={el.color}
+                  speed={2}
+                  distort={0.4}
+                  radius={1}
+                  transparent
+                  opacity={0.3}
+                  roughness={0.2}
+                  metalness={0.8}
+                />
+              ) : (
+                <meshPhysicalMaterial
+                  color={el.color}
+                  transparent
+                  opacity={0.3}
+                  roughness={0.1}
+                  metalness={0.9}
+                  clearcoat={1}
+                  clearcoatRoughness={0.1}
+                  reflectivity={1}
+                />
+              )}
             </mesh>
           </Float>
         ))}
-
-        {/* Supporting static geometric "nodes" with meshPhysicalMaterial */}
-        {Array.from({ length: 8 }).map((_, i) => (
-          <mesh 
-            key={`node-${i}`} 
-            position={[
-              (Math.random() - 0.5) * 20,
-              (Math.random() - 0.5) * 20,
-              -10
-            ]}
-            rotation={[Math.random() * Math.PI, 0, 0]}
-          >
-            <boxGeometry args={[0.2, 0.2, 0.2]} />
-            <meshPhysicalMaterial 
-              color="#fbbf24" 
-              transparent 
-              opacity={0.2} 
-              metalness={0.9} 
-              roughness={0.1} 
-              clearcoat={1}
-            />
-          </mesh>
-        ))}
       </group>
 
-      {/* Fiery Dust Particles */}
-      <Sparkles 
-        count={40} 
-        scale={15} 
-        size={2} 
-        speed={0.4} 
-        color="#f97316" 
-        opacity={0.6}
+      {/* 
+          ATMOSPHERIC PARTICLES
+          Subtle floating "pollen" or "data bits" to enhance immersion 
+      */}
+      <Sparkles
+        count={40}
+        scale={25}
+        size={1.5}
+        speed={0.4}
+        color="#f472b6"
+        opacity={0.4}
       />
       
-      <Sparkles 
-        count={20} 
-        scale={20} 
-        size={4} 
-        speed={0.2} 
-        color="#fbbf24" 
-        opacity={0.4}
-      />
-
-      {/* Subtle Ground Shadows for Depth perception */}
-      <ContactShadows
-        position={[0, -10, 0]}
-        opacity={0.4}
-        scale={40}
-        blur={2}
-        far={20}
-        color="#000000"
+      {/* Distant star-like points for additional texture */}
+      <Sparkles
+        count={20}
+        scale={30}
+        size={0.8}
+        speed={0.2}
+        color="#fda4af"
+        opacity={0.3}
       />
     </>
   );

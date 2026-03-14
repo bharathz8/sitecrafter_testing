@@ -103,14 +103,9 @@ export class UI3DService {
         const defaultQueries = [
             "React Three Fiber Canvas setup ScrollControls",
             "Drei Float Sparkles ContactShadows Stars",
-            "MeshDistortMaterial MeshWobbleMaterial drei",
-            "useFrame animation loop react three fiber",
+            "MeshDistortMaterial MeshWobbleMaterial drei meshPhysicalMaterial",
+            "useFrame animation loop useScroll scroll-linked drei",
             "EffectComposer Bloom Vignette postprocessing",
-            "useScroll scroll-linked animation drei",
-            "meshPhysicalMaterial clearcoat metalness roughness",
-            "Environment preset lighting drei",
-            "PerspectiveCamera OrbitControls drei",
-            "Suspense lazy loading 3D scene react",
         ];
 
         for (const query of defaultQueries) {
@@ -132,7 +127,7 @@ export class UI3DService {
         console.log(`[UI3D] Total unique chunks collected: ${allChunks.length}`);
 
         const rankedChunks = this.rankChunks(allChunks, requirements);
-        const topChunks = rankedChunks.slice(0, 60);
+        const topChunks = rankedChunks.slice(0, 30);
 
         const formattedForPrompt = this.formatChunksForPrompt(topChunks);
 
@@ -157,21 +152,16 @@ export class UI3DService {
                 const prompt = `You are a Three.js/React Three Fiber technical query generator.
 Given this website idea: "${requirements.slice(0, 400)}"
 
-Generate exactly 10 RAG search queries to find the most relevant R3F documentation chunks for building this as an immersive 3D website.
+Generate exactly 5 RAG search queries to find the most relevant R3F documentation chunks for building this as an immersive 3D website.
 
 Target these areas:
 1. Specific Drei helpers needed (Float, Sparkles, Stars, ContactShadows, etc.)
 2. Three.js materials for the visual style (MeshDistortMaterial, meshPhysicalMaterial, etc.)
 3. Animation patterns (useFrame, spring animations, scroll-linked motion)
-4. Lighting and environment setups
-5. Postprocessing effects (Bloom, Vignette, Noise)
-6. Interactive 3D patterns (hover effects, click handlers, cursor changes)
-7. Scroll-based scene transitions
-8. Geometry types for visual elements
-9. Camera controls and perspectives
-10. Performance optimization patterns
+4. Postprocessing effects (Bloom, Vignette, Noise)
+5. Interactive 3D patterns (hover effects, click handlers, cursor changes)
 
-Return ONLY a JSON array of 10 strings. No markdown, no explanation.
+Return ONLY a JSON array of 5 strings. No markdown, no explanation.
 Example: ["react three fiber Float animation", "drei Sparkles particles effect", ...]`;
 
                 const client = getClient();
@@ -186,7 +176,7 @@ Example: ["react three fiber Float animation", "drei Sparkles particles effect",
 
                 const parsed = JSON.parse(content);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed.slice(0, 10).map((q: any) => String(q));
+                    return parsed.slice(0, 5).map((q: any) => String(q));
                 }
             } catch (err: any) {
                 console.warn(`[UI3D] Smart query generation attempt ${attempt} failed: ${err.message?.slice(0, 60)}`);
@@ -197,15 +187,10 @@ Example: ["react three fiber Float animation", "drei Sparkles particles effect",
 
         return [
             `react three fiber ${requirements.split(" ").slice(0, 4).join(" ")} 3D`,
-            "drei helpers Float Sparkles ContactShadows",
-            "MeshDistortMaterial MeshWobbleMaterial organic shapes",
-            "useFrame animation scroll drei useScroll",
+            "drei helpers Float Sparkles ContactShadows Stars",
+            "MeshDistortMaterial MeshWobbleMaterial meshPhysicalMaterial clearcoat",
+            "useFrame animation scroll drei useScroll ScrollControls",
             "EffectComposer Bloom Vignette postprocessing react",
-            "meshPhysicalMaterial clearcoat metalness glass",
-            "three.js lighting setup ambient spot directional",
-            "ScrollControls Scroll scroll-linked 3D scenes",
-            "interactive 3D hover click pointer events react three fiber",
-            "react three fiber performance optimization instancing",
         ];
     }
 

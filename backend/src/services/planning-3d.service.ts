@@ -5,27 +5,27 @@ import { generateDynamicTheme, formatThemeForPrompt, DynamicDesignTheme } from '
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-    apiKey: process.env.gemini,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  apiKey: process.env.gemini,
+  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
 });
 
 const openai2 = new OpenAI({
-    apiKey: process.env.gemini2,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  apiKey: process.env.gemini2,
+  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
 });
 
 const PLANNING_MODEL = "gemini-2.5-flash-lite";
 
 interface ProjectAnalysis {
-    type: 'frontend';
-    nodeCount: number;
-    complexity: 'complex';
+  type: 'frontend';
+  nodeCount: number;
+  complexity: 'complex';
 }
 
 export class Planning3DService {
 
-    private static async generate3DFrontendContext(requirements: string, blueprint: ProjectBlueprint): Promise<string> {
-        const frontendPrompt = `YOU ARE AN AUTONOMOUS AI AGENT -- ELITE 3D WEB EXPERIENCE ARCHITECT
+  private static async generate3DFrontendContext(requirements: string, blueprint: ProjectBlueprint): Promise<string> {
+    const frontendPrompt = `YOU ARE AN AUTONOMOUS AI AGENT -- ELITE 3D WEB EXPERIENCE ARCHITECT
 
 USER'S REQUEST: "${requirements}"
 
@@ -246,36 +246,36 @@ CRITICAL REQUIREMENTS:
 
 OUTPUT AS ONE CONTINUOUS STRING -- no line breaks in detailedContext.`;
 
-        const response = await openai2.chat.completions.create({
-            model: PLANNING_MODEL,
-            messages: [
-                {
-                    role: "system",
-                    content: "You are an autonomous AI agent -- an elite 3D web experience architect specializing in React Three Fiber, Drei, and Three.js. You create immersive, cinematic, interactive 3D websites that win design awards. You never use 2D UI components. You design pure 3D experiences with Canvas, ScrollControls, scene components, and HTML overlays."
-                },
-                {
-                    role: "user",
-                    content: frontendPrompt
-                }
-            ],
-            temperature: 0.8,
-            max_tokens: 16000
-        });
-
-        let context = response.choices[0].message.content || blueprint.detailedContext;
-
-        console.log('[Planning3D] Selecting 3D RAG components...');
-        const ragSelection = await UI3DService.selectComponents(requirements);
-        if (ragSelection.selectedChunks.length > 0) {
-            context += "\n\n" + ragSelection.formattedForPrompt;
-            console.log(`[Planning3D] Added ${ragSelection.selectedChunks.length} RAG chunks from ${ragSelection.queryCount} queries`);
+    const response = await openai2.chat.completions.create({
+      model: PLANNING_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are an autonomous AI agent -- an elite 3D web experience architect specializing in React Three Fiber, Drei, and Three.js. You create immersive, cinematic, interactive 3D websites that win design awards. You never use 2D UI components. You design pure 3D experiences with Canvas, ScrollControls, scene components, and HTML overlays."
+        },
+        {
+          role: "user",
+          content: frontendPrompt
         }
+      ],
+      temperature: 0.8,
+      max_tokens: 16000
+    });
 
-        return context;
+    let context = response.choices[0].message.content || blueprint.detailedContext;
+
+    console.log('[Planning3D] Selecting 3D RAG components...');
+    const ragSelection = await UI3DService.selectComponents(requirements);
+    if (ragSelection.selectedChunks.length > 0) {
+      context += "\n\n" + ragSelection.formattedForPrompt;
+      console.log(`[Planning3D] Added ${ragSelection.selectedChunks.length} RAG chunks from ${ragSelection.queryCount} queries`);
     }
 
-    private static generate3DSystemPrompt(nodeCount: number): string {
-        return `You are a world-class 3D web experience architect specializing in React Three Fiber, Three.js, and Drei. You create CINEMATIC, IMMERSIVE, INTERACTIVE 3D websites that win Awwwards, FWA, and CSS Design Awards.
+    return context;
+  }
+
+  private static generate3DSystemPrompt(nodeCount: number): string {
+    return `You are a world-class 3D web experience architect specializing in React Three Fiber, Three.js, and Drei. You create CINEMATIC, IMMERSIVE, INTERACTIVE 3D websites that win Awwwards, FWA, and CSS Design Awards.
 
 === CORE MISSION ===
 
@@ -287,18 +287,30 @@ Create PRODUCTION-LEVEL, AWARD-WINNING 3D web experiences with:
 - Smooth 60fps performance with optimized rendering
 
 PROJECT COMPLEXITY: PRODUCTION-READY (ALWAYS)
-ARCHITECTURE SCALE: ${nodeCount} nodes for comprehensive 3D system
+ARCHITECTURE SCALE: ${nodeCount} nodes -- ONLY nodes that become actual files
 
 === 3D PROJECT ARCHITECTURE ===
 
 3D FRONTEND PROJECT:
 - Design MULTI-PAGE 3D architecture with React Router DOM
-- MINIMUM 3-5 pages: Home + 2-3 feature pages + About/Contact
+- MINIMUM 4-6 pages: Home + 2-4 feature pages + Contact
 - Each page has its own Canvas + ScrollControls
-- Scene components are shared across pages
-- Node types: scene, overlay, navigation, loading, postprocessing, page
-- Categories: 3D Scenes, HTML Overlays, Layout, Pages
-- Create ${nodeCount} nodes for comprehensive 3D architecture
+
+EXACT NODES TO CREATE (no more, no less):
+  ENTRY:     src/main.tsx, src/App.tsx
+  LAYOUT:    src/components/layout/AppLayout.tsx
+  3D UI:     src/components/3d/NavBar3D.tsx, src/components/3d/Footer3D.tsx, src/components/3d/LoadingScreen3D.tsx
+  SCENES:    src/components/3d/HeroScene3D.tsx, src/components/3d/[Feature]Scene3D.tsx (3-5 scenes)
+  3D SHARED: src/components/3d/BackgroundScene3D.tsx
+  PAGES:     src/pages/HomePage.tsx, src/pages/[Feature]Page.tsx (2-4 pages), src/pages/ContactPage.tsx
+  UTIL:      src/lib/utils.ts
+
+DO NOT CREATE these waste nodes (they never become files):
+- animation-manager, scroll-manager, state-manager
+- performance-optimizer, seo-manager, toast-manager
+- accessibility-manager, event-listener-handler
+- responsive-handler, design-tokens, form-validation
+- global-cursor, 3d-assets-loader
 
 === TECH STACK (MANDATORY) ===
 
@@ -398,7 +410,7 @@ Remove ALL emojis.
 CRITICAL RULES:
 1. Create EXACTLY ${nodeCount} nodes
 2. Pure JSON output, no markdown
-3. detailedContext: 8000+ words minimum on ONE LINE
+3. detailedContext: 4000+ words minimum on ONE LINE (the expanded prompt already provides enrichment)
 4. NO 2D patterns (no Header.tsx, Footer.tsx from layout/, no Card, Button, Input from ui/)
 5. NO lucide-react
 6. Scene components return fragments
@@ -406,34 +418,34 @@ CRITICAL RULES:
 8. ALL interactive behaviors specified
 9. REAL content for all text (no lorem ipsum)
 10. NO emojis`;
-    }
+  }
 
-    static async generateBlueprint(
-        requirements: string,
-        retryCount: number = 0,
-        projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack'
-    ): Promise<PlanningResponse> {
-        const MAX_RETRIES = 3;
+  static async generateBlueprint(
+    requirements: string,
+    retryCount: number = 0,
+    projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack'
+  ): Promise<PlanningResponse> {
+    const MAX_RETRIES = 3;
 
-        try {
-            const projectType = 'frontend' as const;
-            const nodeCount = 35;
-            const complexity = 'complex' as const;
+    try {
+      const projectType = 'frontend' as const;
+      const nodeCount = 18;
+      const complexity = 'complex' as const;
 
-            console.log(`\n[Planning3D] PROJECT ANALYSIS:`);
-            console.log(`  Type: 3D FRONTEND [Pure 3D Mode]`);
-            console.log(`  Complexity: ${complexity.toUpperCase()} (PRODUCTION-LEVEL)`);
-            console.log(`  Nodes: ${nodeCount}`);
-            console.log(`  Generating immersive 3D blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
+      console.log(`\n[Planning3D] PROJECT ANALYSIS:`);
+      console.log(`  Type: 3D FRONTEND [Pure 3D Mode]`);
+      console.log(`  Complexity: ${complexity.toUpperCase()} (PRODUCTION-LEVEL)`);
+      console.log(`  Nodes: ${nodeCount}`);
+      console.log(`  Generating immersive 3D blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
 
-            const dynamicTheme = generateDynamicTheme(requirements);
-            const themePrompt = formatThemeForPrompt(dynamicTheme);
+      const dynamicTheme = generateDynamicTheme(requirements);
+      const themePrompt = formatThemeForPrompt(dynamicTheme);
 
-            console.log(`  Dynamic Theme: ${dynamicTheme.palette.name}`);
-            console.log(`  Animation Style: ${dynamicTheme.animation.name}`);
+      console.log(`  Dynamic Theme: ${dynamicTheme.palette.name}`);
+      console.log(`  Animation Style: ${dynamicTheme.animation.name}`);
 
-            const systemPrompt = this.generate3DSystemPrompt(nodeCount);
-            const userPrompt = `Create a PURE 3D FRONTEND project blueprint for:
+      const systemPrompt = this.generate3DSystemPrompt(nodeCount);
+      const userPrompt = `Create a PURE 3D FRONTEND project blueprint for:
 
 "${requirements}"
 
@@ -523,67 +535,67 @@ Before returning:
 - Are interactive behaviors detailed for every section?
 - NO emojis anywhere?`;
 
-            const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-            const response = await openai.chat.completions.create({
-                model: PLANNING_MODEL,
-                messages: [
-                    {
-                        role: "user",
-                        content: fullPrompt
-                    }
-                ]
-            });
-            const rawOutput = response.choices[0].message.content;
-            console.log(rawOutput);
-            if (!rawOutput) {
-                throw new Error('No response from AI');
-            }
+      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+      const response = await openai.chat.completions.create({
+        model: PLANNING_MODEL,
+        messages: [
+          {
+            role: "user",
+            content: fullPrompt
+          }
+        ]
+      });
+      const rawOutput = response.choices[0].message.content;
+      console.log(rawOutput);
+      if (!rawOutput) {
+        throw new Error('No response from AI');
+      }
 
-            console.log('[Planning3D] Received response, parsing...');
-            const blueprint = OutputParser.extractProjectBlueprint(rawOutput);
+      console.log('[Planning3D] Received response, parsing...');
+      const blueprint = OutputParser.extractProjectBlueprint(rawOutput);
 
-            if (!blueprint) {
-                if (retryCount < MAX_RETRIES) {
-                    console.log(`[Planning3D] Parsing failed, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend);
-                }
-
-                throw new Error('Failed to parse 3D blueprint after multiple attempts');
-            }
-
-            console.log('[Planning3D] Blueprint generated successfully');
-            console.log(`[Planning3D] Nodes: ${blueprint.workflow.nodes.length} | Edges: ${blueprint.workflow.edges.length}`);
-
-            blueprint.projectType = projectType;
-
-            console.log('\n[Planning3D] Generating 3D frontend context with RAG...');
-            const frontendContext = await this.generate3DFrontendContext(requirements, blueprint);
-            blueprint.detailedContext = frontendContext;
-            console.log(`[Planning3D] 3D context: ${frontendContext.length} chars`);
-
-            return {
-                success: true,
-                data: { blueprint, rawOutput }
-            };
-
-        } catch (error: any) {
-            console.error('[Planning3D] Error:', error.message);
-
-            if (retryCount < MAX_RETRIES) {
-                console.log(`[Planning3D] Error occurred, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend);
-            }
-
-            return {
-                success: false,
-                error: `Failed after ${MAX_RETRIES + 1} attempts: ${error.message}`
-            };
+      if (!blueprint) {
+        if (retryCount < MAX_RETRIES) {
+          console.log(`[Planning3D] Parsing failed, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend);
         }
-    }
 
-    static createDetailedPromptFromBlueprint(blueprint: ProjectBlueprint): string {
-        return blueprint.detailedContext;
+        throw new Error('Failed to parse 3D blueprint after multiple attempts');
+      }
+
+      console.log('[Planning3D] Blueprint generated successfully');
+      console.log(`[Planning3D] Nodes: ${blueprint.workflow.nodes.length} | Edges: ${blueprint.workflow.edges.length}`);
+
+      blueprint.projectType = projectType;
+
+      console.log('\n[Planning3D] Generating 3D frontend context with RAG...');
+      const frontendContext = await this.generate3DFrontendContext(requirements, blueprint);
+      blueprint.detailedContext = frontendContext;
+      console.log(`[Planning3D] 3D context: ${frontendContext.length} chars`);
+
+      return {
+        success: true,
+        data: { blueprint, rawOutput }
+      };
+
+    } catch (error: any) {
+      console.error('[Planning3D] Error:', error.message);
+
+      if (retryCount < MAX_RETRIES) {
+        console.log(`[Planning3D] Error occurred, retrying (${retryCount + 1}/${MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return this.generateBlueprint(requirements, retryCount + 1, projectTypeFromFrontend);
+      }
+
+      return {
+        success: false,
+        error: `Failed after ${MAX_RETRIES + 1} attempts: ${error.message}`
+      };
     }
+  }
+
+  static createDetailedPromptFromBlueprint(blueprint: ProjectBlueprint): string {
+    return blueprint.detailedContext;
+  }
 }

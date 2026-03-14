@@ -37,9 +37,11 @@ export async function pageNode(state: WebsiteState): Promise<Partial<WebsiteStat
 
   const systemPrompt = is3D
     ? `You are a SENIOR THREE.JS / REACT THREE FIBER ARCHITECT generating PRODUCTION-READY, ZERO-ERROR 3D page components.
+You create IMMERSIVE, CINEMATIC, INTERACTIVE 3D web experiences that WIN AWARDS.
+Think Bruno Simon, Midwam, Vault.xyz, Noomo Agency quality.
 
 CRITICAL 3D CONSTRAINTS:
-- NEVER import from @/components/ui/ (Button, Card, Input, Badge, etc. DO NOT EXIST)
+- NEVER import from @/components/ui/ (Button, Card, Input, Badge, SplitText, ClickSpark, TextPressure DO NOT EXIST)
 - NEVER import from lucide-react
 - NEVER use Tailwind UI component patterns -- this is a PURE 3D project
 - Use native HTML <button>, <a>, <div> for any HTML overlays inside <Scroll html>
@@ -51,6 +53,60 @@ CRITICAL 3D CONSTRAINTS:
 - Every page must have a default export
 - ALL interactive HTML elements in <Scroll html> need pointer-events-auto
 - Define cn inline if needed: const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+
+═══════════════════════════════════════════════════════════════════════════════
+ FOOTER3D IS MANDATORY ON EVERY PAGE (NON-NEGOTIABLE)
+═══════════════════════════════════════════════════════════════════════════════
+
+- EVERY page MUST import Footer3D: import Footer3D from '@/components/3d/Footer3D';
+- EVERY page MUST render <Footer3D /> as the LAST element inside <Scroll html>
+- The footer section MUST be: <section className="w-screen"><Footer3D /></section>
+- If you generate a page WITHOUT <Footer3D />, the page is INVALID and will be REJECTED
+- Footer3D is placed AFTER all content sections, BEFORE closing </Scroll>
+
+═══════════════════════════════════════════════════════════════════════════════
+ NAVBAR3D IS MANDATORY ON EVERY PAGE (NON-NEGOTIABLE)
+═══════════════════════════════════════════════════════════════════════════════
+
+- EVERY page MUST import NavBar3D: import NavBar3D from '@/components/3d/NavBar3D';
+- EVERY page MUST render <NavBar3D /> BEFORE the Canvas container div
+- The NavBar is placed OUTSIDE the Canvas, as the first element after LoadingScreen3D opens
+- Structure: <LoadingScreen3D> <NavBar3D /> <div className="fixed inset-0 ..."> <Canvas>...</Canvas> </div> </LoadingScreen3D>
+- If you generate a page WITHOUT <NavBar3D />, the page is INVALID and will be REJECTED
+- NavBar3D is a pure HTML glassmorphism nav bar with position:fixed, NOT a 3D component
+
+═══════════════════════════════════════════════════════════════════════════════
+ INTERACTIVE, DYNAMIC, AND UNIQUE WEBSITES (MANDATORY)
+═══════════════════════════════════════════════════════════════════════════════
+
+Every website MUST feel ALIVE and INTERACTIVE. Users should think "WOW".
+
+INTERACTIVE ELEMENTS (use at least 5 per page):
+- Hover effects on buttons: scale, glow, color shift, border animation
+- Scroll-triggered animations: elements fade in, slide up, rotate as user scrolls
+- Glassmorphism cards: backdrop-blur-xl, bg-white/5, border border-white/10
+- Animated counters/stats that count up when scrolled into view
+- Interactive buttons with ripple/pulse effects using CSS animations
+- Parallax text layers that move at different speeds
+- Gradient text: bg-clip-text text-transparent bg-gradient-to-r
+- Floating elements with CSS animation: animate-float (keyframes translateY)
+- Staggered reveal: each card/item delays slightly more than the previous
+
+DYNAMIC PATTERNS:
+- Use useState for toggles, active states, hover tracking
+- Use useNavigate for working navigation buttons
+- Create tabbed content, accordions, or reveal sections
+- Add cursor-following effects with onMouseMove
+- Implement scroll-based opacity/transform changes via framer-motion whileInView
+
+UNIQUENESS RULES:
+- NEVER repeat the same layout across pages
+- Use VARIED section heights (h-screen, min-h-[80vh], min-h-[60vh], auto)
+- Mix asymmetric grids, bento layouts, split-screen, overlapping elements
+- Each page must have a DISTINCT visual personality while staying on-theme
+- Use creative text sizing: hero text 8xl, section titles 5xl, body xl
+- Alternate between centered and left-aligned content
+- Add decorative elements: gradient orbs, grid overlays, noise textures, scan lines
 
 ═══════════════════════════════════════════════════════════════════════════════
  CRITICAL OUTPUT FORMAT - MANDATORY
@@ -601,24 +657,35 @@ function build3DPageContext(state: WebsiteState): string {
 
 === PURE 3D PAGE ARCHITECTURE ===
 
-=== MANDATORY RULES (READ FIRST) ===
+=== MANDATORY RULES (READ FIRST -- VIOLATION = INVALID PAGE) ===
 
 1. EVERY page MUST import NavBar3D and render <NavBar3D /> OUTSIDE Canvas (before the fixed div)
-2. EVERY page MUST import Footer3D and render <Footer3D /> INSIDE <Scroll html> as the LAST section
+2. EVERY page MUST import Footer3D and render <Footer3D /> INSIDE <Scroll html> as the ABSOLUTE LAST section before </Scroll> closes
 3. EVERY page MUST import LoadingScreen3D and wrap the entire return in <LoadingScreen3D>
 4. Page owns the SINGLE Canvas -- scenes do NOT have their own Canvas
 5. Scene components are placed inside <Scroll> at Y offsets: 0, -10, -20, -30...
 6. HTML text overlays go in <Scroll html> as full-height sections with motion.div
 7. EffectComposer goes INSIDE Canvas, AFTER ScrollControls (not inside scenes)
 8. NEVER import from lucide-react
-9. NEVER use disableNormalPass -- use enableNormalPass={false} if needed
-10. Import cn from @/lib/utils if using cn()
-11. pointer-events-auto on interactive HTML elements inside Scroll html
-12. Each HTML section: h-screen w-screen, centered content
+9. NEVER import from @/components/ui/ (SplitText, ClickSpark, TextPressure, Button, Card DO NOT EXIST)
+10. NEVER use disableNormalPass -- use enableNormalPass={false} if needed
+11. pointer-events-auto on ALL interactive HTML elements inside Scroll html
+12. Each HTML section: h-screen w-screen, centered content with motion.div animations
+
+=== FOOTER3D IS NON-NEGOTIABLE ===
+
+You MUST include this EXACT code as the LAST element inside <Scroll html>:
+
+  <section className="w-screen">
+    <Footer3D />
+  </section>
+
+If <Footer3D /> is missing from ANY page, the page is INVALID and will be REJECTED.
+Check EVERY page you generate: does it end with <Footer3D />? If not, ADD IT.
 
 === REQUIRED IMPORTS ===
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
@@ -630,10 +697,36 @@ ${sceneImports}
 
 ${instructions}
 
+=== INTERACTIVITY REQUIREMENTS (minimum 5 per page) ===
+
+Every page MUST have interactive, dynamic elements that ENGAGE the user:
+
+1. HOVER EFFECTS: Every button/card must respond to hover with scale, glow, or color shift
+   className="... hover:scale-105 hover:shadow-[0_0_30px_rgba(accent,0.3)] transition-all duration-500"
+
+2. SCROLL ANIMATIONS: Use framer-motion whileInView for every section:
+   <motion.div initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }}>
+
+3. STAGGERED REVEALS: Cards/items appear one after another:
+   {items.map((item, i) => (
+     <motion.div key={i} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15, duration: 0.6 }} viewport={{ once: true }}>
+   ))}
+
+4. GLASSMORPHISM CARDS: backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl
+
+5. GRADIENT TEXT: bg-clip-text text-transparent bg-gradient-to-r from-[primary] via-[secondary] to-[accent]
+
+6. ANIMATED COUNTERS: Use useState + useEffect to count up numbers on scroll
+
+7. CURSOR EFFECTS: pointer-events-auto, hover:cursor-pointer, interactive button styles
+
+8. DECORATIVE ELEMENTS: Gradient orbs (absolute, rounded-full, blur-[120px], opacity-20)
+
 === PAGE STRUCTURE (follow this EXACTLY) ===
 
 const Page = () => {
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState(0);
 
   return (
     ${hasLoader ? '<LoadingScreen3D>' : ''}
@@ -651,23 +744,37 @@ ${scrollScenes}
               </Scroll>
 
               <Scroll html>
-                {/* Each section = one screen height of HTML overlay */}
+                {/* HERO SECTION */}
                 <section className="h-screen w-screen flex items-center justify-center">
-                  <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} className="text-center px-4 pointer-events-auto">
+                  <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} viewport={{ once: true }} className="text-center px-4 pointer-events-auto">
                     <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tighter">HERO TITLE</h1>
                     <p className="text-xl text-white/80 max-w-2xl mx-auto mb-10">Hero subtitle text</p>
-                    <button onClick={() => navigate('/next')} className="px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-bold hover:bg-[accent] transition-all duration-500 hover:scale-105">CTA</button>
+                    <button onClick={() => navigate('/next')} className="group relative px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all duration-500 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                      <span>Get Started</span>
+                    </button>
                   </motion.div>
                 </section>
 
-                {/* More sections for features, showcase, etc. */}
+                {/* FEATURE SECTIONS with glassmorphism cards and staggered animations */}
                 <section className="h-screen w-screen flex items-center justify-center px-4">
-                  {/* Feature cards with glassmorphism */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl pointer-events-auto">
+                    {[1,2,3].map((_, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15, duration: 0.6 }} viewport={{ once: true }}
+                        className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-all duration-500 cursor-pointer"
+                      >
+                        <h3 className="text-2xl font-bold text-white mb-3">Feature Title</h3>
+                        <p className="text-white/60">Description text</p>
+                      </motion.div>
+                    ))}
+                  </div>
                 </section>
 
-                ${hasFooter ? `<section className="w-screen">
+                {/* MORE SECTIONS -- at least 2 more with DIFFERENT layouts */}
+
+                {/* === FOOTER (MANDATORY -- MUST BE THE LAST ELEMENT) === */}
+                <section className="w-screen">
                   <Footer3D />
-                </section>` : ''}
+                </section>
               </Scroll>
             </ScrollControls>
 
@@ -684,6 +791,21 @@ ${scrollScenes}
     </LoadingScreen3D>
   );
 };
+
+=== FINAL VERIFICATION CHECKLIST (check EVERY page before submitting) ===
+
+[ ] Does the page import Footer3D from '@/components/3d/Footer3D'?
+[ ] Does the page render <Footer3D /> as the LAST section inside <Scroll html>?
+[ ] Does the page import and render <NavBar3D />?
+[ ] Does the page import and wrap with <LoadingScreen3D>?
+[ ] Does the page have at least 5 interactive elements (hover, scroll animation, etc.)?
+[ ] Does the page use motion.div with whileInView for section animations?
+[ ] Does the page use glassmorphism cards (backdrop-blur, bg-white/5, border-white/10)?
+[ ] Does the page have gradient text or decorative gradient elements?
+[ ] Does every button have a working onClick handler?
+[ ] Does the page export default PageName?
+
+If ANY checkbox is NO, FIX IT before outputting the page.
 
 ${brainContext ? `PROJECT BRAIN CONTEXT:\n${brainContext}` : ''}
 `;

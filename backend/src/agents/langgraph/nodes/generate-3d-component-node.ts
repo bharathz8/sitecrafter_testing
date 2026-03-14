@@ -203,6 +203,7 @@ function buildSectionSpecs(blueprint: WebsiteState['blueprint']): Section3DSpec[
         for (const section of sections) {
             const sType = classifySection(section);
             if (seenTypes.has(sType)) continue;
+            if (['footer', 'navbar', 'loader'].includes(sType)) continue;
             seenTypes.add(sType);
 
             const name = `${capitalize(sType)}Scene3D`;

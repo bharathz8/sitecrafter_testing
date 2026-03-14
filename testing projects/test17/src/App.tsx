@@ -1,9 +1,9 @@
 import { Routes, Route } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import HomePage from '@/pages/HomePage';
-import ArticlesListingPage from '@/pages/ArticlesListingPage';
-import ArticleDetailPage from '@/pages/ArticleDetailPage';
-import AboutUsPage from '@/pages/AboutUsPage';
+import AboutPage from '@/pages/AboutPage';
+import ShowcasePage from '@/pages/ShowcasePage';
+import InteractiveExperiencePage from '@/pages/InteractiveExperiencePage';
 import ContactPage from '@/pages/ContactPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
@@ -12,9 +12,9 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/articles" element={<ArticlesListingPage />} />
-        <Route path="/articles/:id" element={<ArticleDetailPage />} />
-        <Route path="/about" element={<AboutUsPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/showcase" element={<ShowcasePage />} />
+        <Route path="/experience/:id" element={<InteractiveExperiencePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -5,8 +5,8 @@ export default {
     extend: {
       colors: {
         primary: '#050505',
-        secondary: '#050505',
-        accent: '#EB1E99',
+        secondary: '#ffffff',
+        accent: '#ffffff',
       },
       fontFamily: {
         sans: ["Inter","system-ui","sans-serif"],

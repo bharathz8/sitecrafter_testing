@@ -107,6 +107,10 @@ export interface ProjectMemory {
 export const WebsiteStateAnnotation = Annotation.Root({
     // Input
     userPrompt: Annotation<string>(),
+    expandedPrompt: Annotation<string>({
+        reducer: (_, newVal) => newVal,
+        default: () => ''
+    }),
     projectType: Annotation<'frontend' | 'backend' | 'fullstack'>(),
 
     // Project ID for Mem0 memory tracking
