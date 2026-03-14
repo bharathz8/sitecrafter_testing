@@ -1,6 +1,0 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4Z" fill="hsl(208, 80%, 55%)"/>
-<path d="M24 14L34 24L24 34L14 24L24 14Z" stroke="hsl(210, 90%, 10%)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M24 24L30 30" stroke="hsl(210, 90%, 10%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M18 18L24 24" stroke="hsl(210, 90%, 10%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
