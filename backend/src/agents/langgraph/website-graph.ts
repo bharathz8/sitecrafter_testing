@@ -141,11 +141,13 @@ export async function generateWebsite(
     projectType: 'frontend' | 'backend' | 'fullstack' = 'frontend',
     onFileGenerated?: (file: GeneratedFile) => void,
     onPhaseChange?: (phase: string) => void,
-    enable3D: boolean = false
+    enable3D: boolean = false,
+    skipBlueprintGeneration: boolean = false
 ): Promise<{ files: Map<string, GeneratedFile>; errors: any[]; messages: string[] }> {
     console.log('\n ===============================================');
     console.log(' STARTING LANGGRAPH WEBSITE GENERATOR');
     console.log(` 3D Mode: ${enable3D ? 'ENABLED' : 'disabled'}`);
+    console.log(` Skip Blueprint Re-Generation: ${skipBlueprintGeneration}`);
     console.log(' ===============================================\n');
 
     const startTime = Date.now();
@@ -158,6 +160,7 @@ export async function generateWebsite(
             userPrompt,
             projectType,
             enable3D,
+            skipBlueprintGeneration,
             blueprint: null,
             files: new Map(),
             fileRegistry: new Map(),

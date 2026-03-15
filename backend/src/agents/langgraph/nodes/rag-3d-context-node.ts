@@ -72,8 +72,9 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
         }
     }
 
-    console.log(`  [rag-3d-context] Running ${DEFAULT_3D_QUERIES.length} default 3D queries...`);
-    for (const query of DEFAULT_3D_QUERIES) {
+    console.log(`  [rag-3d-context] Running ${DEFAULT_3D_QUERIES.length} default 3D queries (banned terms filtered)...`);
+    const safeDefaults = DEFAULT_3D_QUERIES.filter(q => !BANNED_RAG_TERMS.some(b => q.toLowerCase().includes(b.toLowerCase())));
+    for (const query of safeDefaults) {
         try {
             const result = await queryDocumentation(query);
             if (result.retrievedChunks > 0 && result.context) {
@@ -87,6 +88,8 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
         } catch { }
     }
     console.log(`  [rag-3d-context] Default queries done. Total chunks so far: ${allChunks.length}`);
+
+
 
     const llmExpanded = await expandQueriesWithLLM(state.userPrompt || '', modules);
     if (llmExpanded.length > 0) {
@@ -107,7 +110,7 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
         console.log(`  [rag-3d-context] LLM expansion done. Total chunks: ${allChunks.length}`);
     }
 
-    const totalQueries = modules.length + promptKeywords.length + DEFAULT_3D_QUERIES.length + llmExpanded.length;
+    const totalQueries = modules.length + promptKeywords.length + safeDefaults.length + llmExpanded.length;
 
     const topChunks = allChunks.slice(0, 70);
 
@@ -174,42 +177,55 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
 }
 
 function extractKeywords(prompt: string): string[] {
-    const words = prompt.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
-    const stopWords = new Set([
-        'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-        'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-        'should', 'may', 'might', 'can', 'shall', 'must', 'and', 'but', 'or',
-        'nor', 'not', 'so', 'yet', 'both', 'either', 'neither', 'for', 'to',
-        'of', 'in', 'on', 'at', 'by', 'from', 'with', 'about', 'between',
-        'through', 'during', 'before', 'after', 'above', 'below', 'up', 'down',
-        'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once',
-        'i', 'me', 'my', 'we', 'our', 'you', 'your', 'it', 'its', 'they',
-        'them', 'their', 'this', 'that', 'these', 'those', 'which', 'who',
-        'make', 'create', 'build', 'want', 'need', 'like', 'website', 'web',
-        'page', 'site', '3d', 'three', 'using', 'use',
-    ]);
-
     const threejsTerms = [
-        'animation', 'particle', 'glow', 'scene', 'material', 'geometry',
-        'shader', 'lighting', 'shadow', 'reflection', 'glass', 'crystal',
-        'float', 'orbit', 'scroll', 'interactive', 'immersive',
+        'particle', 'glow', 'shader', 'lighting', 'shadow', 'reflection',
+        'glass', 'crystal', 'orbit', 'scroll', 'immersive', 'hologram',
+        'neon', 'plasma', 'aurora', 'nebula', 'morph', 'wireframe',
+        'metallic', 'emissive', 'bloom', 'vignette', 'fog', 'caustics',
     ];
 
-    const meaningful = words
-        .filter(w => w.length > 2 && !stopWords.has(w))
-        .slice(0, 8);
+    const promptLower = prompt.toLowerCase();
+    const found = threejsTerms.filter(t => promptLower.includes(t));
 
-    const relevant3D = threejsTerms.filter(t => prompt.toLowerCase().includes(t));
+    const businessTerms = promptLower
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+        .slice(0, 4);
 
-    return [...new Set([...meaningful, ...relevant3D])].slice(0, 6);
+    return [...new Set([...found, ...businessTerms])].slice(0, 6);
 }
+
+const STOP_WORDS = new Set([
+    'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+    'should', 'may', 'might', 'can', 'shall', 'must', 'and', 'but', 'or',
+    'nor', 'not', 'so', 'yet', 'both', 'either', 'neither', 'for', 'to',
+    'of', 'in', 'on', 'at', 'by', 'from', 'with', 'about', 'between',
+    'through', 'during', 'before', 'after', 'above', 'below',
+    'make', 'create', 'build', 'want', 'need', 'like', 'website', 'web',
+    'page', 'site', 'three', 'using', 'use', 'this', 'that', 'what',
+    'which', 'where', 'when', 'only', 'just', 'also', 'very', 'some',
+    'than', 'then', 'because', 'each', 'every', 'such', 'here', 'there',
+]);
+
+const BANNED_RAG_TERMS = [
+    'useSpring',
+    'MeshTransmissionMaterial',
+    'useGLTF',
+    'useFBX',
+    'DreiImage',
+    'Reflector',
+    'softShadows',
+    'Text3D',
+    'useTexture',
+];
 
 const DEFAULT_3D_QUERIES = [
     'useFrame animation loop',
     'useThree camera viewport',
     'Canvas setup configuration',
     'ScrollControls pages damping',
-    'Scroll html overlay',
     'useScroll offset scroll position',
     'Float animation component',
     'Sparkles particle effect',
@@ -218,81 +234,54 @@ const DEFAULT_3D_QUERIES = [
     'MeshWobbleMaterial wobble effect',
     'meshPhysicalMaterial clearcoat metalness',
     'meshStandardMaterial emissive glow',
-    'EffectComposer postprocessing bloom',
     'Bloom luminance threshold smoothing',
     'Vignette darkness offset',
-    'Noise grain effect',
     'Environment preset reflections',
-    'PerspectiveCamera makeDefault',
     'fog depth atmosphere',
     'ambientLight intensity',
     'spotLight angle penumbra',
     'pointLight color position',
-    'directionalLight shadow',
-    'icosahedronGeometry args detail',
-    'sphereGeometry segments',
-    'torusGeometry tube radius',
-    'torusKnotGeometry parameters',
-    'boxGeometry dimensions',
-    'coneGeometry height segments',
-    'cylinderGeometry cap',
-    'planeGeometry size',
-    'group position rotation scale',
-    'mesh onPointerOver onPointerOut',
-    'useRef THREE.Mesh animation',
-    'THREE.MathUtils.lerp smooth',
-    'THREE.Vector3 set lerp',
-    'THREE.Color setHSL',
-    'Html drei overlay component',
-    'Loader progress loading screen',
-    'useProgress active progress',
-    'Stars count depth',
-    'Billboard face camera',
-    'OrbitControls interaction',
-    'React.lazy dynamic import suspense',
-
-    'CatmullRomCurve3 camera path scroll animation',
-    'useScroll offset scroll driven animation drei',
-    'particle morph BufferGeometry position lerp useFrame',
     'ShaderMaterial vertexShader fragmentShader uTime uniform',
-    'GLSL fragment shader aurora animated wave',
-    'hologram scanline shader material three.js',
-    'plasma energy field shader WebGL',
-
-    'scroll driven storytelling react three fiber',
-    'cinematic camera fly through CatmullRomCurve3',
-    'postprocessing animate scroll Bloom Vignette ref',
-    'ChromaticAberration EffectComposer animate',
-    'particle system converge explode morph',
-
-    'PresentationControls product showcase drei',
-    'AccumulativeShadows realistic shadow drei',
-    'Environment preset studio lighting drei',
-    'Html drei component overlay 3D scene',
+    'CatmullRomCurve3 camera path scroll animation',
+    'particle morph BufferGeometry position lerp useFrame',
     'Stars deep space background drei',
-    'Cloud volumetric drei component',
-
-    'meshPhysicalMaterial transmission thickness ior glass',
-    'meshPhysicalMaterial clearcoat metalness reflectivity',
-    'MeshDistortMaterial distort speed organic',
-    'pointsMaterial size sizeAttenuation particles',
     'AdaptiveDpr AdaptiveEvents performance drei',
+    'mesh onPointerOver onPointerOut',
+    'THREE.MathUtils.lerp smooth',
+    'useProgress active progress',
+    'Html drei overlay component',
+    'ChromaticAberration EffectComposer animate',
+    'PresentationControls product showcase drei',
 ];
+
+
 
 async function expandQueriesWithLLM(userPrompt: string, existingModules: string[]): Promise<string[]> {
     try {
-        const prompt = `You are a Three.js/R3F technical query generator. Given this website idea: "${userPrompt.slice(0, 400)}"
-And these already-identified 3D modules: ${existingModules.join(', ')}
+        const prompt = `You are an expert Three.js/React Three Fiber Technical Architect.
+Your task is to analyze the user's business requirements and strictly determine the optimal 3D rendering techniques (materials, shaders, geometry, lighting, math/animations) needed to achieve a cinematic quality specific to their industry.
 
-Return exactly 10 RAG queries as a JSON array targeting specific R3F components, Drei helpers, Three.js materials, animations, lighting, postprocessing needed. Return ONLY a JSON array of strings, nothing else.
+User's Request: "${userPrompt.slice(0, 400)}"
 
-Example output:
-["Float animation floating objects drei", "Environment preset warm lighting", "ContactShadows soft shadow ground", "Bloom postprocessing glow EffectComposer", "Html overlay button UI drei", "useFrame smooth animation lerp", "MeshStandardMaterial metalness roughness", "Sparkles particles atmosphere", "PresentationControls product rotation", "ScrollControls scroll sections"]`;
+Already identified generic 3D modules: ${existingModules.join(', ')}
+
+First, intuitively guess the business type (e.g., Tech Startup, Bakery, Fashion Brand, Beverage, Sports, Cosmic, Medical, Automotive).
+Then, strictly formulate exactly 15 highly technical RAG (Retrieval-Augmented Generation) search queries to fetch documentation from our vector database. These queries should pull specific documentation on how to build the required visual aesthetics.
+
+Examples of industry-specific queries:
+- Beverage: "glass transmission refraction IOR liquid shader", "tube cylinder organic curved geometry refractive"
+- Tech/AI: "wireframe grid holographic neon glitch shader", "data visualization floating node network procedural"
+- Food: "organic blob shape metaball smooth merge geometry", "warm ambient light golden hour soft shadow"
+- Space: "galaxy star field procedural noise GLSL shader", "nebula volumetric fog density color gradient"
+
+Generate EXACTLY 15 queries. Focus heavily on 'ShaderMaterial', 'meshPhysicalMaterial props', 'particle systems', 'postprocessing Bloom/Noise', and 'useFrame math lerp'.
+
+Return ONLY a JSON array of 15 strings. Nothing else.`;
 
         const response = await invokeLLM(
-            'Return only a JSON array of 10 search query strings. No markdown, no explanation.',
+            'Return only a JSON array of 15 search query strings. No markdown, no explanation.',
             prompt,
-            0.3
+            0.5
         );
 
         const cleaned = response.replace(/```[\s\S]*?```/g, '').trim();
@@ -300,7 +289,10 @@ Example output:
         if (match) {
             const parsed = JSON.parse(`[${match[1]}]`);
             if (Array.isArray(parsed)) {
-                return parsed.filter((q: any) => typeof q === 'string' && q.length > 3).slice(0, 10);
+                return parsed
+                    .filter((q: any) => typeof q === 'string' && q.length > 3)
+                    .filter((q: string) => !BANNED_RAG_TERMS.some(b => q.toLowerCase().includes(b.toLowerCase())))
+                    .slice(0, 15);
             }
         }
     } catch (err: any) {

@@ -813,7 +813,8 @@ export const AgentBuilder: React.FC = () => {
             // Call /planning endpoint to get blueprint for review
             const response = await axios.post(`${BACKEND_URL}/planning`, {
                 requirements: userMessage.trim(),
-                projectType: 'frontend'
+                projectType: 'frontend',
+                enable3D
             });
 
             if (response.data.success && response.data.data?.blueprint) {
@@ -854,15 +855,51 @@ export const AgentBuilder: React.FC = () => {
         // Trigger the existing SSE generation with the detailedContext
         const prompt = blueprint.detailedContext || pendingPrompt;
 
+        // Map backend phase names → frontend phase IDs
+        const phaseMap: Record<string, string> = {
+            'blueprint':              'blueprint',
+            'prompt_expansion':       'blueprint',
+            'structure':              'core',
+            'core':                   'core',
+            'components':             'components',
+            'pages':                  'pages',
+            'page':                   'pages',
+            'validation':             'repair',
+            'repair':                 'repair',
+            'tsc_validation':         'repair',
+            'crawl_3d':               'core',
+            'identify_3d':            'core',
+            'rag_3d_context':         'core',
+            'generate_3d_components': 'components',
+        };
+        // Which phase should be marked complete when the next one starts
+        const phaseOrder = ['blueprint', 'core', 'components', 'pages', 'repair'];
+        let activeFrontendPhase = 'blueprint';
+
+        const advanceToPhase = (newPhaseId: string) => {
+            if (newPhaseId === activeFrontendPhase) return;
+            const prevIdx = phaseOrder.indexOf(activeFrontendPhase);
+            const nextIdx = phaseOrder.indexOf(newPhaseId);
+            if (nextIdx <= prevIdx) return;
+            // Mark all phases up to (not including) nextIdx as complete
+            for (let i = prevIdx; i < nextIdx; i++) {
+                updatePhase(phaseOrder[i], 'complete');
+            }
+            updatePhase(newPhaseId, 'in-progress');
+            activeFrontendPhase = newPhaseId;
+        };
+
         try {
             abortControllerRef.current = new AbortController();
+            updatePhase('blueprint', 'complete');
             updatePhase('core', 'in-progress');
+            activeFrontendPhase = 'core';
             setStatusMessage('Generating code...');
 
             const response = await fetch(`${BACKEND_URL}/chat/langgraph-stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                body: JSON.stringify({ prompt, projectType: 'frontend', enable3D }),
+                body: JSON.stringify({ prompt, projectType: 'frontend', enable3D, skipBlueprintGeneration: true }),
                 signal: abortControllerRef.current.signal
             });
 
@@ -870,7 +907,7 @@ export const AgentBuilder: React.FC = () => {
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
-            let componentCount = 0, pageCount = 0, totalFiles = 0;
+            let totalFiles = 0;
             const collected: { path: string; content: string }[] = [];
 
             if (reader) {
@@ -883,29 +920,41 @@ export const AgentBuilder: React.FC = () => {
                     for (const line of lines) {
                         try {
                             const data = JSON.parse(line.slice(6));
+
                             if (data.type === 'file') {
                                 totalFiles++;
                                 const path = data.path.startsWith('/') ? data.path : '/' + data.path;
                                 collected.push({ path, content: data.content });
                                 setFiles(prev => [...prev, { path, content: data.content }]);
-                                if (data.phase === 'components') componentCount++;
-                                else if (data.phase === 'page') pageCount++;
+
+                                // Advance phase based on which phase sent this file
+                                const mappedPhase = phaseMap[data.phase];
+                                if (mappedPhase) advanceToPhase(mappedPhase);
+
                             } else if (data.type === 'phase') {
                                 setStatusMessage(data.message);
+                                // Advance phase progress indicators
+                                const mappedPhase = phaseMap[data.phase];
+                                if (mappedPhase) advanceToPhase(mappedPhase);
+
                             } else if (data.type === 'complete') {
+                                // Mark all phases complete
+                                phaseOrder.forEach(p => updatePhase(p, 'complete'));
                                 setStatus('complete');
+                                setIsProcessing(false);
+                                setIsCreating(false);
                                 addMessage('success', `Generated ${totalFiles} files!`);
+
                                 if (collected.length > 0) {
-                                    // Save to MongoDB IMMEDIATELY (don't wait for WebContainer)
-                                    // This runs in parallel with mounting files
+                                    // Save to MongoDB immediately (non-blocking)
                                     saveProject(collected).catch(err => {
                                         console.error('Failed to save project:', err);
                                     });
 
-                                    // Mount files and start dev server (these take time)
+                                    // Mount files and start dev server in background
+                                    // (loading UI is already stopped above)
                                     const fsTree = toWebContainerFS(collected);
-                                    await mountFiles(fsTree);
-                                    await startDevServer();
+                                    mountFiles(fsTree).then(() => startDevServer()).catch(console.error);
                                 }
                             }
                         } catch { }
@@ -915,9 +964,13 @@ export const AgentBuilder: React.FC = () => {
         } catch (e: any) {
             addMessage('error', e.message);
             setStatus('error');
+            // Mark any in-progress phase as error
+            setPhases(prev => prev.map(p =>
+                p.status === 'in-progress' ? { ...p, status: 'error' as ProcessingPhase['status'] } : p
+            ));
         } finally {
             setIsProcessing(false);
-            setIsCreating(false); // Reset creation mode when done
+            setIsCreating(false);
         }
     }, [blueprint, pendingPrompt, addMessage, updatePhase, mountFiles, startDevServer, saveProject]);
 

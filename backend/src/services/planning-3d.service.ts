@@ -433,6 +433,42 @@ These patterns cause TypeScript compile errors -- NEVER use them:
    if (!meshRef.current) return;
    NEVER access meshRef.current.property without this guard.
 
+7. BANNED: useSpring -- @react-three/drei does NOT export useSpring.
+   NEVER: import { useSpring } from '@react-three/drei'
+   CORRECT: Use useRef + THREE.MathUtils.lerp inside useFrame for spring-like motion.
+
+8. LOADINGSCREEN3D -- STANDALONE OVERLAY, NOT A WRAPPER:
+   LoadingScreen3D: React.FC = () => { ... }
+   NEVER accept children. NEVER wrap page content.
+   It is a fixed overlay that fades out when useProgress() reaches 100%.
+   Pages render: <LoadingScreen3D /> <NavBar3D /> <Canvas>...</Canvas>
+   NEVER: <LoadingScreen3D><Content /></LoadingScreen3D>
+
+9. USEPROGRESS -- import from '@react-three/drei':
+   import { useProgress } from '@react-three/drei';
+   const { progress, active } = useProgress();
+   NOTE: useProgress is the ONLY drei import allowed in LoadingScreen3D.
+
+10. VISIBILITY CULLING -- guard useFrame with scroll range:
+    const scroll = useScroll();
+    useFrame((state, delta) => {
+      if (scroll.offset < rangeStart || scroll.offset > rangeEnd) return;
+    });
+    This prevents GPU work on offscreen sections.
+
+11. BANNED APIS -- NEVER import these:
+    - MeshTransmissionMaterial (GPU crash)
+    - useGLTF (no .glb files exist)
+    - useFBX (no .fbx files exist)
+    - Text3D (requires font file)
+    - useTexture (no textures exist)
+    - softShadows (performance killer)
+
+12. CANVAS SUSPENSE -- ALWAYS wrap Canvas children:
+    <Suspense fallback={<div className="w-full h-full bg-black" />}>
+      <Canvas>...</Canvas>
+    </Suspense>
+
 === detailedContext STRING FORMATTING ===
 
 The "detailedContext" field MUST be a SINGLE, CONTINUOUS STRING on ONE LINE.
@@ -475,7 +511,8 @@ CRITICAL RULES:
   static async generateBlueprint(
     requirements: string,
     retryCount: number = 0,
-    projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack'
+    projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack',
+    sharedTheme?: DynamicDesignTheme
   ): Promise<PlanningResponse> {
     const MAX_RETRIES = 3;
 
@@ -490,7 +527,7 @@ CRITICAL RULES:
       console.log(`  Nodes: ${nodeCount}`);
       console.log(`  Generating immersive 3D blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
 
-      const dynamicTheme = generateDynamicTheme(requirements);
+      const dynamicTheme = sharedTheme || generateDynamicTheme(requirements);
       const themePrompt = formatThemeForPrompt(dynamicTheme);
 
       console.log(`  Dynamic Theme: ${dynamicTheme.palette.name}`);

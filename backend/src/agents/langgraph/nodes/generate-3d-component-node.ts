@@ -721,13 +721,27 @@ ${sectionType === 'footer' ? `FOOTER SPECIFICS:
 - Copyright: text-xs uppercase tracking-widest text-white/20` : ''}
 
 ${isLoader ? `LOADER SPECIFICS:
-- Wraps children: ({ children }: { children?: React.ReactNode })
+=== CRITICAL: STANDALONE OVERLAY -- NO CHILDREN PROP ===
+- Component signature: const LoadingScreen3D: React.FC = () => { ... }
+- DO NOT accept children. DO NOT wrap page content.
 - Full-screen fixed overlay: position fixed, inset 0, z-index 9999
 - Use useProgress() to get { progress, active }
-- Fade out: opacity 0 + pointer-events-none when progress >= 100
+- Manage unmount via internal useState (isLoaded)
+- When progress >= 100: set isLoaded=true after short delay
+- When isLoaded: opacity 0 + pointer-events-none
 - Show animated brand name + progress bar (width = progress%)
 - 2-3 decorative blur orbs (position absolute, blurred, low opacity)
-- Transition: opacity 0.8s ease` : ''}
+- Transition: opacity 0.8s ease via framer-motion AnimatePresence
+
+CORRECT USAGE IN PAGES:
+  <div className="relative">
+    <LoadingScreen3D />     {/* Standalone absolute overlay */}
+    <NavBar3D />
+    <Canvas>...</Canvas>
+  </div>
+
+FORBIDDEN USAGE:
+  <LoadingScreen3D><PageContent /></LoadingScreen3D>  {/* BANNED */}` : ''}
 
 OUTPUT FORMAT:
 <chirAction type="file" filePath="PATH">
@@ -737,50 +751,127 @@ OUTPUT FORMAT:
 ONE chirAction tag. ZERO 3D imports.`;
 }
 
-function score3DComponent(content: string): { score: number; issues: string[] } {
-    const issues: string[] = [];
-    let score = 10;
+interface QualityIssue {
+    severity: 'CRASH' | 'TS_ERROR' | 'WARNING' | 'PERFORMANCE';
+    code: string;
+    description: string;
+    scoreDeduction: number;
+}
 
-    if (
-        content.includes('export default function') &&
-        content.includes('<Canvas') &&
-        (content.includes('useFrame(') || content.includes('useThree('))
-    ) {
-        issues.push('useFrame/useThree called outside Canvas -- will crash at runtime');
+function score3DComponent(content: string, componentName: string): {
+    score: number;
+    issues: QualityIssue[];
+    mustRegenerate: boolean;
+} {
+    const issues: QualityIssue[] = [];
+    let score = 10;
+    const nameLower = componentName.toLowerCase();
+
+    if (content.includes('useSpring') && content.includes('@react-three/drei')) {
+        issues.push({ severity: 'CRASH', code: 'DREI_USESPRING', description: 'useSpring is NOT exported from @react-three/drei -- use useRef + lerp in useFrame instead', scoreDeduction: 4 });
         score -= 4;
     }
 
+    const hasCanvas = content.includes('<Canvas') || content.includes('<Canvas>');
+    const hasR3FHooks = content.includes('useFrame(') || content.includes('useThree(') || content.includes('useScroll()');
+    if (hasCanvas && hasR3FHooks) {
+        const canvasIdx = content.indexOf('<Canvas');
+        const hookIdx = Math.min(
+            content.includes('useFrame(') ? content.indexOf('useFrame(') : Infinity,
+            content.includes('useThree(') ? content.indexOf('useThree(') : Infinity,
+            content.includes('useScroll()') ? content.indexOf('useScroll()') : Infinity
+        );
+        if (hookIdx < canvasIdx) {
+            issues.push({ severity: 'CRASH', code: 'R3F_HOOKS_OUTSIDE_CANVAS', description: 'useFrame/useThree/useScroll called before Canvas -- move into a child component rendered INSIDE <Canvas>', scoreDeduction: 4 });
+            score -= 4;
+        }
+    }
+
+    if (content.includes('MeshTransmissionMaterial')) {
+        issues.push({ severity: 'CRASH', code: 'BANNED_MATERIAL', description: 'MeshTransmissionMaterial causes GPU crash -- use meshPhysicalMaterial with transmission={0.9} ior={1.5}', scoreDeduction: 3 });
+        score -= 3;
+    }
+
+    if (content.includes('useGLTF(')) {
+        issues.push({ severity: 'CRASH', code: 'USEGLFT_NO_MODELS', description: 'useGLTF called but no .glb/.gltf files exist -- use procedural geometries', scoreDeduction: 4 });
+        score -= 4;
+    }
+
+    if ((nameLower.includes('loading') || nameLower.includes('loader') || nameLower.includes('splash')) &&
+        (content.includes('children') && (content.includes('props.children') || content.includes('{ children }') || content.includes('{children}')))) {
+        issues.push({ severity: 'CRASH', code: 'LOADING_WRAPPER_PATTERN', description: 'LoadingScreen accepts children which kills page content -- must be standalone overlay with NO children prop', scoreDeduction: 4 });
+        score -= 4;
+    }
+
+    if ((nameLower.includes('footer') || nameLower.includes('navbar') || nameLower.includes('nav3d') || nameLower.includes('header')) &&
+        (content.includes("from '@react-three/fiber'") || content.includes('from "@react-three/fiber"') ||
+         content.includes("from '@react-three/drei'") || content.includes('from "@react-three/drei"'))) {
+        const isLoader = nameLower.includes('loading') || nameLower.includes('loader');
+        if (!isLoader || content.includes('useFrame') || content.includes('Canvas')) {
+            issues.push({ severity: 'CRASH', code: 'LAYOUT_R3F_IMPORTS', description: 'Footer/Navbar/Header imports @react-three/* but renders outside Canvas -- use pure HTML/CSS + framer-motion only', scoreDeduction: 4 });
+            score -= 4;
+        }
+    }
+
     if (/<ShaderMaterial[\s/>]/.test(content)) {
-        issues.push('<ShaderMaterial> used as JSX component -- must be lowercase <shaderMaterial attach="material">');
+        issues.push({ severity: 'TS_ERROR', code: 'SHADERMATERIAL_CASING', description: '<ShaderMaterial> must be lowercase <shaderMaterial attach="material">', scoreDeduction: 3 });
         score -= 3;
     }
 
     if (content.includes('ChromaticAberration') && /offset=\{\s*\[/.test(content)) {
-        issues.push('ChromaticAberration offset must be new THREE.Vector2(x, y), not an array');
+        issues.push({ severity: 'TS_ERROR', code: 'CHROMATIC_VECTOR', description: 'ChromaticAberration offset must be new THREE.Vector2(), not array', scoreDeduction: 2 });
         score -= 2;
-    }
-
-    if (content.includes('useGLTF(')) {
-        issues.push('No .glb files exist -- remove useGLTF and use procedural geometry');
-        score -= 4;
     }
 
     if (content.includes('extend({') && !content.includes('declare global')) {
-        issues.push('extend() used without JSX namespace declaration -- add declare global { namespace JSX { interface IntrinsicElements { ... } } }');
+        issues.push({ severity: 'TS_ERROR', code: 'EXTEND_NO_JSX_NAMESPACE', description: 'extend() used without declare global JSX namespace declaration', scoreDeduction: 2 });
         score -= 2;
     }
 
-    if (content.includes('MeshTransmissionMaterial')) {
-        issues.push('MeshTransmissionMaterial is banned -- causes GPU crash -- use meshPhysicalMaterial with transmission prop');
-        score -= 3;
+    if ((content.includes('range') || content.includes('range[')) && !nameLower.includes('loading') && !nameLower.includes('footer') && !nameLower.includes('navbar')) {
+        const hasDefault = content.includes('range = [') || content.includes('range=[') || content.includes('range?: [');
+        if (!hasDefault && content.match(/\brange\b/g)) {
+            issues.push({ severity: 'TS_ERROR', code: 'RANGE_POSSIBLY_UNDEFINED', description: 'range prop used without default value -- add ({ range = [0, 1] }: { range?: [number, number] })', scoreDeduction: 2 });
+            score -= 2;
+        }
     }
 
-    if (content.includes('<Html') && content.includes('ScrollControls') && !content.includes('occlude')) {
-        issues.push('<Html> inside ScrollControls should have occlude prop');
+    const refAccesses = content.match(/(\w+Ref)\.current\./g) || [];
+    if (refAccesses.length > 0 && refAccesses[0]) {
+        const refName = refAccesses[0].split('.')[0];
+        if (!content.includes(`if (!${refName}.current)`) && !content.includes(`${refName}.current &&`) && !content.includes(`${refName}.current?.`)) {
+            issues.push({ severity: 'TS_ERROR', code: 'REF_NO_NULL_CHECK', description: `${refName}.current accessed without null check -- add: if (!${refName}.current) return;`, scoreDeduction: 1 });
+            score -= 1;
+        }
+    }
+
+    if (content.includes('.material.emissive') || content.includes('.material.roughness') || content.includes('.material.metalness') || content.includes('.material.transmission')) {
+        if (!content.includes('as THREE.Mesh') && !content.includes('as THREE.MeshStandard') && !content.includes('as THREE.MeshPhysical')) {
+            issues.push({ severity: 'TS_ERROR', code: 'MATERIAL_TYPE_ASSERTION', description: 'Material property accessed without type cast -- use (ref.current.material as THREE.MeshStandardMaterial)', scoreDeduction: 2 });
+            score -= 2;
+        }
+    }
+
+    if (content.includes('useFrame(') && !content.includes('range') && !content.includes('visible = false') && !content.includes('scroll.offset') && !nameLower.includes('loading') && !nameLower.includes('ambient')) {
+        issues.push({ severity: 'PERFORMANCE', code: 'NO_VISIBILITY_CULLING', description: 'useFrame runs with no visibility culling -- add scroll range guard for GPU performance', scoreDeduction: 2 });
+        score -= 2;
+    }
+
+    const lineCount = content.split('\n').length;
+    if (lineCount < 100 && content.includes('@react-three') && !nameLower.includes('loading') && !nameLower.includes('contact') && !nameLower.includes('ambient')) {
+        issues.push({ severity: 'WARNING', code: 'COMPONENT_TOO_THIN', description: `3D scene is only ${lineCount} lines -- needs minimum 100 lines with proper setup`, scoreDeduction: 1 });
         score -= 1;
     }
 
-    return { score, issues };
+    if (content.includes('<Canvas') && !content.includes('<Suspense')) {
+        issues.push({ severity: 'WARNING', code: 'NO_SUSPENSE_BOUNDARY', description: 'Canvas has no Suspense fallback', scoreDeduction: 1 });
+        score -= 1;
+    }
+
+    const finalScore = Math.max(0, score);
+    const mustRegenerate = finalScore < 6 || issues.some(i => i.severity === 'CRASH' && i.scoreDeduction >= 3);
+
+    return { score: finalScore, issues, mustRegenerate };
 }
 
 export async function generate3DComponentNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
@@ -911,17 +1002,19 @@ export async function generate3DComponentNode(state: WebsiteState): Promise<Part
 
         const isScene = !htmlOverlayTypes.has(spec.sectionType);
         if (isScene) {
-            const quality = score3DComponent(code);
-            if (quality.score < 7) {
-                console.log(`  [quality-gate] ${spec.name} scored ${quality.score}/10, regenerating...`);
-                console.log(`  [quality-gate] Issues: ${quality.issues.join(', ')}`);
+            const quality = score3DComponent(code, spec.name);
+            if (quality.mustRegenerate) {
+                const crashIssues = quality.issues.filter(i => i.severity === 'CRASH' || i.severity === 'TS_ERROR');
+                console.log(`  [quality-gate] ${spec.name} scored ${quality.score}/10 -- REGENERATING (${crashIssues.length} critical issues)`);
+                crashIssues.forEach(i => console.log(`    [${i.severity}] ${i.code}: ${i.description}`));
 
-                const fixPrompt = `Your previous component scored ${quality.score}/10.
+                const issuesList = crashIssues.map(i => `- [${i.severity}] ${i.code}: ${i.description}`).join('\n');
+                const fixPrompt = `PREVIOUS ATTEMPT FAILED QUALITY GATE (score ${quality.score}/10).
 CRITICAL ISSUES TO FIX:
-${quality.issues.map((iss, n) => `${n + 1}. ${iss}`).join('\n')}
+${issuesList}
 
-Regenerate the ENTIRE component from scratch. Make it 3x richer.
-The previous version was too minimal. Write a MURAL not a thumbnail.
+You MUST fix ALL of these issues. Do NOT repeat any banned patterns.
+Generate a completely new implementation that avoids all these problems.
 MINIMUM 200 lines of real code. Include custom shaderMaterial, multiple useFrame loops, useScroll narrative, particle systems.
 ${buildNarrativeContentInstruction(spec, dna, userPrompt)}`;
 
@@ -930,13 +1023,14 @@ ${buildNarrativeContentInstruction(spec, dna, userPrompt)}`;
                     const retryParsed = parseChirActions(retryResponse);
                     if (retryParsed.length > 0 && retryParsed[0].content.length > code.length) {
                         code = retryParsed[0].content;
-                        console.log(`  [quality-gate] Retry produced ${code.length} chars`);
+                        const retryScore = score3DComponent(code, spec.name);
+                        console.log(`  [quality-gate] Retry: ${code.length} chars, score ${retryScore.score}/10`);
                     } else {
                         const retryCodeMatch = retryResponse.match(/```(?:tsx|jsx|typescript|javascript)?\n([\s\S]*?)```/);
                         const retryCode = retryCodeMatch ? retryCodeMatch[1].trim() : '';
                         if (retryCode.length > code.length) {
                             code = retryCode;
-                            console.log(`  [quality-gate] Retry fallback produced ${code.length} chars`);
+                            console.log(`  [quality-gate] Retry fallback: ${code.length} chars`);
                         }
                     }
                 } catch (retryErr: any) {
@@ -944,6 +1038,23 @@ ${buildNarrativeContentInstruction(spec, dna, userPrompt)}`;
                 }
             } else {
                 console.log(`  [quality-gate] ${spec.name} scored ${quality.score}/10 -- passed`);
+            }
+        } else {
+            const overlayCheck = score3DComponent(code, spec.name);
+            if (overlayCheck.issues.some(i => i.code === 'LAYOUT_R3F_IMPORTS' || i.code === 'LOADING_WRAPPER_PATTERN')) {
+                console.log(`  [quality-gate] ${spec.name} HTML overlay has R3F imports or wrapper pattern -- regenerating`);
+                try {
+                    const retryResponse = await invokeLLM(buildHtmlOverlaySystemPrompt(spec.sectionType), `CRITICAL: Your previous ${spec.name} had R3F imports or used children wrapper pattern. Generate a PURE HTML/CSS component with ZERO @react-three imports and NO children prop.\nBUSINESS: ${userPrompt}`, 0.85, 3);
+                    const retryParsed = parseChirActions(retryResponse);
+                    if (retryParsed.length > 0 && retryParsed[0].content.length > 80) {
+                        code = retryParsed[0].content;
+                        console.log(`  [quality-gate] ${spec.name} overlay regenerated: ${code.length} chars`);
+                    }
+                } catch (retryErr: any) {
+                    console.warn(`  [quality-gate] Overlay retry failed: ${retryErr.message?.slice(0, 60)}`);
+                }
+            } else {
+                console.log(`  [quality-gate] ${spec.name} HTML overlay verified -- no R3F imports`);
             }
         }
 
@@ -1051,10 +1162,12 @@ function buildImportInstructions(
     lines.push('    <Noise opacity={0.04} />');
     lines.push('  </EffectComposer>');
     lines.push('');
-    lines.push('EVERY PAGE STRUCTURE:');
-    lines.push('<LoadingScreen3D>');
+    lines.push('EVERY PAGE STRUCTURE (LoadingScreen3D is STANDALONE, NOT a wrapper):');
+    lines.push('<div className="relative min-h-screen bg-black">');
+    lines.push('  <LoadingScreen3D />  {/* Standalone absolute overlay -- NO children */}');
     lines.push('  <NavBar3D />');
     lines.push('  <div className="fixed inset-0 bg-black overflow-hidden" style={{ zIndex: 0 }}>');
+    lines.push('    <Suspense fallback={<div className="w-full h-full bg-black" />}>');
     lines.push('    <Canvas ...canvasSettings>');
     lines.push('      <AdaptiveDpr pixelated />');
     lines.push('      <AdaptiveEvents />');
@@ -1065,8 +1178,9 @@ function buildImportInstructions(
     lines.push('      <Environment preset="city" />');
     lines.push('      <EffectComposer>...</EffectComposer>');
     lines.push('    </Canvas>');
+    lines.push('    </Suspense>');
     lines.push('  </div>');
-    lines.push('</LoadingScreen3D>');
+    lines.push('</div>');
 
     return lines.join('\n');
 }

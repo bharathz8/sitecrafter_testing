@@ -70,8 +70,8 @@ CRITICAL 3D CONSTRAINTS:
 
 - EVERY page MUST import NavBar3D: import NavBar3D from '@/components/3d/NavBar3D';
 - EVERY page MUST render <NavBar3D /> BEFORE the Canvas container div
-- The NavBar is placed OUTSIDE the Canvas, as the first element after LoadingScreen3D opens
-- Structure: <LoadingScreen3D> <NavBar3D /> <div className="fixed inset-0 ..."> <Canvas>...</Canvas> </div> </LoadingScreen3D>
+- NavBar is placed OUTSIDE Canvas, after LoadingScreen3D standalone overlay
+- Structure: <div> <LoadingScreen3D /> <NavBar3D /> <div className="fixed inset-0 ..."> <Canvas>...</Canvas> </div> </div>
 - If you generate a page WITHOUT <NavBar3D />, the page is INVALID and will be REJECTED
 - NavBar3D is a pure HTML glassmorphism nav bar with position:fixed, NOT a 3D component
 
@@ -607,6 +607,68 @@ Wrap in <chirAction type="file" filePath="${thinFile.path}"> tags.`;
         }
 
         parsedFiles.splice(0, parsedFiles.length, ...adequatePages);
+
+        for (let i = 0; i < parsedFiles.length; i++) {
+            const file = parsedFiles[i];
+            const pageName = file.path.split('/').pop()?.replace('.tsx', '') || 'Page';
+            const isNotFound = pageName.includes('NotFound') || pageName.includes('404');
+            if (isNotFound) continue;
+
+            let code = file.content;
+            let needsFix = false;
+            const missingImports: string[] = [];
+
+            if (!code.includes('LoadingScreen3D')) {
+                missingImports.push("import LoadingScreen3D from '@/components/3d/LoadingScreen3D';");
+                needsFix = true;
+            }
+            if (!code.includes('NavBar3D')) {
+                missingImports.push("import NavBar3D from '@/components/3d/NavBar3D';");
+                needsFix = true;
+            }
+            if (!code.includes('Footer3D')) {
+                missingImports.push("import Footer3D from '@/components/3d/Footer3D';");
+                needsFix = true;
+            }
+
+            if (code.includes('<LoadingScreen3D>') && code.includes('</LoadingScreen3D>')) {
+                console.log(`   [3D Pages] ${pageName}: Fixing LoadingScreen3D wrapper -> standalone overlay`);
+                code = code.replace(/<LoadingScreen3D>/g, '<><LoadingScreen3D />');
+                code = code.replace(/<\/LoadingScreen3D>/g, '</>');
+                needsFix = true;
+            }
+
+            const scenePaths = state.projectMemory?.threeDComponentPaths || [];
+            const sceneNames = scenePaths
+                .filter((p: string) => !p.includes('LoadingScreen') && !p.includes('NavBar') && !p.includes('Footer'))
+                .map((p: string) => p.split('/').pop()?.replace('.tsx', '') || '');
+
+            const hasAnyScene = sceneNames.some((name: string) => code.includes(name));
+            if (!hasAnyScene && sceneNames.length > 0) {
+                console.log(`   [3D Pages] ${pageName}: Missing scene component imports, adding ${sceneNames.length} lazy imports`);
+                const lazyImports = sceneNames.map((name: string) => {
+                    const importPath = `@/components/3d/${name}`;
+                    return `const ${name} = lazy(() => import('${importPath}'));`;
+                }).join('\n');
+                missingImports.push(lazyImports);
+                needsFix = true;
+            }
+
+            if (needsFix && missingImports.length > 0) {
+                const importBlock = missingImports.join('\n');
+                const firstImportIdx = code.indexOf('import ');
+                if (firstImportIdx >= 0) {
+                    code = code.slice(0, firstImportIdx) + importBlock + '\n' + code.slice(firstImportIdx);
+                } else {
+                    code = importBlock + '\n' + code;
+                }
+                console.log(`   [3D Pages] ${pageName}: Injected ${missingImports.length} missing imports`);
+            }
+
+            if (code !== file.content) {
+                parsedFiles[i] = { ...file, content: code };
+            }
+        }
     }
 
     for (const { path, content } of parsedFiles) {
@@ -766,7 +828,8 @@ const PageName = () => {
   const navigate = useNavigate();
 
   return (
-    <LoadingScreen3D>
+    <div className="relative min-h-screen bg-[${bg}]">
+      <LoadingScreen3D />  {/* STANDALONE OVERLAY -- NO CHILDREN */}
       <NavBar3D />
       
       <div className="fixed inset-0 w-full h-screen bg-[${bg}] overflow-hidden">
@@ -898,7 +961,7 @@ ${scrollSections}
           </Canvas>
         </Suspense>
       </div>
-    </LoadingScreen3D>
+    </div>
   );
 };
 

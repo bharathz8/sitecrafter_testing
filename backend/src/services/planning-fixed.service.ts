@@ -897,7 +897,8 @@ REMEMBER: The detailedContext is passed to code generation AI. It must be SO com
     requirements: string,
     retryCount: number = 0,
     projectTypeFromFrontend?: 'frontend' | 'backend' | 'fullstack',
-    enable3D: boolean = false
+    enable3D: boolean = false,
+    sharedTheme?: DynamicDesignTheme
   ): Promise<PlanningResponse> {
     const MAX_RETRIES = 3;
 
@@ -929,8 +930,8 @@ REMEMBER: The detailedContext is passed to code generation AI. It must be SO com
       console.log(`  LLM will intelligently determine all features and packages needed`);
       console.log(`\n Generating production-level blueprint (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
 
-      // Generate UNIQUE dynamic design theme for this project
-      const dynamicTheme = generateDynamicTheme(requirements);
+      // Generate UNIQUE dynamic design theme for this project or use shared one
+      const dynamicTheme = sharedTheme || generateDynamicTheme(requirements);
       const themePrompt = formatThemeForPrompt(dynamicTheme);
       const responsivePatterns = generateResponsivePatterns(projectType);
 

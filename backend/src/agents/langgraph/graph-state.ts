@@ -277,6 +277,12 @@ export const WebsiteStateAnnotation = Annotation.Root({
         default: () => false
     }),
 
+    // When true, blueprint node skips re-running planning service (context already pre-generated)
+    skipBlueprintGeneration: Annotation<boolean>({
+        reducer: (_, newVal) => newVal,
+        default: () => false
+    }),
+
     threeDModules: Annotation<string[]>({
         reducer: (_, newVal) => newVal,
         default: () => []

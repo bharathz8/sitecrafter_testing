@@ -16,6 +16,7 @@ import authRoutes from './routes/auth';
 import googleAuthRoutes from './routes/googleAuth';
 import './config/passport';
 import { PlanningService } from './services/planning-fixed.service';
+import { Planning3DService } from './services/planning-3d.service';
 import axios, { AxiosInstance } from "axios";
 import { generateIntegratedFullstack } from './endpoints/fullstack-integrated';
 import { generateCompleteFullstack } from './endpoints/fullstack-complete';
@@ -202,7 +203,7 @@ app.post("/template", async (req: any, res: any) => {
 // Planning endpoint
 app.post("/planning", async (req, res) => {
   try {
-    const { requirements, projectType } = req.body;
+    const { requirements, projectType, enable3D } = req.body;
 
     if (!requirements) {
       res.status(400).json({
@@ -213,7 +214,18 @@ app.post("/planning", async (req, res) => {
     }
 
     console.log(`[Planning] Project type from frontend: ${projectType || 'not provided'}`);
-    const result = await PlanningService.generateBlueprint(requirements, 0, projectType);
+
+    const is3D = enable3D === true || projectType === '3d' || requirements.toLowerCase().includes('3d');
+
+    let result;
+    if (is3D) {
+      console.log(`[Planning] 3D pipeline selected for planning.`);
+      result = await Planning3DService.generateBlueprint(requirements, 0, 'frontend');
+    } else {
+      console.log(`[Planning] 2D pipeline selected for planning.`);
+      result = await PlanningService.generateBlueprint(requirements, 0, projectType);
+    }
+
     res.json(result);
 
   } catch (error: any) {
@@ -355,7 +367,7 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
 // NEW SSE STREAMING ENDPOINT FOR REAL-TIME FILE UPDATES
 // ═══════════════════════════════════════════════════════════════════════════
 app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
-  const { prompt, projectType = 'frontend', enable3D = false } = req.body;
+  const { prompt, projectType = 'frontend', enable3D = false, skipBlueprintGeneration = false } = req.body;
 
   if (!prompt) {
     res.status(400).json({ error: 'Prompt is required' });
@@ -396,8 +408,9 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
   console.log('\n ═══════════════════════════════════════════════════');
   console.log('SSE STREAM: LangGraph Generation Started');
   console.log(' ═══════════════════════════════════════════════════');
-  console.log(` Prompt: ${prompt}`);
+  console.log(` Prompt: ${prompt.slice(0, 80)}...`);
   console.log(` 3D Mode: ${enable3D}`);
+  console.log(` Skip Blueprint Re-Generation: ${skipBlueprintGeneration}`);
 
   // Helper to send SSE events
   const sendEvent = (type: string, data: any) => {
@@ -438,7 +451,8 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
         });
         console.log(`    Phase: ${phase}`);
       },
-      enable3D
+      enable3D,
+      skipBlueprintGeneration
     );
 
     // Send completion
