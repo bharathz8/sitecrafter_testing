@@ -608,181 +608,241 @@ async function addFileWithMemory(
   });
 }
 
-function build3DPageContext(state: WebsiteState): string {
+// ═══════════════════════════════════════════════════════════════════════════════
+// REPLACEMENT for the build3DPageContext function in page-node.ts
+// Copy this entire function to replace the existing one in page-node.ts
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Paste this REPLACEMENT function into page-node.ts, replacing the existing build3DPageContext
+
+function build3DPageContext(state: any): string {
   if (!state.enable3D) return '';
 
   const memory = state.projectMemory;
   const instructions = memory?.threeDImportInstructions || '';
   const paths = memory?.threeDComponentPaths || [];
+  const userPrompt = state.userPrompt || '';
+  const blueprint = state.blueprint;
+  const theme = state.dynamicTheme;
 
-  const brainContext = memory ? getMemoryContext(memory) : '';
-
-  const hasLoader = true;
-  const hasNavBar = true;
-  const hasFooter = true;
-
-  const scenePaths = paths.filter(p =>
-    !p.includes('LoadingScreen3D') && !p.includes('NavBar3D') && !p.includes('Footer3D')
+  // Get all generated scene components (not navbar/footer/loader)
+  const uiOverlays = ['LoadingScreen3D', 'NavBar3D', 'Footer3D'];
+  const scenePaths = paths.filter((p: string) =>
+    !uiOverlays.some(ui => p.includes(ui))
   );
 
+  // If no paths from memory, infer from blueprint
   if (scenePaths.length === 0) {
-    const defaultScenes = ['HeroScene3D', 'FeaturesScene3D', 'ShowcaseScene3D', 'BackgroundScene3D'];
-    for (const s of defaultScenes) {
-      scenePaths.push(`src/components/3d/${s}.tsx`);
+    const sections = blueprint?.pages?.flatMap((p: any) => p.sections || []) || [];
+    const uniqueTypes = [...new Set(sections.map((s: any) => classifySection(String(s))))];
+    for (const type of uniqueTypes.slice(0, 6)) {
+      const name = `${capitalize(type as string)}Scene3D`;
+      scenePaths.push(`src/components/3d/${name}.tsx`);
+    }
+    // Always have hero
+    if (!scenePaths.some((p: string) => p.includes('Hero'))) {
+      scenePaths.unshift('src/components/3d/HeroScene3D.tsx');
     }
   }
 
-  const sceneImports = scenePaths.map(p => {
+  const sceneImports = scenePaths.map((p: string) => {
     const name = p.split('/').pop()?.replace('.tsx', '') || '';
     const importPath = '@/' + p.replace(/^src\//, '').replace('.tsx', '');
     return `const ${name} = lazy(() => import('${importPath}'));`;
   }).join('\n');
 
-  const sceneNames = scenePaths.map(p => p.split('/').pop()?.replace('.tsx', '') || '');
+  const sceneNames = scenePaths.map((p: string) => p.split('/').pop()?.replace('.tsx', '') || '');
 
-  const directImports = [
-    `import LoadingScreen3D from '@/components/3d/LoadingScreen3D';`,
-    `import NavBar3D from '@/components/3d/NavBar3D';`,
-    `import Footer3D from '@/components/3d/Footer3D';`,
-  ].join('\n');
-
-  const scrollScenes = sceneNames.map((name, i) => {
+  // Build scroll section list
+  const scrollSections = sceneNames.map((name: string, i: number) => {
     if (i === 0) return `                <${name} />`;
     return `                <group position={[0, ${i * -10}, 0]}>\n                  <${name} />\n                </group>`;
   }).join('\n');
 
   const numPages = Math.max(sceneNames.length + 1, 4);
 
+  // Color references from theme
+  const primary = theme?.palette?.primary || '#f472b6';
+  const secondary = theme?.palette?.secondary || '#818cf8';
+  const accent = theme?.palette?.accent || '#22d3ee';
+  const bg = theme?.palette?.background || '#050505';
+
   return `
+═══════════════════════════════════════════════════════════════════════════════
+ 3D PAGE ARCHITECTURE — MAKE EACH PAGE STUNNING AND UNIQUE
+═══════════════════════════════════════════════════════════════════════════════
 
-=== PURE 3D PAGE ARCHITECTURE ===
+BUSINESS: ${userPrompt}
+THEME: ${theme?.palette?.name || 'Custom'} | Primary: ${primary} | Accent: ${accent}
 
-=== MANDATORY RULES (READ FIRST -- VIOLATION = INVALID PAGE) ===
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY ARCHITECTURE RULES (violating = invalid page)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. EVERY page MUST import NavBar3D and render <NavBar3D /> OUTSIDE Canvas (before the fixed div)
-2. EVERY page MUST import Footer3D and render <Footer3D /> INSIDE <Scroll html> as the ABSOLUTE LAST section before </Scroll> closes
-3. EVERY page MUST import LoadingScreen3D and wrap the entire return in <LoadingScreen3D>
-4. Page owns the SINGLE Canvas -- scenes do NOT have their own Canvas
-5. Scene components are placed inside <Scroll> at Y offsets: 0, -10, -20, -30...
-6. HTML text overlays go in <Scroll html> as full-height sections with motion.div
-7. EffectComposer goes INSIDE Canvas, AFTER ScrollControls (not inside scenes)
-8. NEVER import from lucide-react
-9. NEVER import from @/components/ui/ (SplitText, ClickSpark, TextPressure, Button, Card DO NOT EXIST)
-10. NEVER use disableNormalPass -- use enableNormalPass={false} if needed
-11. pointer-events-auto on ALL interactive HTML elements inside Scroll html
-12. Each HTML section: h-screen w-screen, centered content with motion.div animations
+1. EVERY page: <LoadingScreen3D> → <NavBar3D /> → <Canvas> wrapper → <Footer3D />
+2. EVERY page owns ONE Canvas with ScrollControls
+3. Scene components are fragments inside <Scroll>
+4. HTML content goes in <Scroll html> sections
+5. EffectComposer inside Canvas AFTER ScrollControls
+6. EVERY button needs onClick (useNavigate or state toggle)
+7. NO lucide-react | NO @/components/ui/* 
+8. pointer-events-auto on ALL interactive HTML elements
 
-=== FOOTER3D IS NON-NEGOTIABLE ===
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY IMPORTS (every page)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You MUST include this EXACT code as the LAST element inside <Scroll html>:
-
-  <section className="w-screen">
-    <Footer3D />
-  </section>
-
-If <Footer3D /> is missing from ANY page, the page is INVALID and will be REJECTED.
-Check EVERY page you generate: does it end with <Footer3D />? If not, ADD IT.
-
-=== REQUIRED IMPORTS ===
-
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
-${directImports}
+import LoadingScreen3D from '@/components/3d/LoadingScreen3D';
+import NavBar3D from '@/components/3d/NavBar3D';
+import Footer3D from '@/components/3d/Footer3D';
 import { useNavigate } from 'react-router-dom';
+const cn = (...c: (string | boolean | undefined)[]) => c.filter(Boolean).join(' ');
 
+// LAZY-LOAD ALL SCENE COMPONENTS:
 ${sceneImports}
 
 ${instructions}
 
-=== INTERACTIVITY REQUIREMENTS (minimum 5 per page) ===
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAGE TEMPLATE (exact structure required)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Every page MUST have interactive, dynamic elements that ENGAGE the user:
-
-1. HOVER EFFECTS: Every button/card must respond to hover with scale, glow, or color shift
-   className="... hover:scale-105 hover:shadow-[0_0_30px_rgba(accent,0.3)] transition-all duration-500"
-
-2. SCROLL ANIMATIONS: Use framer-motion whileInView for every section:
-   <motion.div initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }}>
-
-3. STAGGERED REVEALS: Cards/items appear one after another:
-   {items.map((item, i) => (
-     <motion.div key={i} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15, duration: 0.6 }} viewport={{ once: true }}>
-   ))}
-
-4. GLASSMORPHISM CARDS: backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl
-
-5. GRADIENT TEXT: bg-clip-text text-transparent bg-gradient-to-r from-[primary] via-[secondary] to-[accent]
-
-6. ANIMATED COUNTERS: Use useState + useEffect to count up numbers on scroll
-
-7. CURSOR EFFECTS: pointer-events-auto, hover:cursor-pointer, interactive button styles
-
-8. DECORATIVE ELEMENTS: Gradient orbs (absolute, rounded-full, blur-[120px], opacity-20)
-
-=== PAGE STRUCTURE (follow this EXACTLY) ===
-
-const Page = () => {
+const PageName = () => {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState(0);
 
   return (
-    ${hasLoader ? '<LoadingScreen3D>' : ''}
-      ${hasNavBar ? '<NavBar3D />' : ''}
-
-      <div className="fixed inset-0 w-full h-screen bg-black overflow-hidden">
-        <Suspense fallback={<div className="w-full h-full bg-black" />}>
+    <LoadingScreen3D>
+      <NavBar3D />
+      
+      <div className="fixed inset-0 w-full h-screen bg-[${bg}] overflow-hidden">
+        <Suspense fallback={<div className="w-full h-full" style={{background:'${bg}'}} />}>
           <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]}>
-            <color attach="background" args={['#050505']} />
+            <color attach="background" args={['${bg}']} />
             <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
-
+            
             <ScrollControls pages={${numPages}} damping={0.1}>
               <Scroll>
-${scrollScenes}
+                {/* SCENE COMPONENTS AT Y OFFSETS */}
+${scrollSections}
               </Scroll>
-
+              
               <Scroll html>
-                {/* HERO SECTION */}
-                <section className="h-screen w-screen flex items-center justify-center">
-                  <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} viewport={{ once: true }} className="text-center px-4 pointer-events-auto">
-                    <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tighter">HERO TITLE</h1>
-                    <p className="text-xl text-white/80 max-w-2xl mx-auto mb-10">Hero subtitle text</p>
-                    <button onClick={() => navigate('/next')} className="group relative px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all duration-500 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                      <span>Get Started</span>
-                    </button>
+                {/* ═══ SECTION 1: HERO ═══ */}
+                <section className="h-screen w-screen flex items-center justify-center relative">
+                  <motion.div
+                    initial={{ opacity: 0, y: 60 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                    className="text-center px-4 max-w-5xl pointer-events-auto"
+                  >
+                    {/* GRADIENT HEADLINE */}
+                    <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-none tracking-tighter">
+                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-[${primary}] to-[${accent}]">
+                        HERO HEADING
+                      </span>
+                    </h1>
+                    
+                    <p className="text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">
+                      Compelling subtitle that speaks to the target audience with real copy.
+                    </p>
+                    
+                    {/* CTA BUTTON — must have onClick */}
+                    <div className="flex gap-4 justify-center flex-wrap">
+                      <button
+                        onClick={() => navigate('/next-page')}
+                        className="group relative px-10 py-5 bg-[${primary}] rounded-xl text-white font-bold text-lg hover:scale-105 transition-all duration-500 hover:shadow-[0_0_40px_${primary}66] overflow-hidden"
+                      >
+                        <span className="relative z-10">Primary CTA</span>
+                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                      
+                      <button
+                        onClick={() => navigate('/another-page')}
+                        className="px-10 py-5 backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl text-white font-bold text-lg hover:bg-white/10 hover:scale-105 transition-all duration-500"
+                      >
+                        Secondary CTA
+                      </button>
+                    </div>
+                    
+                    {/* SCROLL HINT */}
+                    <div className="mt-16 flex flex-col items-center gap-2 opacity-40">
+                      <span className="text-xs uppercase tracking-[0.3em] text-white">Scroll to explore</span>
+                      <div className="w-px h-12 bg-gradient-to-b from-white to-transparent animate-bounce" />
+                    </div>
                   </motion.div>
                 </section>
-
-                {/* FEATURE SECTIONS with glassmorphism cards and staggered animations */}
+                
+                {/* ═══ SECTION 2: FEATURES (staggered reveal) ═══ */}
                 <section className="h-screen w-screen flex items-center justify-center px-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl pointer-events-auto">
-                    {[1,2,3].map((_, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15, duration: 0.6 }} viewport={{ once: true }}
-                        className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-all duration-500 cursor-pointer"
-                      >
-                        <h3 className="text-2xl font-bold text-white mb-3">Feature Title</h3>
-                        <p className="text-white/60">Description text</p>
-                      </motion.div>
-                    ))}
+                  <div className="max-w-6xl w-full pointer-events-auto">
+                    <motion.h2
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8 }}
+                      viewport={{ once: true }}
+                      className="text-5xl md:text-6xl font-black text-white text-center mb-4 tracking-tight"
+                    >
+                      Section Heading
+                    </motion.h2>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      transition={{ duration: 0.8, delay: 0.2 }}
+                      viewport={{ once: true }}
+                      className="text-white/50 text-center text-lg mb-16"
+                    >
+                      Supporting description text
+                    </motion.p>
+                    
+                    {/* GLASSMORPHISM FEATURE CARDS */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {[
+                        { title: 'Feature One', desc: 'Real description of this feature', stat: '10x', icon: '◈' },
+                        { title: 'Feature Two', desc: 'Real description of this feature', stat: '99%', icon: '◉' },
+                        { title: 'Feature Three', desc: 'Real description of this feature', stat: '24/7', icon: '◊' },
+                      ].map((item, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 50 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: i * 0.15 }}
+                          viewport={{ once: true }}
+                          whileHover={{ scale: 1.03, y: -4 }}
+                          className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/8 hover:border-[${primary}]/30 transition-all duration-500 cursor-pointer group"
+                        >
+                          <div className="text-4xl mb-4 text-[${accent}]">{item.icon}</div>
+                          <div className="text-4xl font-black text-[${primary}] mb-2">{item.stat}</div>
+                          <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                          <p className="text-white/50 leading-relaxed">{item.desc}</p>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
                 </section>
-
-                {/* MORE SECTIONS -- at least 2 more with DIFFERENT layouts */}
-
-                {/* === FOOTER (MANDATORY -- MUST BE THE LAST ELEMENT) === */}
+                
+                {/* ═══ ADD MORE SECTIONS based on blueprint content ═══ */}
+                {/* Use h-screen w-screen for each section */}
+                {/* EVERY section must have real content, not placeholders */}
+                {/* Apply motion.div whileInView animations to ALL content */}
+                {/* Use glassmorphism: backdrop-blur-xl bg-white/5 border border-white/10 */}
+                
+                {/* ═══ FINAL: FOOTER (MANDATORY - LAST ELEMENT) ═══ */}
                 <section className="w-screen">
                   <Footer3D />
                 </section>
               </Scroll>
             </ScrollControls>
-
+            
             <Environment preset="city" />
-
+            
             <EffectComposer>
               <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} />
-              <Vignette eskil={false} offset={0.1} darkness={0.8} />
+              <Vignette eskil={false} offset={0.1} darkness={0.75} />
               <Noise opacity={0.04} />
             </EffectComposer>
           </Canvas>
@@ -792,21 +852,75 @@ ${scrollScenes}
   );
 };
 
-=== FINAL VERIFICATION CHECKLIST (check EVERY page before submitting) ===
+export default PageName;
 
-[ ] Does the page import Footer3D from '@/components/3d/Footer3D'?
-[ ] Does the page render <Footer3D /> as the LAST section inside <Scroll html>?
-[ ] Does the page import and render <NavBar3D />?
-[ ] Does the page import and wrap with <LoadingScreen3D>?
-[ ] Does the page have at least 5 interactive elements (hover, scroll animation, etc.)?
-[ ] Does the page use motion.div with whileInView for section animations?
-[ ] Does the page use glassmorphism cards (backdrop-blur, bg-white/5, border-white/10)?
-[ ] Does the page have gradient text or decorative gradient elements?
-[ ] Does every button have a working onClick handler?
-[ ] Does the page export default PageName?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DESIGN SYSTEM FOR THIS PROJECT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-If ANY checkbox is NO, FIX IT before outputting the page.
+Colors:
+  Background: bg-[${bg}] (also: background="${bg}" on Canvas color)
+  Primary: text-[${primary}] / bg-[${primary}] / shadow-[${primary}]
+  Secondary: text-[${secondary}] / bg-[${secondary}]
+  Accent: text-[${accent}] (for highlights and CTAs)
+  Glass: backdrop-blur-xl bg-white/5 border border-white/10
+  Glass Hover: bg-white/10 border-white/20
 
-${brainContext ? `PROJECT BRAIN CONTEXT:\n${brainContext}` : ''}
+Typography:
+  Hero: text-6xl md:text-8xl font-black tracking-tighter
+  Section title: text-4xl md:text-6xl font-black tracking-tight
+  Body: text-lg text-white/60 leading-relaxed
+  Caption: text-xs uppercase tracking-[0.3em] text-white/40
+  Gradient text: bg-clip-text text-transparent bg-gradient-to-r from-white to-[${accent}]
+
+Button styles:
+  Primary: bg-[${primary}] rounded-xl hover:shadow-[0_0_40px_${primary}66] hover:scale-105
+  Ghost: backdrop-blur-xl bg-white/5 border border-white/20 rounded-xl hover:bg-white/10
+  Outline: border border-[${primary}] text-[${primary}] hover:bg-[${primary}]/10
+
+Animation patterns:
+  Card reveal: initial={{ opacity:0, y:50 }} whileInView={{ opacity:1, y:0 }}
+  Stagger delay: transition={{ delay: index * 0.15 }}
+  Viewport: viewport={{ once: true, margin: '-50px' }}
+  Hover lift: whileHover={{ scale: 1.03, y: -4 }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION CHECKLIST (every page MUST pass before output)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] LoadingScreen3D wraps the entire return
+[ ] NavBar3D is first element inside LoadingScreen3D (before Canvas)
+[ ] Footer3D is LAST element inside <Scroll html>
+[ ] Every button has onClick handler
+[ ] pointer-events-auto on all interactive elements inside Scroll html
+[ ] EffectComposer is inside Canvas
+[ ] All text is real brand copy (no lorem ipsum, no placeholders)
+[ ] motion.div with whileInView on every content section
+[ ] Glassmorphism cards used for feature grids
+[ ] Gradient text on hero headline
+[ ] default export at bottom of file
+
+${instructions ? `\n${instructions}` : ''}
 `;
 }
+
+function classifySection(sectionName: string): string {
+  const lower = sectionName.toLowerCase();
+  if (lower.match(/hero|banner|landing|intro|welcome/)) return 'hero';
+  if (lower.match(/feature|capability|benefit|what we/)) return 'features';
+  if (lower.match(/product|showcase|gallery|portfolio|work|project/)) return 'showcase';
+  if (lower.match(/pricing|plan|tier|package/)) return 'pricing';
+  if (lower.match(/testimonial|review|client|customer|feedback/)) return 'testimonials';
+  if (lower.match(/team|about|who we|staff|people/)) return 'about';
+  if (lower.match(/contact|form|reach|touch|connect/)) return 'contact';
+  if (lower.match(/cta|call to action|get started|sign up|join/)) return 'cta';
+  if (lower.match(/stat|number|metric|counter|achievement/)) return 'stats';
+  if (lower.match(/process|how|step|workflow/)) return 'process';
+  return 'features';
+}
+
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export { build3DPageContext };

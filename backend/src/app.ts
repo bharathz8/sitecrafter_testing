@@ -1409,14 +1409,28 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
 
             let entryName = entry.entryName;
 
-            // Remove root folder if exists (e.g., "project-name/src/..." -> "src/...")
             const parts = entryName.split('/');
             if (parts.length > 1) {
-                // Check if first part looks like a root folder
                 const firstPart = parts[0];
-                if (!firstPart.includes('.') && parts.length > 1) {
+                const standardFolders = ['src', 'public', 'components', 'pages', 'assets', 'lib', 'styles', 'utils'];
+                if (!firstPart.includes('.') && !standardFolders.includes(firstPart.toLowerCase())) {
                     entryName = parts.slice(1).join('/');
                 }
+            }
+
+            const rootConfigs = [
+                'package.json', 'tsconfig.json', 'tsconfig.node.json', 'vite.config.ts', 
+                'postcss.config.js', 'tailwind.config.js', 'eslint.config.js', 'index.html',
+                '.gitignore', '.env', '.env.local', 'package-lock.json', 'README.md'
+            ];
+            
+            const fileName = entryName.split('/').pop()?.toLowerCase() || '';
+            const isInStandardFolder = entryName.toLowerCase().startsWith('src/') || 
+                                      entryName.toLowerCase().startsWith('public/') ||
+                                      entryName.toLowerCase().startsWith('node_modules/');
+
+            if (!isInStandardFolder && !rootConfigs.includes(fileName)) {
+                entryName = 'src/' + entryName;
             }
 
             // Skip empty paths or hidden files

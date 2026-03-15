@@ -117,7 +117,23 @@ export function truncate(text: string, maxLength: number): string {
   addFile(files, registry, 'src/lib/utils.ts', utilsTsx, 'core');
 
   if (state.enable3D) {
-    console.log('    [3D MODE] Generating 3D-specific App.tsx and AppLayout (NO 2D header/footer)');
+    console.log('    [3D MODE] Generating 3D-specific main.tsx, App.tsx, and AppLayout');
+
+    const main3DTsx = `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);`;
+    addFile(files, registry, 'src/main.tsx', main3DTsx, 'core');
+    console.log('    main.tsx created (3D mode - no sonner)');
 
     const app3DTsx = `import { Routes, Route } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -142,7 +158,7 @@ import { Outlet } from 'react-router-dom';
 
 const AppLayout = () => {
   return (
-    <div style={{ background: '#000', color: '#fff', position: 'relative' }}>
+    <div style={{ background: '#000', color: '#fff', position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
       <Outlet />
     </div>
   );

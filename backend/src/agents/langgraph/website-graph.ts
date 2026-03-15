@@ -58,7 +58,7 @@ function buildGraph() {
         .addNode('components_step', componentNode)
         .addNode('generate_3d_components', generate3DComponentNode)
         .addNode('pages_step', pageNode)
-        .addNode('tsc_validation', tscValidationNode)
+        // .addNode('tsc_validation', tscValidationNode) // temporarily disabled
 
         .addEdge('__start__', 'intent_router')
 
@@ -129,8 +129,7 @@ function buildGraph() {
         .addEdge('components_step', 'pages_step')
 
         .addEdge('generate_3d_components', 'pages_step')
-        .addEdge('pages_step', 'tsc_validation')
-        .addEdge('tsc_validation', END);
+        .addEdge('pages_step', END);
 
     return workflow.compile();
 }

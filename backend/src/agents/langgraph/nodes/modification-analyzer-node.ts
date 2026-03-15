@@ -30,7 +30,7 @@ const apiKeys = [
     process.env.gemini2,
 ].filter(key => key && key.length > 0) as string[];
 
-let currentKeyIndex = 0;
+let currentKeyIndex = Math.floor(Math.random() * Math.max(apiKeys.length, 1));
 
 function getClient(): OpenAI {
     return new OpenAI({

@@ -21,11 +21,13 @@ import {
   Html, Billboard, Grid,
   useProgress, useCursor, useIntersect,
   Sphere, Box, RoundedBox, Dodecahedron, Icosahedron, Plane,
-  Trail, MeshPortalMaterial,
+  Trail, MeshPortalMaterial, Cloud,
+  PresentationControls, AdaptiveDpr, AdaptiveEvents,
+  AccumulativeShadows, RandomizedLight,
 } from '@react-three/drei';
 
 // Post-processing
-import { EffectComposer, Bloom, Vignette, Noise, ChromaticAberration } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, Noise, ChromaticAberration, DepthOfField, HueSaturation } from '@react-three/postprocessing';
 
 === CANVAS SETUP ===
 
@@ -33,11 +35,14 @@ The Canvas component creates the WebGL context and THREE.Scene automatically.
 ONLY pages own a <Canvas>. Scene components NEVER contain <Canvas>.
 
 <Canvas
-  camera={{ position: [0, 0, 8], fov: 50 }}
-  dpr={[1, 1.5]}
-  gl={{ antialias: true, alpha: false }}
+  gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+  dpr={[1, 2]}
+  shadows
+  camera={{ position: [0, 0, 8], fov: 60, near: 0.1, far: 1000 }}
 >
   <color attach="background" args={['#050505']} />
+  <AdaptiveDpr pixelated />
+  <AdaptiveEvents />
   {/* 3D content here */}
 </Canvas>
 
@@ -72,7 +77,7 @@ All Three.js geometries are available as lowercase JSX:
 </mesh>
 
 <mesh>
-  <planeGeometry args={[width, height]} />
+  <planeGeometry args={[width, height, widthSegments, heightSegments]} />
   <meshBasicMaterial color="#333" side={THREE.DoubleSide} />
 </mesh>
 
@@ -89,6 +94,16 @@ All Three.js geometries are available as lowercase JSX:
 <mesh>
   <torusGeometry args={[radius, tube, radialSegments, tubularSegments]} />
   <meshStandardMaterial color="#00ffff" />
+</mesh>
+
+<mesh>
+  <dodecahedronGeometry args={[radius, detail]} />
+  <meshStandardMaterial color="#f472b6" />
+</mesh>
+
+<mesh>
+  <octahedronGeometry args={[radius, detail]} />
+  <meshStandardMaterial color="#818cf8" />
 </mesh>
 
 === MATERIALS ===
@@ -113,6 +128,45 @@ Properties for meshPhysicalMaterial (premium look):
   emissive="#ff0066"
   emissiveIntensity={0.5}
 
+Glass effect with meshPhysicalMaterial:
+  transmission={0.9}
+  thickness={0.5}
+  ior={1.5}
+  roughness={0}
+  clearcoat={1}
+  
+=== CUSTOM ShaderMaterial (CRITICAL FOR CINEMATIC SCENES) ===
+
+Custom GLSL shaders are the KEY to award-winning visuals.
+Use <shaderMaterial> (lowercase intrinsic) with vertexShader + fragmentShader strings.
+
+PATTERN: Declarative shader inside mesh
+<mesh>
+  <planeGeometry args={[10, 10, 64, 64]} />
+  <shaderMaterial
+    ref={shaderRef}
+    vertexShader={vertexShader}
+    fragmentShader={fragmentShader}
+    uniforms={uniforms}
+    transparent
+    side={THREE.DoubleSide}
+  />
+</mesh>
+
+Animate in useFrame:
+useFrame((_, delta) => {
+  if (shaderRef.current) {
+    shaderRef.current.uniforms.uTime.value += delta;
+  }
+});
+
+uniforms must be created with useMemo to avoid re-creation:
+const uniforms = useMemo(() => ({
+  uTime: { value: 0 },
+  uColorA: { value: new THREE.Color('#ff0066') },
+  uColorB: { value: new THREE.Color('#00ffcc') },
+}), []);
+
 === LIGHTS ===
 
 All lights are lowercase intrinsic JSX:
@@ -128,6 +182,7 @@ All lights are lowercase intrinsic JSX:
   color="#f472b6"
   castShadow
 />
+<hemisphereLight args={['#ffeeb1', '#080820', 0.5]} />
 
 === FOG ===
 
@@ -210,11 +265,30 @@ HDR environment lighting:
 <Environment preset="city" />
 // presets: 'apartment', 'city', 'dawn', 'forest', 'lobby', 'night', 'park', 'studio', 'sunset', 'warehouse'
 
+=== DREI: PresentationControls ===
+
+Interactive drag/rotate controls for product showcases:
+
+<PresentationControls
+  global
+  snap
+  speed={1}
+  zoom={0.7}
+  rotation={[0, -Math.PI / 6, 0]}
+  polar={[-Math.PI / 6, Math.PI / 6]}
+  azimuth={[-Math.PI / 6, Math.PI / 6]}
+>
+  <mesh>
+    <torusKnotGeometry />
+    <meshPhysicalMaterial clearcoat={1} metalness={0.9} />
+  </mesh>
+</PresentationControls>
+
 === DREI: ScrollControls + Scroll ===
 
 Scroll-driven 3D experiences:
 
-<ScrollControls pages={5} damping={0.1}>
+<ScrollControls pages={8} damping={0.03}>
   <Scroll>
     {/* 3D objects -- positioned at Y offsets */}
     <HeroScene3D />
@@ -248,8 +322,9 @@ const MyScene = () => {
 
   useFrame(() => {
     if (groupRef.current) {
-      groupRef.current.rotation.y = scroll.offset * Math.PI * 2;
-      groupRef.current.position.y = scroll.offset * -10;
+      const s = scroll.offset;
+      groupRef.current.rotation.y = s * Math.PI * 2;
+      groupRef.current.position.y = s * -10;
     }
   });
 
@@ -300,12 +375,89 @@ Trail effect behind moving objects:
   </mesh>
 </Trail>
 
+=== DREI: Cloud ===
+
+Volumetric cloud for atmosphere:
+
+<Cloud opacity={0.5} speed={0.4} width={10} depth={1.5} segments={20} />
+
+=== THREE.js: CatmullRomCurve3 (Cinematic Camera Paths) ===
+
+Create smooth camera fly-through paths:
+
+const curve = useMemo(() => new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0, 3, 12),
+  new THREE.Vector3(0, 0, 2),
+  new THREE.Vector3(-4, 1, 3),
+  new THREE.Vector3(4, 1, 3),
+  new THREE.Vector3(0, 6, 6),
+  new THREE.Vector3(0, 1, 10),
+]), []);
+
+useFrame(() => {
+  const t = scroll.offset;
+  const point = curve.getPoint(t);
+  camera.position.lerp(point, 0.05);
+  camera.lookAt(0, 0, 0);
+});
+
+=== THREE.js: BufferGeometry Particles (Particle Morphing) ===
+
+Create particle systems that morph between shapes:
+
+const count = 3000;
+const positions = useMemo(() => new Float32Array(count * 3), []);
+
+// Generate shape positions:
+function generateSphere(n: number, radius = 3): Float32Array {
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    arr[i*3]   = radius * Math.sin(phi) * Math.cos(theta);
+    arr[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
+    arr[i*3+2] = radius * Math.cos(phi);
+  }
+  return arr;
+}
+
+function generateScatter(n: number, range = 8): Float32Array {
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    arr[i*3]   = (Math.random() - 0.5) * range;
+    arr[i*3+1] = (Math.random() - 0.5) * range;
+    arr[i*3+2] = (Math.random() - 0.5) * range;
+  }
+  return arr;
+}
+
+// Morph in useFrame:
+useFrame(() => {
+  const t = scroll.offset;
+  const geo = pointsRef.current.geometry;
+  const pos = geo.attributes.position.array as Float32Array;
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    pos[i3]   = THREE.MathUtils.lerp(shapeA[i3],   shapeB[i3],   t);
+    pos[i3+1] = THREE.MathUtils.lerp(shapeA[i3+1], shapeB[i3+1], t);
+    pos[i3+2] = THREE.MathUtils.lerp(shapeA[i3+2], shapeB[i3+2], t);
+  }
+  geo.attributes.position.needsUpdate = true;
+});
+
+<points ref={pointsRef}>
+  <bufferGeometry>
+    <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+  </bufferGeometry>
+  <pointsMaterial size={0.03} color="#ff66aa" sizeAttenuation transparent opacity={0.8} />
+</points>
+
 === POST-PROCESSING ===
 
 EffectComposer wraps post-processing effects INSIDE Canvas but OUTSIDE ScrollControls:
 
 <Canvas>
-  <ScrollControls pages={5}>
+  <ScrollControls pages={8} damping={0.03}>
     {/* ... */}
   </ScrollControls>
 
@@ -315,8 +467,24 @@ EffectComposer wraps post-processing effects INSIDE Canvas but OUTSIDE ScrollCon
     <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} />
     <Vignette eskil={false} offset={0.1} darkness={0.8} />
     <Noise opacity={0.04} />
+    <ChromaticAberration offset={[0.002, 0.002]} />
   </EffectComposer>
 </Canvas>
+
+Animate postprocessing with refs:
+const bloomRef = useRef<any>(null!);
+const vignetteRef = useRef<any>(null!);
+
+useFrame(() => {
+  const s = scroll.offset;
+  if (bloomRef.current) bloomRef.current.intensity = THREE.MathUtils.lerp(0.3, 3.5, Math.min(s * 3, 1));
+  if (vignetteRef.current) vignetteRef.current.darkness = THREE.MathUtils.lerp(0.85, 0.1, s);
+});
+
+<EffectComposer>
+  <Bloom ref={bloomRef} intensity={0.3} luminanceThreshold={0.2} />
+  <Vignette ref={vignetteRef} darkness={0.85} />
+</EffectComposer>
 
 RULE: NEVER use disableNormalPass -- use enableNormalPass={false} if needed.
 RULE: EffectComposer goes in the PAGE, NOT in scene components.
@@ -351,6 +519,20 @@ useFrame(() => {
   onPointerOver={() => setHovered(true)}
   onPointerOut={() => setHovered(false)}
 >
+
+Mouse parallax with useThree:
+
+const { pointer } = useThree();
+useFrame(() => {
+  if (groupRef.current) {
+    groupRef.current.position.x = THREE.MathUtils.lerp(
+      groupRef.current.position.x, pointer.x * 0.3, 0.05
+    );
+    groupRef.current.position.y = THREE.MathUtils.lerp(
+      groupRef.current.position.y, pointer.y * 0.3, 0.05
+    );
+  }
+});
 
 === SCENE COMPONENT PATTERN (TYPE 1) ===
 
@@ -396,7 +578,7 @@ Pages own the single Canvas. All scenes are lazy-loaded.
 import React, { Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
+import { ScrollControls, Scroll, Environment, PerspectiveCamera, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import LoadingScreen3D from '@/components/3d/LoadingScreen3D';
 import NavBar3D from '@/components/3d/NavBar3D';
@@ -413,13 +595,19 @@ const HomePage = () => {
     <LoadingScreen3D>
       <NavBar3D />
 
-      <div className="fixed inset-0 w-full h-screen bg-black overflow-hidden">
+      <div className="fixed inset-0 w-full h-screen bg-black overflow-hidden" style={{ zIndex: 0 }}>
         <Suspense fallback={<div className="w-full h-full bg-black" />}>
-          <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]}>
+          <Canvas
+            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+            dpr={[1, 2]}
+            shadows
+            camera={{ position: [0, 0, 8], fov: 60, near: 0.1, far: 1000 }}
+          >
             <color attach="background" args={['#050505']} />
-            <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
+            <AdaptiveDpr pixelated />
+            <AdaptiveEvents />
 
-            <ScrollControls pages={4} damping={0.1}>
+            <ScrollControls pages={8} damping={0.03}>
               <Scroll>
                 <HeroScene3D />
                 <group position={[0, -10, 0]}>
@@ -552,6 +740,191 @@ export default LoadingScreen3D;
 CRITICAL: LoadingScreen3D must NEVER import from @/components/ui/.
 The ONLY allowed external import is useProgress from @react-three/drei.
 
+=== GLSL SHADER LIBRARY (COPY-PASTE READY) ===
+
+Use these shader patterns for atmospheric backgrounds and effects.
+Pick the shader that matches the business type being generated.
+
+--- SHADER 1: AURORA WAVE ---
+Best for: wellness, nature, calm, tech, SaaS
+Best geometry: planeGeometry args={[20, 20, 128, 128]} positioned at z=-5
+Color recommendations: cool blues + warm pinks for wellness, cyan + purple for tech
+
+vertexShader:
+  varying vec2 vUv;
+  varying float vElevation;
+  uniform float uTime;
+  void main() {
+    vUv = uv;
+    vec4 modelPos = modelMatrix * vec4(position, 1.0);
+    float elevation = sin(modelPos.x * 3.0 + uTime) * 0.3
+                    + sin(modelPos.z * 2.0 + uTime * 0.8) * 0.2;
+    modelPos.y += elevation;
+    vElevation = elevation;
+    gl_Position = projectionMatrix * viewMatrix * modelPos;
+  }
+
+fragmentShader:
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uTime;
+  varying vec2 vUv;
+  varying float vElevation;
+  void main() {
+    float mixStr = (vElevation + 0.5) * 0.8;
+    vec3 color = mix(uColorA, uColorB, mixStr);
+    float alpha = 0.6 + sin(vUv.x * 10.0 + uTime) * 0.2;
+    gl_FragColor = vec4(color, alpha);
+  }
+
+uniforms: { uTime: {value:0}, uColorA: {value:new THREE.Color('#primaryColor')}, uColorB: {value:new THREE.Color('#accentColor')} }
+Animate: shaderRef.current.uniforms.uTime.value += delta in useFrame
+
+--- SHADER 2: HOLOGRAM SCANLINE ---
+Best for: tech, cybersecurity, AI, gaming, data
+Best geometry: sphereGeometry args={[3, 64, 64]} or cylinderGeometry
+Color recommendations: cyan/green for cyber, blue for AI, neon for gaming
+
+vertexShader:
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+
+fragmentShader:
+  uniform float uTime;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+  void main() {
+    float scanline = sin(vUv.y * 200.0 + uTime * 5.0) * 0.04;
+    float flicker = sin(uTime * 30.0) * 0.01 + 0.99;
+    float edgeGlow = 1.0 - smoothstep(0.4, 0.5, length(vUv - 0.5));
+    vec3 color = uColor * (1.0 + edgeGlow * 2.0 + scanline) * flicker;
+    float alpha = edgeGlow * 0.8 + 0.1;
+    gl_FragColor = vec4(color, alpha);
+  }
+
+uniforms: { uTime: {value:0}, uColor: {value:new THREE.Color('#00ffcc')} }
+
+--- SHADER 3: PLASMA ENERGY FIELD ---
+Best for: energy, fintech, crypto, sports, music
+Best geometry: planeGeometry args={[15, 15, 1, 1]} or sphereGeometry
+Color recommendations: orange/gold for energy, purple/gold for fintech, neon for music
+
+vertexShader:
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+
+fragmentShader:
+  uniform float uTime;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+  void main() {
+    float v1 = sin(vUv.x * 10.0 + uTime);
+    float v2 = sin(vUv.y * 10.0 + uTime * 0.8);
+    float v3 = sin((vUv.x + vUv.y) * 10.0 + uTime * 1.2);
+    float plasma = (v1 + v2 + v3) / 3.0;
+    vec3 color = uColor * (plasma * 0.5 + 0.5) * 2.0;
+    gl_FragColor = vec4(color, abs(plasma) * 0.7 + 0.1);
+  }
+
+uniforms: { uTime: {value:0}, uColor: {value:new THREE.Color('#ff6600')} }
+
+--- SHADER 4: DEEP SPACE VOID ---
+Best for: luxury, mystery, premium services, fashion, real estate
+Best geometry: sphereGeometry args={[50, 64, 64]} with side={THREE.BackSide} (skybox)
+Color recommendations: deep purple for luxury, dark blue for premium, black/gold for fashion
+
+vertexShader:
+  varying vec2 vUv;
+  varying vec3 vPosition;
+  void main() {
+    vUv = uv;
+    vPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+
+fragmentShader:
+  uniform float uTime;
+  uniform vec3 uColorDeep;
+  uniform vec3 uColorHighlight;
+  varying vec2 vUv;
+  varying vec3 vPosition;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  void main() {
+    vec2 uv = vUv;
+    float nebula = noise(uv * 3.0 + uTime * 0.05) * 0.5
+                 + noise(uv * 6.0 - uTime * 0.03) * 0.25
+                 + noise(uv * 12.0 + uTime * 0.02) * 0.125;
+    nebula = smoothstep(0.3, 0.8, nebula);
+    vec3 color = mix(uColorDeep, uColorHighlight, nebula * 0.6);
+    float stars = step(0.998, hash(floor(uv * 500.0)));
+    float starTwinkle = sin(uTime * 2.0 + hash(floor(uv * 500.0)) * 6.28) * 0.5 + 0.5;
+    color += vec3(stars * starTwinkle * 0.8);
+    gl_FragColor = vec4(color, 1.0);
+  }
+
+uniforms: { uTime: {value:0}, uColorDeep: {value:new THREE.Color('#05001a')}, uColorHighlight: {value:new THREE.Color('#1a0033')} }
+
+--- SHADER 5: LIQUID METAL ---
+Best for: automotive, manufacturing, premium tech, industrial
+Best geometry: planeGeometry args={[10, 10, 128, 128]} or sphereGeometry
+Color recommendations: chrome/silver for automotive, copper for industrial, gold for premium
+
+vertexShader:
+  varying vec2 vUv;
+  varying float vElevation;
+  uniform float uTime;
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    float ripple1 = sin(pos.x * 4.0 + uTime * 1.5) * cos(pos.y * 3.0 + uTime) * 0.15;
+    float ripple2 = sin(pos.x * 7.0 - uTime * 0.8) * sin(pos.y * 5.0 + uTime * 1.2) * 0.08;
+    float ripple3 = cos(length(pos.xy) * 3.0 - uTime * 2.0) * 0.1;
+    pos.z += ripple1 + ripple2 + ripple3;
+    vElevation = ripple1 + ripple2 + ripple3;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+
+fragmentShader:
+  uniform float uTime;
+  uniform vec3 uColorBase;
+  uniform vec3 uColorHighlight;
+  varying vec2 vUv;
+  varying float vElevation;
+  void main() {
+    float caustic = sin(vUv.x * 20.0 + uTime * 2.0) * sin(vUv.y * 20.0 - uTime * 1.5) * 0.5 + 0.5;
+    float fresnel = pow(1.0 - abs(vElevation * 3.0), 3.0);
+    vec3 color = mix(uColorBase, uColorHighlight, caustic * 0.4 + fresnel * 0.3);
+    color += vec3(pow(caustic, 4.0)) * 0.3;
+    float specular = pow(max(0.0, sin(vUv.x * 30.0 + uTime) * sin(vUv.y * 30.0 - uTime)), 8.0);
+    color += vec3(specular) * 0.5;
+    gl_FragColor = vec4(color, 0.9);
+  }
+
+uniforms: { uTime: {value:0}, uColorBase: {value:new THREE.Color('#888888')}, uColorHighlight: {value:new THREE.Color('#ffffff')} }
+
+=== END GLSL SHADER LIBRARY ===
+
 === ABSOLUTE BANNED LIST (WILL CAUSE RUNTIME CRASHES) ===
 
 1. NEVER use <Text> or <Text3D> from drei (requires font files not available)
@@ -567,6 +940,21 @@ The ONLY allowed external import is useProgress from @react-three/drei.
 11. NEVER use setState inside useFrame (causes re-render loop)
 12. NEVER use <a href> for navigation (use <Link to> from react-router-dom)
 
+=== ALLOWED AND ENCOURAGED ===
+
+ShaderMaterial, RawShaderMaterial (custom GLSL)
+shaderMaterial (lowercase intrinsic in R3F JSX)
+meshPhysicalMaterial with transmission + thickness + ior (glass effect)
+useScroll, ScrollControls, Scroll from @react-three/drei
+Float, Sparkles, Stars, Cloud, ContactShadows, Environment
+PresentationControls, AccumulativeShadows, RandomizedLight
+EffectComposer, Bloom, Vignette, ChromaticAberration, Noise, DepthOfField
+useFrame, useThree, useRef, useMemo, useState, useEffect
+THREE.CatmullRomCurve3, THREE.BufferGeometry, THREE.ShaderMaterial
+THREE.MathUtils.lerp for smooth animations
+GSAP for HTML overlay animations (gsap is installed)
+framer-motion for HTML overlay animations
+
 === MATERIAL CASING RULES (CRITICAL FOR TypeScript) ===
 
 INTRINSIC (Three.js built-in) -- LOWERCASE:
@@ -574,6 +962,7 @@ INTRINSIC (Three.js built-in) -- LOWERCASE:
   <meshStandardMaterial />
   <meshPhysicalMaterial />
   <meshLambertMaterial />
+  <shaderMaterial />
 
 DREI (imported from @react-three/drei) -- CAPITALIZED:
   <MeshDistortMaterial />
@@ -587,10 +976,12 @@ Mixing these up (e.g., <MeshPhysicalMaterial> or <meshdistortmaterial>) will cau
 1. Sparkles: max 80 particles
 2. Stars: max 2000 count
 3. IcosahedronGeometry: max detail=4
-4. Canvas dpr: [1, 1.5] (not [1, 2])
+4. Canvas dpr: [1, 2]
 5. Use React.lazy() for scene components
 6. Wrap lazy components in <Suspense>
 7. Use useFrame refs instead of setState for animation
+8. Use <AdaptiveDpr pixelated /> for automatic DPR scaling
+9. Use <AdaptiveEvents /> for automatic pointer event optimization
 
 === ERROR BOUNDARY PATTERN ===
 

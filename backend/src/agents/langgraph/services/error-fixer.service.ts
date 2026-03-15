@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Error Fixer Service
  * Uses gemini-2.5-flash-lite for fixing code errors
  * Includes API key rotation for rate limit handling
@@ -24,7 +24,7 @@ const apiKeys = [
     process.env.gemini4,
 ].filter(key => key && key.length > 0) as string[];
 
-let currentKeyIndex = 0;
+let currentKeyIndex = Math.floor(Math.random() * Math.max(apiKeys.length, 1));
 
 console.log(` Error Fixer using ${apiKeys.length} API keys`);
 console.log(` Error Fix Model: ${ERROR_FIX_MODEL}`);

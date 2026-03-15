@@ -113,9 +113,12 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
 
     let tavilyContext = '';
     const tavilyQueries = [
-        `React Three Fiber ScrollControls page layout example ${new Date().getFullYear()}`,
-        `@react-three/drei MeshDistortMaterial MeshWobbleMaterial usage`,
-        `React Three Fiber EffectComposer Bloom postprocessing setup`,
+        `awwwards site of the year 3D website react three fiber ${new Date().getFullYear()}`,
+        `Bruno Simon portfolio techniques three.js breakdown`,
+        `react three fiber particle morphing BufferGeometry example`,
+        `GLSL shader material animated background react three fiber`,
+        `codrops creative coding WebGL scroll storytelling ${new Date().getFullYear()}`,
+        `Active Theory agency 3D web experience techniques`,
     ];
 
     if (state.userPrompt) {
@@ -247,6 +250,33 @@ const DEFAULT_3D_QUERIES = [
     'Billboard face camera',
     'OrbitControls interaction',
     'React.lazy dynamic import suspense',
+
+    'CatmullRomCurve3 camera path scroll animation',
+    'useScroll offset scroll driven animation drei',
+    'particle morph BufferGeometry position lerp useFrame',
+    'ShaderMaterial vertexShader fragmentShader uTime uniform',
+    'GLSL fragment shader aurora animated wave',
+    'hologram scanline shader material three.js',
+    'plasma energy field shader WebGL',
+
+    'scroll driven storytelling react three fiber',
+    'cinematic camera fly through CatmullRomCurve3',
+    'postprocessing animate scroll Bloom Vignette ref',
+    'ChromaticAberration EffectComposer animate',
+    'particle system converge explode morph',
+
+    'PresentationControls product showcase drei',
+    'AccumulativeShadows realistic shadow drei',
+    'Environment preset studio lighting drei',
+    'Html drei component overlay 3D scene',
+    'Stars deep space background drei',
+    'Cloud volumetric drei component',
+
+    'meshPhysicalMaterial transmission thickness ior glass',
+    'meshPhysicalMaterial clearcoat metalness reflectivity',
+    'MeshDistortMaterial distort speed organic',
+    'pointsMaterial size sizeAttenuation particles',
+    'AdaptiveDpr AdaptiveEvents performance drei',
 ];
 
 async function expandQueriesWithLLM(userPrompt: string, existingModules: string[]): Promise<string[]> {

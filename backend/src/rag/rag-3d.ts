@@ -54,6 +54,7 @@ class RotatingBatchedEmbeddings extends Embeddings {
     private taskType: TaskType;
     private batchSize: number;
     private delayMs: number;
+    private keyOffset: number;
 
     constructor(keys: string[], taskType: TaskType, batchSize = EMBED_BATCH_SIZE, delayMs = EMBED_BATCH_DELAY) {
         super({});
@@ -61,6 +62,7 @@ class RotatingBatchedEmbeddings extends Embeddings {
         this.taskType = taskType;
         this.batchSize = batchSize;
         this.delayMs = delayMs;
+        this.keyOffset = Math.floor(Math.random() * Math.max(keys.length, 1));
     }
 
     private async embedSingle(text: string, startKeyIdx: number): Promise<number[] | null> {
@@ -72,9 +74,14 @@ class RotatingBatchedEmbeddings extends Embeddings {
                 const [vec] = await embedder.embedDocuments([text]);
                 if (vec && vec.length > 0) return vec;
             } catch (err: any) {
-                const msg = err.message?.slice(0, 60) || "";
+                const msg = err.message?.slice(0, 80) || "";
+                const keyNum = (startKeyIdx + attempt) % this.keys.length + 1;
                 if (msg.includes("429") || msg.includes("quota")) {
+                    console.warn(`[Embed] Key #${keyNum} rate limited in single retry, waiting 15s...`);
                     await sleep(15000);
+                } else {
+                    console.warn(`[Embed] Key #${keyNum} failed in single retry: ${msg}`);
+                    await sleep(1000);
                 }
             }
         }
@@ -103,7 +110,7 @@ class RotatingBatchedEmbeddings extends Embeddings {
             const batch = validTexts.slice(i, i + this.batchSize);
             const batchIndices = validIndices.slice(i, i + this.batchSize);
             const batchValidPos = Array.from({ length: batch.length }, (_, j) => i + j);
-            const apiKey = this.keys[batchNum % this.keys.length];
+            const apiKey = this.keys[(batchNum + this.keyOffset) % this.keys.length];
             const embedder = makeEmbeddingForKey(apiKey, this.taskType);
 
             let success = false;
@@ -126,7 +133,7 @@ class RotatingBatchedEmbeddings extends Embeddings {
                     if (batchEmpty > 0) {
                         console.warn(`[Embed] Batch ${batchNum + 1}: ${batchEmpty}/${batch.length} empty -- queued for retry`);
                     } else {
-                        console.log(`[Embed] Batch ${batchNum + 1}/${totalBatches} done (key #${(batchNum % this.keys.length) + 1})`);
+                        console.log(`[Embed] Batch ${batchNum + 1}/${totalBatches} done (key #${((batchNum + this.keyOffset) % this.keys.length) + 1})`);
                     }
                     success = true;
                 } catch (err: any) {
@@ -159,7 +166,7 @@ class RotatingBatchedEmbeddings extends Embeddings {
                 const origIdx = failedIndices[k];
                 const textPos = failedTextIndices[k];
                 const text = validTexts[textPos];
-                const startKey = (k + 1) % this.keys.length;
+                const startKey = (k + this.keyOffset) % this.keys.length;
                 const vec = await this.embedSingle(text, startKey);
                 if (vec) {
                     results[origIdx] = vec;
@@ -194,15 +201,19 @@ class RotatingBatchedEmbeddings extends Embeddings {
     }
 
     async embedQuery(text: string): Promise<number[]> {
-        for (let i = 0; i < this.keys.length; i++) {
+        const startIdx = Math.floor(Math.random() * this.keys.length);
+        for (let attempt = 0; attempt < this.keys.length; attempt++) {
+            const keyIdx = (startIdx + attempt) % this.keys.length;
             try {
-                const embedder = makeEmbeddingForKey(this.keys[i], this.taskType);
+                const embedder = makeEmbeddingForKey(this.keys[keyIdx], this.taskType);
                 const vec = await embedder.embedQuery(text.replace(/\s+/g, " ").trim());
                 if (vec && vec.length > 0) return vec;
             } catch (err: any) {
-                if (i === this.keys.length - 1) throw err;
-                console.warn(`[Embed] Query failed on key ${i + 1}, trying next...`);
-                await sleep(1000);
+                if (attempt === this.keys.length - 1) throw err;
+                const msg = err.message?.slice(0, 80) || "";
+                const waitMs = (msg.includes("429") || msg.includes("quota")) ? 5000 : 1000;
+                console.warn(`[Embed] Query failed on key #${keyIdx + 1}: ${msg} -- trying next (wait ${waitMs / 1000}s)`);
+                await sleep(waitMs);
             }
         }
         throw new Error("All keys failed for query embedding");
@@ -733,7 +744,7 @@ export async function generateComponent(prompt: string) {
     console.log("[Generate] Calling Gemini with key rotation...");
 
     let retries = keys.length;
-    let keyIdx = 0;
+    let keyIdx = Math.floor(Math.random() * keys.length);
     let backoff = 20000;
     while (retries > 0) {
         try {

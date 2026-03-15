@@ -4,16 +4,37 @@ import { UIService } from './ui.service';
 import { generateDynamicTheme, formatThemeForPrompt, generateResponsivePatterns, DynamicDesignTheme } from './dynamic-trends.service';
 import OpenAI from "openai";
 
-// Initialize OpenAI client with Gemini API
-const openai = new OpenAI({
-  apiKey: process.env.gemini,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-});
+const apiKeys = [
+    process.env.gemini13,
+    process.env.gemini12,
+    process.env.gemini8,
+    process.env.gemini9,
+    process.env.gemini10,
+    process.env.gemini11,
+    process.env.gemini,
+    process.env.gemini3,
+    process.env.gemini4,
+    process.env.gemini7,
+    process.env.gemini6,
+    process.env.gemini5,
+    process.env.gemini2,
+].filter(k => k && k.length > 0) as string[];
 
-const openai2 = new OpenAI({
-  apiKey: process.env.gemini2,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-});
+let keyIdx = Math.floor(Math.random() * apiKeys.length);
+
+function getClient(): OpenAI {
+    const key = apiKeys[keyIdx % apiKeys.length] || process.env.gemini;
+    return new OpenAI({
+        apiKey: key as string,
+        baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    });
+}
+
+function rotateKey(): void {
+    if (apiKeys.length > 0) {
+        keyIdx = (keyIdx + 1) % apiKeys.length;
+    }
+}
 
 const PLANNING_MODEL = "gemini-2.5-flash-lite"; // Single model for planning
 
@@ -62,7 +83,8 @@ Focus ONLY on backend architecture. Generate comprehensive specifications includ
 
 Make this TypeScript-based Node.js/Express backend. Be extremely detailed with 8000+ words.`;
 
-    const response = await openai.chat.completions.create({
+    const client = getClient();
+    const response = await client.chat.completions.create({
       model: PLANNING_MODEL,
       messages: [
         {
@@ -404,7 +426,8 @@ Use this structure:
 BEGIN YOUR ULTRA-DETAILED SPECIFICATION NOW:`;
 
     // Make the API call with the autonomous planning prompt
-    const response = await openai2.chat.completions.create({
+    const client = getClient();
+    const response = await client.chat.completions.create({
       model: PLANNING_MODEL,
       messages: [
         {
@@ -1336,7 +1359,8 @@ Before returning, ensure:
 REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-READY code. Think professional SaaS application. Make it comprehensive, beautiful, accessible, and feature-rich!`;
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const response = await openai.chat.completions.create({
+      const client = getClient();
+      const response = await client.chat.completions.create({
         model: PLANNING_MODEL,
         messages: [
           {
@@ -1428,6 +1452,7 @@ REMEMBER: This blueprint must enable generation of ENTERPRISE-GRADE, PRODUCTION-
 
     } catch (error: any) {
       console.error('Error:', error.message);
+      rotateKey();
 
       if (retryCount < MAX_RETRIES) {
         console.log(`Error occurred, retrying (${retryCount + 1}/${MAX_RETRIES})...`);

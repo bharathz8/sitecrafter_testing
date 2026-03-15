@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Blueprint Node - Generates project blueprint using PlanningService
  * Uses autonomous multi-phase planning for dynamic feature ideation
  */
@@ -222,7 +222,16 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         const projectMemory = initProjectMemory(stateWithBlueprint);
         if (state.enable3D) {
             projectMemory.threeDDependencies = { ...THREE_JS_DEPENDENCIES };
-            projectMemory.narrativeStyle = `Create an immersive, cinematic 3D experience for: ${state.userPrompt.slice(0, 300)}`;
+            projectMemory.narrativeStyle = `CINEMATIC 3D EXPERIENCE: Create an Awwwards-level immersive 3D website for: ${state.userPrompt.slice(0, 300)}.
+QUALITY: Every scene must be a MURAL (200+ lines, custom shaders, particle systems, scroll narratives) not a thumbnail.
+SCROLL NARRATIVE: Map useScroll().offset to 3-act arc (Establish->Reveal->Resolve).
+CAMERA: Use CatmullRomCurve3 for cinematic camera fly-throughs on hero scenes.
+SHADERS: Include custom ShaderMaterial with vertexShader + fragmentShader + uTime for atmospheric backgrounds.
+PARTICLES: Use BufferGeometry particle morphing systems that transition between shapes on scroll.
+POSTPROCESSING: Bloom, Vignette, ChromaticAberration animated with scroll via refs.
+Canvas: gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }} dpr={[1,2]} shadows camera={{ fov: 60, near: 0.1, far: 1000 }}
+ScrollControls: pages={8} damping={0.03}
+Performance: <AdaptiveDpr pixelated /> <AdaptiveEvents />`;
         }
         console.log(`[blueprint] Project brain initialized (3D=${projectMemory.is3D})`);
 
@@ -272,7 +281,7 @@ const blueprintApiKeys = [
     process.env.gemini2,
 ].filter(key => key && key.length > 0) as string[];
 
-let blueprintKeyIndex = 0;
+let blueprintKeyIndex = Math.floor(Math.random() * Math.max(blueprintApiKeys.length, 1));
 
 function getBlueprintApiKey(): string {
     return blueprintApiKeys[blueprintKeyIndex] || process.env.gemini2 || '';

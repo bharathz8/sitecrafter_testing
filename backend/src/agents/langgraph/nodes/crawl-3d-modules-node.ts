@@ -1,10 +1,15 @@
 import { WebsiteState } from '../graph-state';
 import { isVectorStoreReady, getVectorStoreAge, ingestDocumentation } from '../../../rag/rag-3d';
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+// ─── Change this to control re-ingestion frequency ───────────────────────────
+// Set to Infinity to NEVER re-ingest automatically (recommended once you have
+// a good hnsw_3d_docs store). To force a fresh crawl, delete the
+// hnsw_3d_docs/ folder and restart — the node will rebuild it once, then stop.
+const REINGEST_AFTER_MS = Infinity; // was: 7 * 24 * 60 * 60 * 1000 (7 days)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function crawl3DModulesNode(state: WebsiteState): Promise<Partial<WebsiteState>> {
-    console.log('\n[crawl-3d-modules] Starting 3D documentation crawl check...');
+    console.log('\n[crawl-3d-modules] Checking 3D documentation store...');
 
     if (!state.enable3D) {
         console.log('[crawl-3d-modules] 3D not enabled, skipping.');
@@ -14,16 +19,24 @@ export async function crawl3DModulesNode(state: WebsiteState): Promise<Partial<W
     const storeReady = isVectorStoreReady();
     const storeAge = getVectorStoreAge();
 
-    if (storeReady && storeAge < SEVEN_DAYS_MS) {
-        const ageDays = Math.round(storeAge / (24 * 60 * 60 * 1000));
-        console.log(`[crawl-3d-modules] Vector store is fresh (${ageDays} days old), skipping re-ingestion.`);
+    if (storeReady && storeAge < REINGEST_AFTER_MS) {
+        const ageDays = isFinite(storeAge)
+            ? `${Math.round(storeAge / (24 * 60 * 60 * 1000))}d old`
+            : 'age unknown';
+        console.log(`[crawl-3d-modules] Vector store is ready (${ageDays}), skipping re-ingestion.`);
+        console.log(`[crawl-3d-modules] To force a fresh crawl: delete hnsw_3d_docs/ and restart.`);
         return {
             currentPhase: 'crawl_3d_complete',
-            messages: [`3D RAG store ready (${ageDays}d old), skipping re-ingestion`],
+            messages: [`3D RAG store ready (${ageDays}), using existing store`],
         };
     }
 
-    console.log('[crawl-3d-modules] Vector store missing or stale, running full ingestion...');
+    if (!storeReady) {
+        console.log('[crawl-3d-modules] Vector store missing — running first-time ingestion...');
+    } else {
+        console.log('[crawl-3d-modules] Store older than threshold — re-ingesting...');
+    }
+
     try {
         const result = await ingestDocumentation();
         console.log(`[crawl-3d-modules] Ingestion complete: ${result.chunksStored} chunks from ${result.urlsProcessed} URLs`);
@@ -35,7 +48,7 @@ export async function crawl3DModulesNode(state: WebsiteState): Promise<Partial<W
         console.error('[crawl-3d-modules] Ingestion failed:', err.message);
         return {
             currentPhase: 'crawl_3d_complete',
-            messages: [`3D ingestion failed (${err.message}), proceeding with existing store or LLM knowledge`],
+            messages: [`3D ingestion failed (${err.message}), proceeding with existing store`],
         };
     }
 }
