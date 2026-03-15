@@ -65,19 +65,17 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         console.log(`   Project Type: ${state.projectType || 'frontend'}`);
 
         const is3D = state.enable3D || false;
-        const effectivePrompt = (is3D && state.expandedPrompt && state.expandedPrompt.length > 100)
-            ? state.expandedPrompt
-            : state.userPrompt;
 
-        if (is3D && state.expandedPrompt && state.expandedPrompt.length > 100) {
-            console.log(`   [Blueprint] Using EXPANDED prompt (${state.expandedPrompt.length} chars)`);
+        const lockedBusinessName = is3D ? extractBusinessName(state.userPrompt) : '';
+        if (is3D) {
+            console.log(`   [Blueprint] 3D MODE -- locked business name: "${lockedBusinessName}"`);
+            console.log(`   [Blueprint] Using RAW userPrompt (ignoring expanded prompt)`);
         }
 
         let planningResponse;
         if (is3D) {
-            console.log(' [Blueprint] 3D MODE: Using Planning3DService');
             planningResponse = await Planning3DService.generateBlueprint(
-                effectivePrompt,
+                state.userPrompt,
                 0,
                 state.projectType || 'frontend'
             );
@@ -95,6 +93,11 @@ export async function blueprintNode(state: WebsiteState): Promise<Partial<Websit
         }
 
         const planBlueprint = planningResponse.data.blueprint;
+
+        if (is3D && lockedBusinessName) {
+            planBlueprint.projectName = lockedBusinessName;
+            console.log(`   [Blueprint] Overrode project name -> "${lockedBusinessName}"`);
+        }
 
         // Use LLM to dynamically generate project-specific pages
         console.log('    Generating unique pages with LLM...');
@@ -259,6 +262,23 @@ Performance: <AdaptiveDpr pixelated /> <AdaptiveEvents />`;
         console.error(' Blueprint generation failed:', error.message);
         throw error;
     }
+}
+
+function extractBusinessName(prompt: string): string {
+    const explicitMatch = prompt.match(
+        /(?:for|called|named)\s+["']?([A-Z][a-zA-Z0-9\s&'.,-]{2,40})["']?(?:\s|$|,)/
+    );
+    if (explicitMatch) return explicitMatch[1].trim();
+
+    const quotedMatch = prompt.match(/["']([A-Z][a-zA-Z0-9\s&'.]{2,40})["']/);
+    if (quotedMatch) return quotedMatch[1].trim();
+
+    return prompt
+        .replace(/^(create|build|make|design|develop|generate)\s+(a\s+|an\s+|the\s+)?/i, '')
+        .split(/\s+/)
+        .slice(0, 4)
+        .map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)
+        .join(' ');
 }
 
 /**

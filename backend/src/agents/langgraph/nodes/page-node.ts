@@ -559,6 +559,56 @@ ${build3DPageContext(state)}`;
     const response = await invokeLLM(systemPrompt, userPrompt, 0.7);
     const parsedFiles = parseChirActions(response);
 
+    if (is3D) {
+        const thinPages: typeof parsedFiles = [];
+        const adequatePages: typeof parsedFiles = [];
+
+        for (const file of parsedFiles) {
+            const isNotFound = file.path.includes('NotFound') || file.path.includes('404');
+            if (!isNotFound && file.content.length < 6000) {
+                console.log(`   [3D Pages] THIN PAGE: ${file.path} (${file.content.length} chars) -- regenerating`);
+                thinPages.push(file);
+            } else {
+                adequatePages.push(file);
+            }
+        }
+
+        for (const thinFile of thinPages) {
+            const pageName = thinFile.path.split('/').pop()?.replace('.tsx', '') || 'Page';
+            const regenInstruction = `PREVIOUS VERSION OF ${pageName} WAS TOO THIN (${thinFile.content.length} characters).
+
+REGENERATE ${pageName} FROM SCRATCH with maximum richness:
+- Minimum 150 lines of actual TypeScript/JSX code
+- Canvas + ScrollControls + minimum 4 lazy-loaded scene components
+- Minimum 6 full <section> blocks inside <Scroll html>, each h-screen w-screen
+- AdaptiveDpr and AdaptiveEvents inside Canvas
+- Suspense boundary around Canvas
+- All sections: glassmorphism cards, motion.div animations, real copy text
+- NavBar3D before Canvas, Footer3D as last section
+- Every interactive element needs onClick or pointer-events-auto
+
+File path: ${thinFile.path}
+Wrap in <chirAction type="file" filePath="${thinFile.path}"> tags.`;
+
+            try {
+                const regenResponse = await invokeLLM(systemPrompt, regenInstruction, 0.7);
+                const regenFiles = parseChirActions(regenResponse);
+                if (regenFiles.length > 0 && regenFiles[0].content.length > thinFile.content.length) {
+                    console.log(`   [3D Pages] Regenerated ${pageName}: ${regenFiles[0].content.length} chars`);
+                    adequatePages.push(regenFiles[0]);
+                } else {
+                    console.log(`   [3D Pages] Regen did not improve ${pageName}, keeping original`);
+                    adequatePages.push(thinFile);
+                }
+            } catch (regenErr: any) {
+                console.warn(`   [3D Pages] Regen failed for ${pageName}: ${regenErr.message?.slice(0, 60)}`);
+                adequatePages.push(thinFile);
+            }
+        }
+
+        parsedFiles.splice(0, parsedFiles.length, ...adequatePages);
+    }
+
     for (const { path, content } of parsedFiles) {
       await addFileWithMemory(files, registry, path, content, 'page', state.projectId);
     }

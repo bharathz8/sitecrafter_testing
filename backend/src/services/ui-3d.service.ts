@@ -149,20 +149,34 @@ export class UI3DService {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 rotateApiKey();
-                const prompt = `You are a Three.js/React Three Fiber technical query generator.
-Given this website idea: "${requirements.slice(0, 400)}"
+                const prompt = `You are a Three.js/React Three Fiber documentation search expert.
 
-Generate exactly 5 RAG search queries to find the most relevant R3F documentation chunks for building this as an immersive 3D website.
+Website project: "${requirements.slice(0, 400)}"
 
-Target these areas:
-1. Specific Drei helpers needed (Float, Sparkles, Stars, ContactShadows, etc.)
-2. Three.js materials for the visual style (MeshDistortMaterial, meshPhysicalMaterial, etc.)
-3. Animation patterns (useFrame, spring animations, scroll-linked motion)
-4. Postprocessing effects (Bloom, Vignette, Noise)
-5. Interactive 3D patterns (hover effects, click handlers, cursor changes)
+Generate exactly 5 HIGHLY SPECIFIC RAG search queries for this exact business type.
+Each query must target a distinct technical aspect of building this specific 3D website.
 
-Return ONLY a JSON array of 5 strings. No markdown, no explanation.
-Example: ["react three fiber Float animation", "drei Sparkles particles effect", ...]`;
+MANDATORY RULES:
+- Queries must be SPECIFIC to this business type and its visual identity
+- NEVER write generic queries like "react three fiber useFrame animation loop"
+- Base queries on the business industry, mood, and expected visual style
+
+Query targets (one per query):
+1. A material or shader effect matching the brand aesthetic
+2. A geometry or particle system matching the industry
+3. A specific drei helper suited for this content type
+4. A postprocessing or lighting effect matching the mood
+5. A scroll or interaction pattern for this content type
+
+Examples by business type:
+- Luxury jewelry: "threejs gold metallic PBR clearcoat material caustics reflection"
+- Beverage brand: "three.js liquid glass transmission refraction fluid shader material"
+- Tech/SaaS: "react three fiber data network node particle visualization grid"
+- Fitness: "threejs energy rings pulse emissive glow animation useFrame"
+- Creative agency: "react three fiber infinite horizontal scroll camera path gsap"
+- Restaurant/Food: "organic soft geometry MeshDistortMaterial warm light drei"
+
+Return ONLY a JSON array of 5 strings. No markdown, no explanation.`;
 
                 const client = getClient();
                 const response: any = await chatCompletionWithRetry(client, {
@@ -175,8 +189,11 @@ Example: ["react three fiber Float animation", "drei Sparkles particles effect",
                 content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
                 const parsed = JSON.parse(content);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed.slice(0, 5).map((q: any) => String(q));
+                if (Array.isArray(parsed) && parsed.length >= 3) {
+                    const queries = parsed.slice(0, 5).map((q: any) => String(q));
+                    console.log(`[UI3D] Business-specific queries generated:`);
+                    queries.forEach((q: string, i: number) => console.log(`  ${i + 1}. ${q}`));
+                    return queries;
                 }
             } catch (err: any) {
                 console.warn(`[UI3D] Smart query generation attempt ${attempt} failed: ${err.message?.slice(0, 60)}`);
@@ -185,12 +202,49 @@ Example: ["react three fiber Float animation", "drei Sparkles particles effect",
             }
         }
 
+        const lower = requirements.toLowerCase();
+        if (lower.match(/luxury|jewel|fashion|premium|haute/)) {
+            return [
+                "threejs gold metallic PBR clearcoat material caustics",
+                "react three fiber environment studio lighting preset",
+                "drei ContactShadows soft product showcase",
+                "postprocessing EffectComposer DepthOfField bokeh",
+                "react three fiber PresentationControls product rotation",
+            ];
+        }
+        if (lower.match(/food|bak|drink|beverag|restaurant|cafe/)) {
+            return [
+                "three.js liquid glass transmission refraction material",
+                "MeshDistortMaterial organic shape warm amber glow",
+                "drei Float animation gentle bobbing food product",
+                "react three fiber warm spotlight point light scene",
+                "drei Sparkles warm particle effect floating",
+            ];
+        }
+        if (lower.match(/tech|saas|data|ai|software|startup|cloud/)) {
+            return [
+                "react three fiber data visualization node network particles grid",
+                "threejs hologram scanline GLSL shader material effect",
+                "react three fiber particle system BufferGeometry data stream",
+                "postprocessing Bloom ChromaticAberration tech neon glow",
+                "drei ScrollControls scroll-driven data reveal animation",
+            ];
+        }
+        if (lower.match(/fitness|gym|sport|workout|health|wellness/)) {
+            return [
+                "threejs energy rings pulse emissive glow animation useFrame",
+                "react three fiber dynamic TorusKnotGeometry fast rotation",
+                "drei Sparkles energy particle effect directional speed",
+                "postprocessing Bloom high intensity athletic glow",
+                "react three fiber IcosahedronGeometry wireframe energy",
+            ];
+        }
         return [
-            `react three fiber ${requirements.split(" ").slice(0, 4).join(" ")} 3D`,
-            "drei helpers Float Sparkles ContactShadows Stars",
-            "MeshDistortMaterial MeshWobbleMaterial meshPhysicalMaterial clearcoat",
-            "useFrame animation scroll drei useScroll ScrollControls",
-            "EffectComposer Bloom Vignette postprocessing react",
+            `react three fiber ${requirements.split(" ").slice(0, 3).join(" ")} 3D immersive scene`,
+            "drei Float ContactShadows Environment preset ambient",
+            "MeshDistortMaterial MeshWobbleMaterial organic material animation",
+            "EffectComposer Bloom Vignette Noise postprocessing",
+            "ScrollControls useScroll scroll-driven narrative animation",
         ];
     }
 

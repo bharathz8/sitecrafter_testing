@@ -404,6 +404,35 @@ Glassmorphism for cards/panels:
 - border border-white/10
 - rounded-2xl
 
+=== TYPESCRIPT ERROR PREVENTION (MANDATORY) ===
+
+These patterns cause TypeScript compile errors -- NEVER use them:
+
+1. CUSTOM MATERIAL JSX NAMESPACE: When using extend() to register a custom material class, ALWAYS add:
+   extend({ MyMaterial });
+   declare global { namespace JSX { interface IntrinsicElements { myMaterial: any; } } }
+   NEVER use extend() without the declare global block.
+
+2. MATERIAL TYPE ASSERTION -- always cast when accessing material properties via ref:
+   (meshRef.current.material as THREE.MeshPhysicalMaterial).emissiveIntensity = x;
+   NEVER: meshRef.current.material.emissiveIntensity = x;
+
+3. CHROMATIC ABERRATION -- always use Vector2:
+   offset={new THREE.Vector2(0.002, 0.002)}
+   NEVER: offset={[0.002, 0.002]}
+
+4. PROPS INTERFACE -- every component with props must have a typed interface:
+   interface MySceneProps { scrollOffset?: number; position?: [number, number, number]; }
+   const MyScene3D: React.FC<MySceneProps> = ({ scrollOffset = 0 }) => { ... }
+
+5. USEFRAME DELTA -- always destructure both args:
+   useFrame((state, delta) => { if (!meshRef.current) return; meshRef.current.rotation.y += delta; })
+   NEVER: useFrame(() => { mesh.rotation.y += 0.01; })
+
+6. REF NULL CHECK -- always guard before accessing:
+   if (!meshRef.current) return;
+   NEVER access meshRef.current.property without this guard.
+
 === detailedContext STRING FORMATTING ===
 
 The "detailedContext" field MUST be a SINGLE, CONTINUOUS STRING on ONE LINE.

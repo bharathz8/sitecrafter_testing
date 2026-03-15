@@ -675,36 +675,108 @@ OUTPUT FORMAT:
 ONE chirAction tag. ONE file. No markdown.`;
 }
 
+function buildHtmlOverlaySystemPrompt(sectionType: string): string {
+    const isLoader = sectionType === 'loader' || sectionType === 'loading';
+    return `You are an expert React/TypeScript developer building a PURE HTML glassmorphism component for a 3D website.
+
+THIS IS A ${sectionType.toUpperCase()} COMPONENT -- PURE HTML/CSS ONLY. ZERO 3D CODE.
+
+ABSOLUTE BANNED IMPORTS (violating = component rejected):
+- @react-three/fiber -- ANY import
+- @react-three/drei -- ANY import${isLoader ? ' EXCEPT useProgress' : ''}
+- @react-three/postprocessing -- ANY import
+- three / THREE -- ANY import
+- Canvas, useFrame, useThree, useScroll (R3F version)
+- ScrollControls, Scroll -- from drei
+- lucide-react
+- @/components/ui/*
+
+ALLOWED IMPORTS ONLY:
+  import React, { useState, useEffect, useRef } from 'react';
+  import { motion, AnimatePresence } from 'framer-motion';
+  import { Link, useNavigate } from 'react-router-dom';
+${isLoader ? `  import { useProgress } from '@react-three/drei';
+` : ''}
+STYLE REQUIREMENTS:
+- Dark glassmorphism: bg-black/20 backdrop-blur-xl border border-white/10
+- Use framer-motion for all animations
+- Social/nav icons: inline <svg> paths ONLY -- no icon library
+- Text: text-white, text-white/70, tracking-widest, uppercase
+- Premium feel -- Apple/Stripe quality
+
+${sectionType === 'navbar' ? `NAVBAR SPECIFICS:
+- Fixed positioning: fixed top-0 left-0 right-0 z-50
+- Height: h-16
+- Desktop: horizontal link list
+- Mobile: hamburger (3 <span> lines morphing to X via rotate transform)
+- Links: use <Link to="..."> from react-router-dom
+- NO onClick={() => window.location.href} -- always use Link or useNavigate` : ''}
+
+${sectionType === 'footer' ? `FOOTER SPECIFICS:
+- Dark background: bg-black border-t border-white/5
+- Large vertical padding: py-20
+- TOP ACCENT LINE: <div className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent mb-16" />
+- 4-column grid layout
+- Social icons: pure inline <svg> for X/Twitter, GitHub, LinkedIn, Instagram
+- Copyright: text-xs uppercase tracking-widest text-white/20` : ''}
+
+${isLoader ? `LOADER SPECIFICS:
+- Wraps children: ({ children }: { children?: React.ReactNode })
+- Full-screen fixed overlay: position fixed, inset 0, z-index 9999
+- Use useProgress() to get { progress, active }
+- Fade out: opacity 0 + pointer-events-none when progress >= 100
+- Show animated brand name + progress bar (width = progress%)
+- 2-3 decorative blur orbs (position absolute, blurred, low opacity)
+- Transition: opacity 0.8s ease` : ''}
+
+OUTPUT FORMAT:
+<chirAction type="file" filePath="PATH">
+// COMPLETE PRODUCTION-READY CODE -- minimum 80 lines
+</chirAction>
+
+ONE chirAction tag. ZERO 3D imports.`;
+}
+
 function score3DComponent(content: string): { score: number; issues: string[] } {
     const issues: string[] = [];
     let score = 10;
 
-    if (content.length < 8000) {
-        issues.push('Component too short -- write MORE code, more detail, more geometry, more animation');
+    if (
+        content.includes('export default function') &&
+        content.includes('<Canvas') &&
+        (content.includes('useFrame(') || content.includes('useThree('))
+    ) {
+        issues.push('useFrame/useThree called outside Canvas -- will crash at runtime');
+        score -= 4;
+    }
+
+    if (/<ShaderMaterial[\s/>]/.test(content)) {
+        issues.push('<ShaderMaterial> used as JSX component -- must be lowercase <shaderMaterial attach="material">');
         score -= 3;
     }
-    if (!content.includes('useScroll')) {
-        issues.push('Missing useScroll -- must be scroll-reactive with 3-act narrative arc');
+
+    if (content.includes('ChromaticAberration') && /offset=\{\s*\[/.test(content)) {
+        issues.push('ChromaticAberration offset must be new THREE.Vector2(x, y), not an array');
         score -= 2;
     }
-    if (!content.includes('ShaderMaterial') && !content.includes('shaderMaterial')) {
-        issues.push('Missing custom shader -- add a ShaderMaterial with vertexShader + fragmentShader for atmosphere');
+
+    if (content.includes('useGLTF(')) {
+        issues.push('No .glb files exist -- remove useGLTF and use procedural geometry');
+        score -= 4;
+    }
+
+    if (content.includes('extend({') && !content.includes('declare global')) {
+        issues.push('extend() used without JSX namespace declaration -- add declare global { namespace JSX { interface IntrinsicElements { ... } } }');
         score -= 2;
     }
-    if (!content.includes('useFrame')) {
-        issues.push('Missing useFrame -- nothing is animated, scene is dead');
+
+    if (content.includes('MeshTransmissionMaterial')) {
+        issues.push('MeshTransmissionMaterial is banned -- causes GPU crash -- use meshPhysicalMaterial with transmission prop');
         score -= 3;
     }
-    if ((content.match(/useFrame/g) || []).length < 2) {
-        issues.push('Only 1 useFrame -- add more animation loops for camera, particles, shader, objects');
-        score -= 1;
-    }
-    if (!content.includes('lerp') && !content.includes('MathUtils')) {
-        issues.push('Missing smooth animation -- use THREE.MathUtils.lerp for all transitions');
-        score -= 1;
-    }
-    if (!content.includes('pointLight') && !content.includes('spotLight') && !content.includes('directionalLight')) {
-        issues.push('Missing dramatic lighting -- add spotLight and pointLight for cinematic feel');
+
+    if (content.includes('<Html') && content.includes('ScrollControls') && !content.includes('occlude')) {
+        issues.push('<Html> inside ScrollControls should have occlude prop');
         score -= 1;
     }
 
@@ -745,12 +817,17 @@ export async function generate3DComponentNode(state: WebsiteState): Promise<Part
 
     const htmlOverlayTypes = new Set(['loader', 'navbar', 'footer']);
 
-    const results = await Promise.allSettled(
+        const results = await Promise.allSettled(
         sectionSpecs.map(async (spec) => {
             console.log(`  [generate-3d] Creating ${spec.name} (${spec.sectionType})...`);
 
-            const contentInstruction = buildNarrativeContentInstruction(spec, dna, userPrompt);
-            const systemPrompt = build3DSystemPrompt(dna);
+            const isHtmlOverlay = htmlOverlayTypes.has(spec.sectionType);
+            const contentInstruction = isHtmlOverlay
+                ? ''
+                : buildNarrativeContentInstruction(spec, dna, userPrompt);
+            const systemPrompt = isHtmlOverlay
+                ? buildHtmlOverlaySystemPrompt(spec.sectionType)
+                : build3DSystemPrompt(dna);
 
             const userLLMPrompt = [
                 `GENERATE ONE SINGLE FILE: ${spec.path}`,
@@ -762,21 +839,31 @@ export async function generate3DComponentNode(state: WebsiteState): Promise<Part
                 '',
                 `BUSINESS: ${userPrompt}`,
                 '',
-                theme ? [
+                ...(!isHtmlOverlay && theme ? [
                     `DESIGN THEME: "${theme.palette.name}"`,
                     `  Primary: ${theme.palette.primary}`,
                     `  Secondary: ${theme.palette.secondary}`,
                     `  Accent: ${theme.palette.accent}`,
                     `  Style: ${theme.palette.style}`,
                     `  Animation: ${theme.animation.name}`,
-                ].join('\n') : '',
+                ] : isHtmlOverlay && theme ? [
+                    `COLOR PALETTE for glassmorphism accents:`,
+                    `  Primary: ${theme.palette.primary}`,
+                    `  Accent: ${theme.palette.accent}`,
+                ] : []),
                 '',
-                `AVAILABLE 3D MODULES: ${modules.join(', ')}`,
-                '',
-                contentInstruction,
-                '',
-                ragContext ? `3D DOCUMENTATION (USE ONLY DOCUMENTED PATTERNS):\n${ragContext.slice(0, 6000)}` : '',
-                promptContext ? `THREE.JS REFERENCE (includes GLSL shader library):\n${promptContext.slice(0, 4000)}` : '',
+                ...(!isHtmlOverlay ? [
+                    `AVAILABLE 3D MODULES: ${modules.join(', ')}`,
+                    '',
+                    contentInstruction,
+                    '',
+                    ragContext ? `3D DOCUMENTATION:\n${ragContext.slice(0, 6000)}` : '',
+                    promptContext ? `THREE.JS REFERENCE:\n${promptContext.slice(0, 4000)}` : '',
+                ] : [
+                    `Build a premium glassmorphism ${spec.sectionType} for this business: ${userPrompt}`,
+                    `Make it visually stunning with framer-motion animations.`,
+                    `Reflect the brand colors: primary ${theme?.palette?.primary || '#f472b6'}, accent ${theme?.palette?.accent || '#22d3ee'}`,
+                ]),
             ].filter(Boolean).join('\n');
 
             const response = await invokeLLM(systemPrompt, userLLMPrompt, 0.85, 5);
@@ -825,7 +912,7 @@ export async function generate3DComponentNode(state: WebsiteState): Promise<Part
         const isScene = !htmlOverlayTypes.has(spec.sectionType);
         if (isScene) {
             const quality = score3DComponent(code);
-            if (quality.score < 6) {
+            if (quality.score < 7) {
                 console.log(`  [quality-gate] ${spec.name} scored ${quality.score}/10, regenerating...`);
                 console.log(`  [quality-gate] Issues: ${quality.issues.join(', ')}`);
 
