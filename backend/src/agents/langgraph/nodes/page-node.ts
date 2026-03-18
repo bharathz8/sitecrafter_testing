@@ -65,15 +65,13 @@ CRITICAL 3D CONSTRAINTS:
 - Footer3D is placed AFTER all content sections, BEFORE closing </Scroll>
 
 ═══════════════════════════════════════════════════════════════════════════════
- NAVBAR3D IS MANDATORY ON EVERY PAGE (NON-NEGOTIABLE)
+ NAVBAR3D IS IN AppLayout -- DO NOT ADD IT IN PAGES
 ═══════════════════════════════════════════════════════════════════════════════
 
-- EVERY page MUST import NavBar3D: import NavBar3D from '@/components/3d/NavBar3D';
-- EVERY page MUST render <NavBar3D /> BEFORE the Canvas container div
-- NavBar is placed OUTSIDE Canvas, after LoadingScreen3D standalone overlay
-- Structure: <div> <LoadingScreen3D /> <NavBar3D /> <div className="fixed inset-0 ..."> <Canvas>...</Canvas> </div> </div>
-- If you generate a page WITHOUT <NavBar3D />, the page is INVALID and will be REJECTED
-- NavBar3D is a pure HTML glassmorphism nav bar with position:fixed, NOT a 3D component
+- NavBar3D is ALREADY rendered by the shared AppLayout component
+- Do NOT import or render NavBar3D in page components
+- Pages render inside <Outlet /> which already has NavBar3D above it
+- If you add NavBar3D in a page, it will DOUBLE RENDER
 
 ═══════════════════════════════════════════════════════════════════════════════
  INTERACTIVE, DYNAMIC, AND UNIQUE WEBSITES (MANDATORY)
@@ -553,126 +551,162 @@ ${state.detailedContext ? `
 ${state.detailedContext.slice(0, 3000)}...
 ` : ''}
 
+${is3D ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EACH PAGE MUST HAVE A COMPLETELY DIFFERENT LAYOUT (MANDATORY):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- HomePage: Cinematic full-height hero + feature grid + stats row + CTA section
+- ClassesPage/ProductsPage/ListingPage: Filter tabs (useState) + masonry/bento card grid + modal/drawer on click
+- AboutPage: Split-screen bio + horizontal timeline + team grid with hover reveals
+- ContactPage: Two-column split — form with live validation states LEFT, animated detail cards RIGHT — form submit shows success state, never a dead button
+- ANY OTHER PAGE: Design a layout that does NOT repeat any of the above patterns
+
+EACH PAGE MUST IMPLEMENT REAL INTERACTIVE STATES:
+- Minimum 2 useState hooks with visible UI changes per page
+- Modal/drawer open-close for list pages, form validation for contact pages
+- Tab/filter active state for collection pages
+- Every button must have a working onClick handler (useNavigate, setState, or similar)
+` : ''}
+
+${is3D && state.importInstructions ? `=== 3D SCENE INTEGRATION GUIDE (MANDATORY — FOLLOW EXACTLY) ===
+${state.importInstructions}
+` : ''}
+
 ${build3DPageContext(state)}`;
 
   try {
-    const response = await invokeLLM(systemPrompt, userPrompt, 0.7);
-    const parsedFiles = parseChirActions(response);
-
+    // ──── PER-PAGE GENERATION LOOP (3D) ────
+    // Instead of one giant LLM call for all pages, generate each page individually
+    // so each gets the full 65K output budget and only its assigned scenes
     if (is3D) {
-        const thinPages: typeof parsedFiles = [];
-        const adequatePages: typeof parsedFiles = [];
+      const scenePageMap = (state as any).scenePageMap || {};
+      const allParsedFiles: { path: string; content: string }[] = [];
 
-        for (const file of parsedFiles) {
-            const isNotFound = file.path.includes('NotFound') || file.path.includes('404');
-            if (!isNotFound && file.content.length < 6000) {
-                console.log(`   [3D Pages] THIN PAGE: ${file.path} (${file.content.length} chars) -- regenerating`);
-                thinPages.push(file);
-            } else {
-                adequatePages.push(file);
-            }
-        }
+      for (const page of blueprint.pages) {
+        const pageName = page.name.replace(/\s+/g, '');
+        const pageFileName = `src/pages/${pageName}.tsx`;
+        console.log(`\n   [3D Pages] Generating ${pageName} individually...`);
 
-        for (const thinFile of thinPages) {
-            const pageName = thinFile.path.split('/').pop()?.replace('.tsx', '') || 'Page';
-            const regenInstruction = `PREVIOUS VERSION OF ${pageName} WAS TOO THIN (${thinFile.content.length} characters).
+        // Build page-specific scene context from scenePageMap
+        const assignedScenes = scenePageMap[pageName] || [];
+        const pageSpecificSceneContext = buildPageSpecificSceneContext(state, assignedScenes, page);
+
+        const singlePagePrompt = `Generate ONLY the page component for "${pageName}" (file: ${pageFileName}).
+Output EXACTLY ONE <chirAction> tag for this ONE page.
+
+${imagesContext}
+
+${themeContext}
+
+═══ ${page.name} (${pageFileName}) ═══
+Route: ${page.route}
+Description: ${page.description}
+
+REQUIRED SECTIONS (3-5 minimum):
+${page.sections?.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n') || '1. Hero Section\n2. Features Grid\n3. Content Section\n4. CTA Section'}
+
+MUST INCLUDE:
+- Responsive layout (mobile/tablet/desktop)
+- High contrast text (readable on all backgrounds)
+- Real content (no lorem ipsum) for "${blueprint.projectName}"
+- Export: export default ${pageName};
+
+═══ 3D SCENES ASSIGNED TO THIS PAGE ═══
+${assignedScenes.length > 0 ? assignedScenes.map((s: string) => `- ${s} (lazy import from @/components/3d/${s})`).join('\n') : 'Use HeroScene3D, FeaturesScene3D (inferred)'}
+
+${pageSpecificSceneContext}
+
+IMPORT PATTERNS (3D PROJECT -- NO 2D UI COMPONENTS):
+import React, { Suspense, lazy, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
+import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
+import LoadingScreen3D from '@/components/3d/LoadingScreen3D';
+// NavBar3D is in AppLayout -- DO NOT import it here
+import Footer3D from '@/components/3d/Footer3D';
+import { useNavigate } from 'react-router-dom';
+const cn = (...c: (string | boolean | undefined)[]) => c.filter(Boolean).join(' ');
+
+// LAZY-LOAD ONLY THIS PAGE'S SCENES:
+${assignedScenes.map((s: string) => `const ${s} = lazy(() => import('@/components/3d/${s}'));`).join('\n')}
+
+DO NOT IMPORT: Button, Card, Input, Badge from @/components/ui/ -- THOSE FILES DO NOT EXIST
+DO NOT IMPORT: lucide-react -- NOT INSTALLED
+
+BLUEPRINT FEATURES TO IMPLEMENT:
+${blueprint.features.map(f => `- ${f.name}: ${f.description}`).join('\n')}
+
+${state.detailedContext ? state.detailedContext.slice(0, 3000) : ''}
+
+${state.importInstructions || ''}
+
+Wrap in <chirAction type="file" filePath="${pageFileName}"> tags.`;
+
+        try {
+          const pageResponse = await invokeLLM(systemPrompt, singlePagePrompt, 0.7);
+          const pageParsedFiles = parseChirActions(pageResponse);
+
+          if (pageParsedFiles.length > 0) {
+            // Take only the file matching this page
+            const matchedFile = pageParsedFiles.find(f => f.path.includes(pageName)) || pageParsedFiles[0];
+            const finalFile = { path: pageFileName, content: matchedFile.content };
+
+            // Immediate thin-page detection
+            if (finalFile.content.length < 9000) {
+              console.log(`   [3D Pages] THIN PAGE: ${pageName} (${finalFile.content.length} chars) -- regenerating`);
+              const regenPrompt = `PREVIOUS VERSION OF ${pageName} WAS TOO THIN (${finalFile.content.length} characters).
 
 REGENERATE ${pageName} FROM SCRATCH with maximum richness:
 - Minimum 150 lines of actual TypeScript/JSX code
-- Canvas + ScrollControls + minimum 4 lazy-loaded scene components
+- Canvas + ScrollControls + minimum ${assignedScenes.length} lazy-loaded scene components: ${assignedScenes.join(', ')}
 - Minimum 6 full <section> blocks inside <Scroll html>, each h-screen w-screen
 - AdaptiveDpr and AdaptiveEvents inside Canvas
 - Suspense boundary around Canvas
-- All sections: glassmorphism cards, motion.div animations, real copy text
+- All sections: glassmorphism cards, motion.div animations, real copy text for "${blueprint.projectName}"
 - NavBar3D before Canvas, Footer3D as last section
 - Every interactive element needs onClick or pointer-events-auto
 
-File path: ${thinFile.path}
-Wrap in <chirAction type="file" filePath="${thinFile.path}"> tags.`;
+File path: ${pageFileName}
+Wrap in <chirAction type="file" filePath="${pageFileName}"> tags.`;
 
-            try {
-                const regenResponse = await invokeLLM(systemPrompt, regenInstruction, 0.7);
+              try {
+                const regenResponse = await invokeLLM(systemPrompt, regenPrompt, 0.7);
                 const regenFiles = parseChirActions(regenResponse);
-                if (regenFiles.length > 0 && regenFiles[0].content.length > thinFile.content.length) {
-                    console.log(`   [3D Pages] Regenerated ${pageName}: ${regenFiles[0].content.length} chars`);
-                    adequatePages.push(regenFiles[0]);
-                } else {
-                    console.log(`   [3D Pages] Regen did not improve ${pageName}, keeping original`);
-                    adequatePages.push(thinFile);
+                if (regenFiles.length > 0 && regenFiles[0].content.length > finalFile.content.length) {
+                  console.log(`   [3D Pages] Regenerated ${pageName}: ${regenFiles[0].content.length} chars`);
+                  finalFile.content = regenFiles[0].content;
                 }
-            } catch (regenErr: any) {
+              } catch (regenErr: any) {
                 console.warn(`   [3D Pages] Regen failed for ${pageName}: ${regenErr.message?.slice(0, 60)}`);
-                adequatePages.push(thinFile);
+              }
             }
+
+            // Immediate post-patch (import injection + JSX injection)
+            finalFile.content = postPatch3DPage(finalFile.content, pageName, assignedScenes, state);
+
+            allParsedFiles.push(finalFile);
+            console.log(`   [3D Pages] ${pageName}: ${finalFile.content.length} chars (${assignedScenes.length} scenes)`);
+          } else {
+            console.warn(`   [3D Pages] No output for ${pageName}, skipping`);
+          }
+        } catch (pageErr: any) {
+          console.error(`   [3D Pages] Failed to generate ${pageName}: ${pageErr.message?.slice(0, 80)}`);
         }
+      }
 
-        parsedFiles.splice(0, parsedFiles.length, ...adequatePages);
+      for (const { path, content } of allParsedFiles) {
+        await addFileWithMemory(files, registry, path, content, 'page', state.projectId);
+      }
 
-        for (let i = 0; i < parsedFiles.length; i++) {
-            const file = parsedFiles[i];
-            const pageName = file.path.split('/').pop()?.replace('.tsx', '') || 'Page';
-            const isNotFound = pageName.includes('NotFound') || pageName.includes('404');
-            if (isNotFound) continue;
+    } else {
+      // ──── 2D MODE: Original single-call approach ────
+      const response = await invokeLLM(systemPrompt, userPrompt, 0.7);
+      const parsedFiles = parseChirActions(response);
 
-            let code = file.content;
-            let needsFix = false;
-            const missingImports: string[] = [];
-
-            if (!code.includes('LoadingScreen3D')) {
-                missingImports.push("import LoadingScreen3D from '@/components/3d/LoadingScreen3D';");
-                needsFix = true;
-            }
-            if (!code.includes('NavBar3D')) {
-                missingImports.push("import NavBar3D from '@/components/3d/NavBar3D';");
-                needsFix = true;
-            }
-            if (!code.includes('Footer3D')) {
-                missingImports.push("import Footer3D from '@/components/3d/Footer3D';");
-                needsFix = true;
-            }
-
-            if (code.includes('<LoadingScreen3D>') && code.includes('</LoadingScreen3D>')) {
-                console.log(`   [3D Pages] ${pageName}: Fixing LoadingScreen3D wrapper -> standalone overlay`);
-                code = code.replace(/<LoadingScreen3D>/g, '<><LoadingScreen3D />');
-                code = code.replace(/<\/LoadingScreen3D>/g, '</>');
-                needsFix = true;
-            }
-
-            const scenePaths = state.projectMemory?.threeDComponentPaths || [];
-            const sceneNames = scenePaths
-                .filter((p: string) => !p.includes('LoadingScreen') && !p.includes('NavBar') && !p.includes('Footer'))
-                .map((p: string) => p.split('/').pop()?.replace('.tsx', '') || '');
-
-            const hasAnyScene = sceneNames.some((name: string) => code.includes(name));
-            if (!hasAnyScene && sceneNames.length > 0) {
-                console.log(`   [3D Pages] ${pageName}: Missing scene component imports, adding ${sceneNames.length} lazy imports`);
-                const lazyImports = sceneNames.map((name: string) => {
-                    const importPath = `@/components/3d/${name}`;
-                    return `const ${name} = lazy(() => import('${importPath}'));`;
-                }).join('\n');
-                missingImports.push(lazyImports);
-                needsFix = true;
-            }
-
-            if (needsFix && missingImports.length > 0) {
-                const importBlock = missingImports.join('\n');
-                const firstImportIdx = code.indexOf('import ');
-                if (firstImportIdx >= 0) {
-                    code = code.slice(0, firstImportIdx) + importBlock + '\n' + code.slice(firstImportIdx);
-                } else {
-                    code = importBlock + '\n' + code;
-                }
-                console.log(`   [3D Pages] ${pageName}: Injected ${missingImports.length} missing imports`);
-            }
-
-            if (code !== file.content) {
-                parsedFiles[i] = { ...file, content: code };
-            }
-        }
-    }
-
-    for (const { path, content } of parsedFiles) {
-      await addFileWithMemory(files, registry, path, content, 'page', state.projectId);
+      for (const { path, content } of parsedFiles) {
+        await addFileWithMemory(files, registry, path, content, 'page', state.projectId);
+      }
     }
 
     console.log(`\n Page files generated: ${files.size}`);
@@ -810,7 +844,7 @@ import { Canvas } from '@react-three/fiber';
 import { ScrollControls, Scroll, Environment, PerspectiveCamera } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import LoadingScreen3D from '@/components/3d/LoadingScreen3D';
-import NavBar3D from '@/components/3d/NavBar3D';
+// NavBar3D is in AppLayout -- DO NOT import it here
 import Footer3D from '@/components/3d/Footer3D';
 import { useNavigate } from 'react-router-dom';
 const cn = (...c: (string | boolean | undefined)[]) => c.filter(Boolean).join(' ');
@@ -1015,6 +1049,133 @@ VERIFICATION CHECKLIST (every page MUST pass before output)
 
 ${instructions ? `\n${instructions}` : ''}
 `;
+}
+
+// ──── PAGE-SPECIFIC SCENE CONTEXT (replaces dumping all scenes) ────
+function buildPageSpecificSceneContext(state: any, assignedScenes: string[], page: any): string {
+  if (!state.enable3D || assignedScenes.length === 0) return '';
+
+  const theme = state.dynamicTheme;
+  const primary = theme?.palette?.primary || '#f472b6';
+  const accent = theme?.palette?.accent || '#22d3ee';
+  const bg = theme?.palette?.background || '#050505';
+  const numPages = Math.max(assignedScenes.length + 2, 5);
+
+  const sceneImports = assignedScenes.map(name =>
+    `const ${name} = lazy(() => import('@/components/3d/${name}'));`
+  ).join('\n');
+
+  const scrollSections = assignedScenes.map((name, i) => {
+    if (i === 0) return `                <${name} />`;
+    return `                <group position={[0, ${i * -10}, 0]}>\n                  <${name} />\n                </group>`;
+  }).join('\n');
+
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3D SCENE INTEGRATION FOR THIS PAGE ONLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LAZY IMPORTS (use ONLY these scenes for ${page.name}):
+${sceneImports}
+
+SCENE LAYOUT inside <Scroll>:
+${scrollSections}
+
+ScrollControls pages={${numPages}} damping={0.1}
+
+DESIGN COLORS:
+  Background: ${bg}
+  Primary: ${primary}
+  Accent: ${accent}
+  Glass: backdrop-blur-xl bg-white/5 border border-white/10
+
+PAGE STRUCTURE (NavBar3D is in AppLayout — DO NOT add it here):
+<div className="relative min-h-screen bg-[${bg}]">
+  <LoadingScreen3D />
+  <div className="fixed inset-0 w-full h-screen bg-[${bg}] overflow-hidden">
+    <Suspense fallback={<div className="w-full h-full" style={{background:'${bg}'}} />}>
+      <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]}>
+        <color attach="background" args={['${bg}']} />
+        <ScrollControls pages={${numPages}} damping={0.1}>
+          <Scroll>
+            {/* ${assignedScenes.length} scene components at Y offsets */}
+${scrollSections}
+          </Scroll>
+          <Scroll html>
+            {/* ${page.sections?.length || 4} full-height sections with glassmorphism content */}
+            {/* LAST ELEMENT: <section className="w-screen"><Footer3D /></section> */}
+          </Scroll>
+        </ScrollControls>
+        <Environment preset="city" />
+        <EffectComposer>
+          <Bloom intensity={1.5} luminanceThreshold={0.2} luminanceSmoothing={0.9} />
+          <Vignette eskil={false} offset={0.1} darkness={0.75} />
+          <Noise opacity={0.04} />
+        </EffectComposer>
+      </Canvas>
+    </Suspense>
+  </div>
+</div>
+`;
+}
+
+// ──── POST-PATCH: Fix imports + inject missing scene JSX ────
+function postPatch3DPage(code: string, pageName: string, assignedScenes: string[], state: any): string {
+  let patched = code;
+  const missingImports: string[] = [];
+
+  // Fix LoadingScreen3D wrapper pattern
+  if (patched.includes('<LoadingScreen3D>') && patched.includes('</LoadingScreen3D>')) {
+    console.log(`   [post-patch] ${pageName}: Fixing LoadingScreen3D wrapper -> standalone`);
+    patched = patched.replace(/<LoadingScreen3D>/g, '<><LoadingScreen3D />');
+    patched = patched.replace(/<\/LoadingScreen3D>/g, '</>');
+  }
+
+  // Ensure overlay imports (NavBar3D is in AppLayout, not needed per-page)
+  if (!patched.includes('LoadingScreen3D')) {
+    missingImports.push("import LoadingScreen3D from '@/components/3d/LoadingScreen3D';");
+  }
+  if (!patched.includes('Footer3D')) {
+    missingImports.push("import Footer3D from '@/components/3d/Footer3D';");
+  }
+
+  // Ensure scene lazy imports exist
+  for (const sceneName of assignedScenes) {
+    if (!patched.includes(sceneName)) {
+      missingImports.push(`const ${sceneName} = lazy(() => import('@/components/3d/${sceneName}'));`);
+    }
+  }
+
+  // Inject missing imports
+  if (missingImports.length > 0) {
+    const importBlock = missingImports.join('\n');
+    const firstImportIdx = patched.indexOf('import ');
+    if (firstImportIdx >= 0) {
+      patched = patched.slice(0, firstImportIdx) + importBlock + '\n' + patched.slice(firstImportIdx);
+    } else {
+      patched = importBlock + '\n' + patched;
+    }
+    console.log(`   [post-patch] ${pageName}: Injected ${missingImports.length} missing imports`);
+  }
+
+  // JSX injection: if scenes are imported but not rendered, inject inside <Scroll>
+  for (const sceneName of assignedScenes) {
+    const hasImport = patched.includes(`import('@/components/3d/${sceneName}')`) || patched.includes(`from '@/components/3d/${sceneName}'`);
+    const hasJSX = patched.includes(`<${sceneName}`) && (patched.includes(`<${sceneName} />`) || patched.includes(`<${sceneName}>`));
+
+    if (hasImport && !hasJSX) {
+      console.log(`   [post-patch] ${pageName}: Scene ${sceneName} imported but not rendered, injecting JSX`);
+      // Find <Scroll> opening tag and inject after it
+      const scrollMatch = patched.match(/<Scroll>\s*\n/);
+      if (scrollMatch && scrollMatch.index !== undefined) {
+        const insertPos = scrollMatch.index + scrollMatch[0].length;
+        const injection = `                <Suspense fallback={null}><${sceneName} /></Suspense>\n`;
+        patched = patched.slice(0, insertPos) + injection + patched.slice(insertPos);
+      }
+    }
+  }
+
+  return patched;
 }
 
 function classifySection(sectionName: string): string {

@@ -10,12 +10,16 @@ import { repairNode } from './nodes/repair-node';
 import { intentRouterNode } from './nodes/intent-router-node';
 import { chatResponseNode } from './nodes/chat-response-node';
 import { modificationAnalyzerNode } from './nodes/modification-analyzer-node';
-import { crawl3DModulesNode } from './nodes/crawl-3d-modules-node';
-import { identify3DModulesNode } from './nodes/identify-3d-modules-node';
-import { rag3DContextNode } from './nodes/rag-3d-context-node';
+// [DISABLED] Old RAG pipeline imports -- replaced by per-request crawl
+// import { crawl3DModulesNode } from './nodes/crawl-3d-modules-node';
+// import { identify3DModulesNode } from './nodes/identify-3d-modules-node';
+// import { rag3DContextNode } from './nodes/rag-3d-context-node';
+import { context3DNode } from './nodes/context-3d-node';
 import { generate3DComponentNode } from './nodes/generate-3d-component-node';
 import { tscValidationNode } from './nodes/tsc-validation-node';
 import { promptExpansionNode } from './nodes/prompt-expansion-node';
+// [DISABLED] Old RAG embed failure tracking -- no longer needed
+// import { resetEmbedFailureCounts } from '../../rag/rag-3d';
 
 let globalFileCallback: ((file: GeneratedFile) => void) | null = null;
 let globalPhaseCallback: ((phase: string) => void) | null = null;
@@ -49,16 +53,18 @@ function buildGraph() {
         .addNode('prompt_expansion', promptExpansionNode)
         .addNode('blueprint_step', blueprintNode)
 
-        .addNode('crawl_3d', crawl3DModulesNode)
-        .addNode('identify_3d', identify3DModulesNode)
-        .addNode('rag_3d_context', rag3DContextNode)
+        // [DISABLED] Old RAG pipeline nodes -- replaced by per-request crawl
+        // .addNode('crawl_3d', crawl3DModulesNode)
+        // .addNode('identify_3d', identify3DModulesNode)
+        // .addNode('rag_3d_context', rag3DContextNode)
+        .addNode('context_3d', context3DNode)
 
         .addNode('structure_step', structureNode)
         .addNode('core_step', coreNode)
         .addNode('components_step', componentNode)
         .addNode('generate_3d_components', generate3DComponentNode)
         .addNode('pages_step', pageNode)
-        // .addNode('tsc_validation', tscValidationNode) // temporarily disabled
+        .addNode('tsc_validation', tscValidationNode)
 
         .addEdge('__start__', 'intent_router')
 
@@ -98,19 +104,21 @@ function buildGraph() {
 
         .addConditionalEdges('blueprint_step', (state: WebsiteState) => {
             if (state.enable3D) {
-                console.log('   -> 3D enabled, routing to crawl_3d');
-                return 'crawl_3d';
+                console.log('   -> 3D enabled, routing to context_3d');
+                return 'context_3d';
             }
             console.log('   -> Standard pipeline, routing to structure_step');
             return 'structure_step';
         }, {
-            'crawl_3d': 'crawl_3d',
+            'context_3d': 'context_3d',
             'structure_step': 'structure_step'
         })
 
-        .addEdge('crawl_3d', 'identify_3d')
-        .addEdge('identify_3d', 'rag_3d_context')
-        .addEdge('rag_3d_context', 'structure_step')
+        // [DISABLED] Old RAG pipeline edges
+        // .addEdge('crawl_3d', 'identify_3d')
+        // .addEdge('identify_3d', 'rag_3d_context')
+        // .addEdge('rag_3d_context', 'structure_step')
+        .addEdge('context_3d', 'structure_step')
 
         .addEdge('structure_step', 'core_step')
 
@@ -129,7 +137,20 @@ function buildGraph() {
         .addEdge('components_step', 'pages_step')
 
         .addEdge('generate_3d_components', 'pages_step')
-        .addEdge('pages_step', END);
+
+        // Skip TypeScript validation for 3D generation to speed up testing
+        .addConditionalEdges('pages_step', (state: WebsiteState) => {
+            if (state.enable3D) {
+                console.log('   -> 3D enabled, skipping tsc_validation for now');
+                return '__end__'; // Maps to END
+            }
+            return 'tsc_validation';
+        }, {
+            '__end__': END,
+            'tsc_validation': 'tsc_validation'
+        })
+
+        .addEdge('tsc_validation', END);
 
     return workflow.compile();
 }
@@ -149,6 +170,8 @@ export async function generateWebsite(
     console.log(` 3D Mode: ${enable3D ? 'ENABLED' : 'disabled'}`);
     console.log(` Skip Blueprint Re-Generation: ${skipBlueprintGeneration}`);
     console.log(' ===============================================\n');
+
+
 
     const startTime = Date.now();
 

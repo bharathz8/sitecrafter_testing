@@ -155,10 +155,12 @@ export default App;`;
 
     const appLayout3D = `import React from 'react';
 import { Outlet } from 'react-router-dom';
+import NavBar3D from '@/components/3d/NavBar3D';
 
 const AppLayout = () => {
   return (
     <div style={{ background: '#000', color: '#fff', position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
+      <NavBar3D />
       <Outlet />
     </div>
   );
@@ -166,7 +168,7 @@ const AppLayout = () => {
 
 export default AppLayout;`;
     addFile(files, registry, 'src/components/layout/AppLayout.tsx', appLayout3D, 'core');
-    console.log('    AppLayout.tsx created (3D mode - minimal, pages own nav/footer)');
+    console.log('    AppLayout.tsx created (3D mode - NavBar3D in layout, pages own footer)');
 
     console.log(`\n Core files generated (3D): ${files.size}`);
     files.forEach((_, path) => console.log(`    ${path}`));

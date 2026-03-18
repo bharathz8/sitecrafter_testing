@@ -54,6 +54,119 @@ interface BusinessDNA {
     narrativeArc: string;
 }
 
+// ──── RANDOMIZED NAV / FOOTER / LOADER ARCHETYPES ────
+const NAV_ARCHETYPES = [
+    {
+        name: 'glassmorphism-floating',
+        desc: 'Glassmorphism floating bar — backdrop-blur-xl bg-black/20 border-b border-white/10, fixed top-4 mx-6 rounded-2xl',
+        brandStyle: 'tracking-[0.3em] uppercase font-black with text-shadow glow',
+        mobileMenu: 'slide-down overlay with staggered framer-motion reveal',
+        hoverEffect: 'underline grows from left using CSS scaleX transform',
+    },
+    {
+        name: 'side-drawer',
+        desc: 'Minimal top-right hamburger that opens a full-height side drawer from right — bg-black/95 w-80, nav links stacked vertically with staggered motion.div, close X top-right',
+        brandStyle: 'bottom-left fixed, vertical text writing-mode rotated 180deg tracking-[0.5em]',
+        mobileMenu: 'same drawer, full-width on mobile',
+        hoverEffect: 'link text shifts right 12px with opacity pulse',
+    },
+    {
+        name: 'fullscreen-takeover',
+        desc: 'Tiny circle button top-right that expands into FULLSCREEN overlay bg-black/98 with giant centered nav links (text-6xl), animated with clipPath circle expand from button origin',
+        brandStyle: 'absolute top-left text-xs tracking-[0.6em] uppercase font-light',
+        mobileMenu: 'same fullscreen takeover',
+        hoverEffect: 'each link has a background gradient line that slides in from left on hover',
+    },
+    {
+        name: 'bottom-dock',
+        desc: 'macOS-style dock fixed bottom-6 center — rounded-full bg-white/5 backdrop-blur-2xl px-8 py-3, nav items as icon+label columns with scale-110 hover, brand name hidden (shown only on scroll-top)',
+        brandStyle: 'fade-in at scroll=0 as large centered text, fades out on scroll',
+        mobileMenu: 'dock stays but items become icon-only, long-press shows label tooltip',
+        hoverEffect: 'item scales to 1.15 with subtle glow ring animation',
+    },
+    {
+        name: 'split-header',
+        desc: 'Two-part header: left half has brand name, right half has nav links flush-right. Separated by a thin vertical gradient line. bg-transparent, border-b border-white/5. On scroll, collapses to single centered row',
+        brandStyle: 'font-serif italic text-2xl tracking-wide',
+        mobileMenu: 'bottom sheet sliding up with framer-motion spring animation',
+        hoverEffect: 'link gets a dot indicator below using ::after pseudo-element',
+    },
+    {
+        name: 'orbital-menu',
+        desc: 'Floating circle button top-right with 3 dots. On click, nav links FAN OUT in a semi-circle arc (like a radial menu) using framer-motion with spring physics. Each link is a small pill shape. Click outside to collapse',
+        brandStyle: 'top-left, text-sm font-mono tracking-[0.4em] uppercase with blinking cursor animation',
+        mobileMenu: 'same orbital fan-out, slightly larger pills',
+        hoverEffect: 'pill scales up and gets border-glow in accent color',
+    },
+    {
+        name: 'ticker-bar',
+        desc: 'Narrow top bar with brand left and a horizontally scrolling ticker of nav links (infinite CSS marquee animation). Hover pauses ticker, click navigates. Below ticker: 1px gradient line accent',
+        brandStyle: 'font-black text-lg inline with the ticker flow',
+        mobileMenu: 'ticker stops, links stack vertically in a dropdown',
+        hoverEffect: 'link background highlights with accent color/10 rounded',
+    },
+];
+
+const FOOTER_ARCHETYPES = [
+    {
+        name: 'classic-4col',
+        desc: '4-column grid footer — Brand+tagline | Quick Links | Services | Social. Top gradient accent line h-px. Copyright bar at bottom with text-[10px] tracking-[0.4em]. bg-black py-24. 2 decorative blur orbs absolute',
+        socialStyle: 'inline SVG icons in a row with hover scale',
+    },
+    {
+        name: 'mega-footer',
+        desc: 'Full-width dark footer with large brand name (text-8xl font-black opacity-5 as watermark behind). 3-col grid above: nav links, newsletter email input, social. Bottom copyright. bg-gradient-to-b from-black to-gray-950',
+        socialStyle: 'circular bordered icon buttons with hover fill',
+    },
+    {
+        name: 'minimal-centered',
+        desc: 'Extremely minimal — centered brand name, single row of nav links below, tiny copyright. No grid columns. Lots of vertical spacing py-32. Single accent line top. Feels premium and clean',
+        socialStyle: 'text-only social links (Twitter, GitHub, etc.) separated by middot ·',
+    },
+    {
+        name: 'split-cta-footer',
+        desc: 'Upper half: large CTA section with heading "Ready to start?" and accent-colored button. Lower half: 3-column classic links + copyright. Divided by gradient line. Dark bg with subtle noise texture (CSS background-image)',
+        socialStyle: 'small icon row under brand column',
+    },
+    {
+        name: 'stacked-reveal',
+        desc: 'Footer sections stacked vertically (not columns) — each section separated by thin border-white/5 line. Brand block, then Links block, then Social block, then Copyright. Each uses full width. Feels editorial/magazine',
+        socialStyle: 'large social icons in a centered row with labels underneath',
+    },
+    {
+        name: 'asymmetric-art',
+        desc: 'Asymmetric layout: brand + tagline takes 60% left with large text. Right 40% has stacked nav links and social. A large decorative gradient circle (blur-[300px] opacity-5) anchored bottom-right. Very artistic feel',
+        socialStyle: 'vertical stack of social links with hover indent',
+    },
+];
+
+const LOADER_ARCHETYPES = [
+    {
+        name: 'letter-stagger',
+        desc: 'Brand name with staggerChildren letter-by-letter reveal. Progress bar below: gradient from primary to accent. 3 corner decorations. 2 ambient blur orbs. Fade out on complete',
+    },
+    {
+        name: 'counter-reveal',
+        desc: 'Giant centered number counting 0-100 (text-9xl font-black). Brand name tiny above. On 100, number morphs into brand name with layoutId animation. Minimal, dramatic',
+    },
+    {
+        name: 'ring-pulse',
+        desc: 'Centered SVG ring that fills clockwise (stroke-dashoffset animation) as progress increases. Brand name inside ring. Pulsing glow on the ring edge. Clean dark background. Exit: ring scales up and fades',
+    },
+    {
+        name: 'line-scan',
+        desc: 'Horizontal line scanning top to bottom repeatedly (like a scanner). Brand name revealed as the line passes over it (clip-path). Progress shown as subtle bottom bar. Futuristic/techy feel',
+    },
+    {
+        name: 'particle-assemble',
+        desc: 'CSS-only: 20-30 small dots (divs) scattered randomly, animate toward center to form a simple shape/brand initial. Progress bar at bottom. On complete, dots burst outward and fade. Pure CSS animations with animation-delay stagger',
+    },
+];
+
+function pickRandom<T>(arr: T[]): T {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
 async function extractBusinessDNA(userPrompt: string, blueprint: WebsiteState['blueprint']): Promise<BusinessDNA> {
     const prompt = `Analyze this business and extract its complete visual DNA for a cinematic 3D website.
 
@@ -75,35 +188,27 @@ Return a JSON object with these EXACT keys:
 
 Return ONLY valid JSON.`;
 
-    try {
-        rotateKey();
-        const response = await getClient().chat.completions.create({
-            model: 'gemini-2.5-flash-lite',
-            messages: [
-                { role: 'system', content: 'You are a creative director for Awwwards-winning 3D websites. Return only JSON.' },
-                { role: 'user', content: prompt },
-            ],
-            temperature: 0.3,
-        });
+    for (let attempts = 0; attempts < 3; attempts++) {
+        try {
+            rotateKey();
+            const response = await getClient().chat.completions.create({
+                model: 'gemini-2.5-flash-lite',
+                messages: [
+                    { role: 'system', content: 'You are a creative director for Awwwards-winning 3D websites. Return only JSON.' },
+                    { role: 'user', content: prompt },
+                ],
+                temperature: 0.3,
+            });
 
-        const content = response.choices[0].message.content || '{}';
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    } catch (err: any) {
-        console.warn('[3D-DNA] Analysis failed:', err.message?.slice(0, 60));
+            const content = response.choices[0].message.content || '{}';
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) return JSON.parse(jsonMatch[0]);
+        } catch (err: any) {
+            console.warn(`[3D-DNA] Analysis attempt ${attempts + 1} failed:`, err.message?.slice(0, 60));
+        }
     }
 
-    return {
-        industry: 'modern-business',
-        energyLevel: 'dynamic',
-        sceneArchetype: 'CosmicNebula',
-        colorTemperature: 'deep-purple',
-        motionStyle: 'fluid',
-        visualKeywords: ['precision', 'innovation', 'premium', 'trust'],
-        shaderRecommendation: 'aurora',
-        particleStyle: 'nebula',
-        narrativeArc: 'From mysterious darkness to vibrant revelation to confident action',
-    };
+    throw new Error("[3D-DNA] Failed to extract Business DNA after 3 attempts.");
 }
 
 async function buildBusinessSpecificSections(
@@ -148,115 +253,31 @@ Return JSON array:
 BE MAXIMALLY CREATIVE. Think Bruno Simon, Active Theory, Resn.co.nz quality.
 Return ONLY the JSON array.`;
 
-    try {
-        rotateKey();
-        const response = await getClient().chat.completions.create({
-            model: 'gemini-2.5-flash-lite',
-            messages: [
-                { role: 'system', content: 'You are a world-class 3D creative director. Design stunning, unique section concepts with scroll-driven narratives. Return only JSON.' },
-                { role: 'user', content: prompt },
-            ],
-            temperature: 1.0,
-        });
+    for (let attempts = 0; attempts < 3; attempts++) {
+        try {
+            rotateKey();
+            const response = await getClient().chat.completions.create({
+                model: 'gemini-2.5-flash-lite',
+                messages: [
+                    { role: 'system', content: 'You are a world-class 3D creative director. Design stunning, unique section concepts with scroll-driven narratives. Return only JSON.' },
+                    { role: 'user', content: prompt },
+                ],
+                temperature: 1.0,
+            });
 
-        const content = response.choices[0].message.content || '[]';
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-            const specs = JSON.parse(jsonMatch[0]) as Section3DSpec[];
-            console.log(`[3D-Specs] Generated ${specs.length} business-specific sections`);
-            return specs;
+            const content = response.choices[0].message.content || '[]';
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const specs = JSON.parse(jsonMatch[0]) as Section3DSpec[];
+                console.log(`[3D-Specs] Generated ${specs.length} business-specific sections`);
+                return specs;
+            }
+        } catch (err: any) {
+            console.warn(`[3D-Specs] LLM attempt ${attempts + 1} failed:`, err.message?.slice(0, 60));
         }
-    } catch (err: any) {
-        console.warn('[3D-Specs] LLM failed:', err.message?.slice(0, 60));
     }
 
-    return buildFallbackSpecs(dna);
-}
-
-function buildFallbackSpecs(dna: BusinessDNA): Section3DSpec[] {
-    return [
-        {
-            name: 'LoadingScreen3D',
-            path: 'src/components/3d/LoadingScreen3D.tsx',
-            sectionType: 'loader',
-            contentDescription: 'HTML loading overlay with useProgress. Dark background, brand name, animated progress bar.',
-            geometryIdea: 'pure HTML overlay, no 3D',
-            colorMood: 'dark with accent glow',
-            animationStyle: 'fade out when progress complete',
-        },
-        {
-            name: 'NavBar3D',
-            path: 'src/components/3d/NavBar3D.tsx',
-            sectionType: 'navbar',
-            contentDescription: 'Fixed glassmorphism navigation bar. Pure HTML, backdrop-blur, no Canvas.',
-            geometryIdea: 'pure HTML nav',
-            colorMood: 'bg-black/30 border-white/10',
-            animationStyle: 'hamburger toggle on mobile',
-        },
-        {
-            name: 'Footer3D',
-            path: 'src/components/3d/Footer3D.tsx',
-            sectionType: 'footer',
-            contentDescription: 'Dark cinematic footer. Multi-column, inline SVG social icons. Pure HTML.',
-            geometryIdea: 'pure HTML footer',
-            colorMood: 'bg-black border-white/10',
-            animationStyle: 'gradient accent line top',
-        },
-        {
-            name: 'HeroScene3D',
-            path: 'src/components/3d/HeroScene3D.tsx',
-            sectionType: 'hero',
-            contentDescription: `NARRATIVE ROLE: Opening chapter. Scroll 0%: darkness with single glowing particle. Scroll 15%: particle explodes into 3000-particle nebula. Scroll 35%: particles converge into business-representative 3D shape. Scroll 60%: shape rotates revealing business name. Scroll 85%: camera zooms close filling viewport. Scroll 100%: flash transition. Uses CinematicCamera on CatmullRomCurve3, ParticleMorph system, ${dna.shaderRecommendation} ShaderMaterial background, animated Bloom 0.3-3.5 and Vignette 0.85-0.1 over scroll. Mouse parallax shifts objects 0.3 units.`,
-            geometryIdea: `Central ${dna.sceneArchetype} geometry with particle morph system (scatter -> sphere -> explosion), ${dna.shaderRecommendation} shader background plane`,
-            colorMood: dna.colorTemperature,
-            animationStyle: `${dna.motionStyle} with scroll-driven 3-act narrative arc and cinematic camera fly-through`,
-        },
-        {
-            name: 'FeaturesScene3D',
-            path: 'src/components/3d/FeaturesScene3D.tsx',
-            sectionType: 'features',
-            contentDescription: `NARRATIVE ROLE: The reveal act. Each feature is a 3D floating island at different depths. As camera scrolls past each island it LIGHTS UP with details emerging. Islands are connected by glowing particle streams like neural networks. Hovering an island makes it rise y+0.5 with particles orbiting faster, emissive intensity triples. Each island activates at scroll offsets 0.2, 0.4, 0.6, 0.8. Html labels appear above each island.`,
-            geometryIdea: `4-5 floating island geometries each with different shape (${dna.visualKeywords.join(', ')} themed), connected by custom BufferGeometry particle lines`,
-            colorMood: dna.colorTemperature,
-            animationStyle: 'scroll-linked activation sequence with hover interactions and particle connections',
-        },
-        {
-            name: 'ShowcaseScene3D',
-            path: 'src/components/3d/ShowcaseScene3D.tsx',
-            sectionType: 'showcase',
-            contentDescription: `NARRATIVE ROLE: The wow moment. Central hero object rotates on pedestal with PresentationControls for drag/rotate. 3-angle spotlight drama creating studio lighting. Orbiting detail geometries at radius=3 animated in useFrame. ContactShadows for grounded feel. Environment preset for reflections. ChromaticAberration on edges for premium feel.`,
-            geometryIdea: 'Central hero geometry scale 2.5-3.5 with meshPhysicalMaterial (clearcoat=1, roughness=0, metalness=0.95), orbiting micro-geometries',
-            colorMood: dna.colorTemperature,
-            animationStyle: 'slow auto-rotation with hover pause and emissive increase',
-        },
-        {
-            name: 'AboutScene3D',
-            path: 'src/components/3d/AboutScene3D.tsx',
-            sectionType: 'about',
-            contentDescription: `NARRATIVE ROLE: Humanizing chapter. Calm, warm atmosphere contrasting energetic sections. Slow-moving organic shapes like breathing organisms. Warm lighting shifts from cool blue to amber over scroll. MeshDistortMaterial (distort=0.2, speed=1) for organic life. Soft ContactShadows. Slow Float animation (speed=0.3). HTML overlay smooth fade-in at scroll 0.3.`,
-            geometryIdea: 'Organic morphing geometries with MeshDistortMaterial, particle figure morph at scroll 0.5',
-            colorMood: 'warm amber gold shifting from cool',
-            animationStyle: `${dna.motionStyle} organic breathing with slow documentary camera pan`,
-        },
-        {
-            name: 'ContactScene3D',
-            path: 'src/components/3d/ContactScene3D.tsx',
-            sectionType: 'cta',
-            contentDescription: `NARRATIVE ROLE: Closing chapter. Scene CONVERGES toward central glowing gateway form (torus with plasma shader). 500 particles flow inward from all directions. Intense Bloom (intensity=4.0) on gateway. Stars background (count=500, depth=50, fade=true). HTML contact form positioned via absolute CSS over Canvas.`,
-            geometryIdea: 'Central gateway torus with plasma ShaderMaterial, convergence particle system, Stars background',
-            colorMood: dna.colorTemperature,
-            animationStyle: 'convergence animation with explosive particle burst on interaction',
-        },
-        {
-            name: 'AmbientScene3D',
-            path: 'src/components/3d/AmbientScene3D.tsx',
-            sectionType: 'ambient',
-            contentDescription: 'Subtle ambient particle field for background layers. Low-opacity floating geometry at varying depths.',
-            geometryIdea: 'Sparkles + 8 small semi-transparent spheres at varying depths z=-3 to z=-8',
-            colorMood: 'very subtle, opacity 0.2-0.3',
-            animationStyle: 'slow float with parallax on scroll',
-        },
-    ];
+    throw new Error("[3D-Specs] Failed to generate distinct business specific sections after 3 attempts.");
 }
 
 function buildNarrativeContentInstruction(spec: Section3DSpec, dna: BusinessDNA, userPrompt: string): string {
@@ -679,6 +700,13 @@ function buildHtmlOverlaySystemPrompt(sectionType: string): string {
     const isLoader = sectionType === 'loader' || sectionType === 'loading';
     return `You are an expert React/TypeScript developer building a PURE HTML glassmorphism component for a 3D website.
 
+DYNAMIC DATA INJECTION — THESE ARE MANDATORY:
+The user message contains the EXACT brand name, nav links, tagline, and colors to use.
+You MUST copy them verbatim. NEVER substitute generic placeholder text.
+NEVER invent nav link labels or routes. NEVER write "Your Company", "Brand Name",
+"Link 1", "Lorem ipsum", or any invented content.
+The brand name, links, tagline, and colors are in the user message — use them EXACTLY as provided.
+
 THIS IS A ${sectionType.toUpperCase()} COMPONENT -- PURE HTML/CSS ONLY. ZERO 3D CODE.
 
 ABSOLUTE BANNED IMPORTS (violating = component rejected):
@@ -823,12 +851,57 @@ function score3DComponent(content: string, componentName: string): {
         score -= 2;
     }
 
-    if (content.includes('extend({') && !content.includes('declare global')) {
-        issues.push({ severity: 'TS_ERROR', code: 'EXTEND_NO_JSX_NAMESPACE', description: 'extend() used without declare global JSX namespace declaration', scoreDeduction: 2 });
-        score -= 2;
+    // CHECK A — extend() without per-element JSX namespace declaration
+    if (content.includes('extend({') || content.includes('extend( {')) {
+        const extendedNames = [...content.matchAll(/extend\(\{\s*(\w+)/g)].map(m => m[1]);
+        for (const name of extendedNames) {
+            const jsxName = name.charAt(0).toLowerCase() + name.slice(1);
+            if (!content.includes(`'${jsxName}'`) && !content.includes(`"${jsxName}"`)) {
+                issues.push({ severity: 'TS_ERROR', code: 'MISSING_JSX_NAMESPACE',
+                    description: `extend({${name}}) used but declare global JSX namespace missing for <${jsxName}>`,
+                    scoreDeduction: 2 });
+                score -= 2;
+            }
+        }
+        if (extendedNames.length > 0 && !content.includes('declare global')) {
+            issues.push({ severity: 'TS_ERROR', code: 'EXTEND_NO_JSX_NAMESPACE',
+                description: 'extend() used without declare global JSX namespace declaration',
+                scoreDeduction: 0 /* already deducted per-name above */ });
+        }
     }
 
-    if ((content.includes('range') || content.includes('range[')) && !nameLower.includes('loading') && !nameLower.includes('footer') && !nameLower.includes('navbar')) {
+    // CHECK B — destructured props with no TypeScript interface
+    const componentMatches = [...content.matchAll(/const \w+[^=]*=\s*\(\s*\{([^}]+)\}/g)];
+    for (const match of componentMatches) {
+        const propsStr = match[1];
+        if (propsStr.includes(',') && !content.includes('interface') && !content.includes('type Props')) {
+            issues.push({ severity: 'TS_ERROR', code: 'IMPLICIT_ANY_PROPS',
+                description: 'Component has destructured props but no TypeScript interface defined — add interface Props { ... }',
+                scoreDeduction: 2 });
+            score -= 2;
+            break;
+        }
+    }
+
+    // CHECK C — ChromaticAberration missing required radialModulation / modulationOffset props
+    if (content.includes('ChromaticAberration') &&
+        (!content.includes('radialModulation') || !content.includes('modulationOffset'))) {
+        issues.push({ severity: 'TS_ERROR', code: 'CHROMATIC_MISSING_PROPS',
+            description: 'ChromaticAberration missing required radialModulation and modulationOffset props',
+            scoreDeduction: 1 });
+        score -= 1;
+    }
+
+    // CHECK D — EffectComposer inside a scene fragment (not a page)
+    const isSceneFragment = !nameLower.includes('page') && !nameLower.includes('layout');
+    if (isSceneFragment && content.includes('EffectComposer')) {
+        issues.push({ severity: 'CRASH', code: 'EFFECT_COMPOSER_IN_FRAGMENT',
+            description: 'EffectComposer must be in the page Canvas, not inside a scene fragment',
+            scoreDeduction: 3 });
+        score -= 3;
+    }
+
+    if ((content.includes('range') || content.includes('range[')) &&!nameLower.includes('loading') && !nameLower.includes('footer') && !nameLower.includes('navbar')) {
         const hasDefault = content.includes('range = [') || content.includes('range=[') || content.includes('range?: [');
         if (!hasDefault && content.match(/\brange\b/g)) {
             issues.push({ severity: 'TS_ERROR', code: 'RANGE_POSSIBLY_UNDEFINED', description: 'range prop used without default value -- add ({ range = [0, 1] }: { range?: [number, number] })', scoreDeduction: 2 });
@@ -869,7 +942,7 @@ function score3DComponent(content: string, componentName: string): {
     }
 
     const finalScore = Math.max(0, score);
-    const mustRegenerate = finalScore < 6 || issues.some(i => i.severity === 'CRASH' && i.scoreDeduction >= 3);
+    const mustRegenerate = finalScore < 7 || issues.some(i => i.severity === 'CRASH' && i.scoreDeduction >= 3);
 
     return { score: finalScore, issues, mustRegenerate };
 }
@@ -948,13 +1021,115 @@ export async function generate3DComponentNode(state: WebsiteState): Promise<Part
                     '',
                     contentInstruction,
                     '',
-                    ragContext ? `3D DOCUMENTATION:\n${ragContext.slice(0, 6000)}` : '',
-                    promptContext ? `THREE.JS REFERENCE:\n${promptContext.slice(0, 4000)}` : '',
-                ] : [
-                    `Build a premium glassmorphism ${spec.sectionType} for this business: ${userPrompt}`,
-                    `Make it visually stunning with framer-motion animations.`,
-                    `Reflect the brand colors: primary ${theme?.palette?.primary || '#f472b6'}, accent ${theme?.palette?.accent || '#22d3ee'}`,
-                ]),
+                    ragContext ? `3D DOCUMENTATION:\n${ragContext}` : '',
+                    promptContext ? `THREE.JS REFERENCE:\n${promptContext}` : '',
+                ] : (() => {
+                    const projectName = blueprint?.projectName ||
+                        userPrompt.match(/"projectName"\s*:\s*"([^"]+)"/)?.[1] ||
+                        'Studio';
+
+                    const tagline = blueprint?.description
+                        ? blueprint.description.split('.')[0].trim()
+                        : 'Crafting extraordinary experiences';
+
+                    const navLinks = (blueprint?.pages || [])
+                        .filter((p: any) => p.name && p.route)
+                        .map((p: any) => `{ label: "${p.name}", route: "${p.route}" }`)
+                        .join(', ') ||
+                        '{ label: "Home", route: "/" }, { label: "About", route: "/about" }, { label: "Contact", route: "/contact" }';
+
+                    const contactEmail = (blueprint as any)?.contactEmail ||
+                        userPrompt.match(/[\w.-]+@[\w.-]+\.\w{2,}/)?.[0] ||
+                        '';
+
+                    const accentHex = theme?.palette?.accent || '#22d3ee';
+                    const primaryHex = theme?.palette?.primary || '#f472b6';
+
+                    if (spec.sectionType === 'navbar') {
+                        const navStyle = pickRandom(NAV_ARCHETYPES);
+                        console.log(`  [style-pick] NavBar: ${navStyle.name}`);
+                        return [
+                        `Build a premium "${navStyle.name}" style NavBar3D for this exact brand:`,
+                        ``,
+                        `STYLE: ${navStyle.desc}`,
+                        ``,
+                        `BRAND NAME (use EXACTLY this — no substitutions): "${projectName}"`,
+                        `BRAND TYPOGRAPHY: ${navStyle.brandStyle}`,
+                        `NAV LINKS (use EXACTLY these routes — no inventions):`,
+                        `  ${navLinks}`,
+                        `ACCENT COLOR: ${accentHex}`,
+                        `PRIMARY COLOR: ${primaryHex}`,
+                        ``,
+                        `REQUIREMENTS:`,
+                        `- Brand is wrapped in <Link to="/">`,
+                        `- Each nav link is a <Link to={route}> — NO onClick window.location`,
+                        `- Mobile menu: ${navStyle.mobileMenu}`,
+                        `- Hover effect: ${navStyle.hoverEffect}`,
+                        `- NO lucide-react, NO @react-three imports, NO @/components/ui`,
+                        `- Pure inline SVG for any icons`,
+                        `- Add framer-motion animations for entrance and interactions`,
+                        `- Must be VISUALLY UNIQUE — not generic glassmorphism if the style says otherwise`,
+                        ];
+                    }
+
+                    if (spec.sectionType === 'footer') {
+                        const footerStyle = pickRandom(FOOTER_ARCHETYPES);
+                        console.log(`  [style-pick] Footer: ${footerStyle.name}`);
+                        return [
+                        `Build a cinematic "${footerStyle.name}" style Footer3D for this exact brand:`,
+                        ``,
+                        `STYLE: ${footerStyle.desc}`,
+                        ``,
+                        `BRAND NAME (use EXACTLY this): "${projectName}"`,
+                        `TAGLINE (use EXACTLY this): "${tagline}"`,
+                        ...(contactEmail ? [`CONTACT EMAIL: ${contactEmail}`] : []),
+                        `NAV LINKS for footer quick-links (use these exact routes):`,
+                        `  ${navLinks}`,
+                        `ACCENT COLOR: ${accentHex} — use for gradient accent line and hover states`,
+                        ``,
+                        `REQUIREMENTS:`,
+                        `- Social icons: ${footerStyle.socialStyle}`,
+                        `  For SVG icons, write full inline <svg> paths for X/Twitter, GitHub, LinkedIn, Instagram`,
+                        `  (write the full SVG path data — no icon library)`,
+                        `- Copyright: "© ${new Date().getFullYear()} ${projectName}. All rights reserved."`,
+                        `- bg-black or bg-gradient dark base`,
+                        `- NO lucide-react, NO @react-three imports, NO @/components/ui`,
+                        `- Add framer-motion viewport entrance animations`,
+                        `- Must match the "${footerStyle.name}" aesthetic described above — NOT generic 4-column if style says otherwise`,
+                        ];
+                    }
+
+                    if (spec.sectionType === 'loader' || spec.sectionType === 'loading') {
+                        const loaderStyle = pickRandom(LOADER_ARCHETYPES);
+                        console.log(`  [style-pick] Loader: ${loaderStyle.name}`);
+                        return [
+                        `Build a cinematic "${loaderStyle.name}" style LoadingScreen3D for this brand:`,
+                        ``,
+                        `STYLE: ${loaderStyle.desc}`,
+                        ``,
+                        `BRAND NAME (show EXACTLY this during loading): "${projectName}"`,
+                        `ACCENT COLOR: ${accentHex}`,
+                        `PRIMARY COLOR: ${primaryHex}`,
+                        ``,
+                        `REQUIREMENTS:`,
+                        `- STANDALONE OVERLAY — component signature must be:`,
+                        `  const LoadingScreen3D: React.FC = () => { ... }`,
+                        `  NO children prop. NO wrapping. Floats above everything.`,
+                        `- Full-screen fixed: position:fixed inset-0 z-[9999] bg-black`,
+                        `- Progress tracking: use import { useProgress } from '@react-three/drei'`,
+                        `- Fade out: when progress >= 100, animate opacity to 0 + pointerEvents none`,
+                        `  use framer-motion AnimatePresence exit={{ opacity: 0 }}`,
+                        `- NO @react-three/fiber, NO Canvas, NO useFrame`,
+                        `- ONLY allowed drei import: import { useProgress } from '@react-three/drei'`,
+                        `- Implement the "${loaderStyle.name}" aesthetic exactly as described above`,
+                        ];
+                    }
+
+                    return [
+                        `Build a premium glassmorphism ${spec.sectionType} for: ${userPrompt}`,
+                        `Brand: "${projectName}" | Colors: ${primaryHex} / ${accentHex}`,
+                    ];
+                })()),
             ].filter(Boolean).join('\n');
 
             const response = await invokeLLM(systemPrompt, userLLMPrompt, 0.85, 5);
@@ -1077,6 +1252,81 @@ ${buildNarrativeContentInstruction(spec, dna, userPrompt)}`;
 
     const importInstructions = buildImportInstructions(sectionSpecs, generatedPaths, dna);
 
+    // ──── BUILD SCENE-TO-PAGE MAPPING ────
+    // Maps each page to its assigned scene components based on section classification
+    const scenePageMap: Record<string, string[]> = {};
+    const sceneSpecs = sectionSpecs.filter(s => !['navbar', 'footer', 'loader'].includes(s.sectionType));
+    const generatedSceneNames = sceneSpecs
+        .filter(s => generatedPaths.some(p => p.includes(s.name)))
+        .map(s => ({ name: s.name, sectionType: s.sectionType }));
+
+    const pages = blueprint?.pages || [];
+
+    // classifySection helper (mirrors page-node.ts logic)
+    const classifySection = (sectionName: string): string => {
+        const lower = sectionName.toLowerCase();
+        if (lower.match(/hero|banner|landing|intro|welcome/)) return 'hero';
+        if (lower.match(/feature|capability|benefit|what we/)) return 'features';
+        if (lower.match(/product|showcase|gallery|portfolio|work|project/)) return 'showcase';
+        if (lower.match(/pricing|plan|tier|package/)) return 'pricing';
+        if (lower.match(/testimonial|review|client|customer|feedback/)) return 'testimonials';
+        if (lower.match(/team|about|who we|staff|people/)) return 'about';
+        if (lower.match(/contact|form|reach|touch|connect/)) return 'contact';
+        if (lower.match(/cta|call to action|get started|sign up|join/)) return 'cta';
+        if (lower.match(/stat|number|metric|counter|achievement/)) return 'stats';
+        if (lower.match(/process|how|step|workflow/)) return 'process';
+        return 'features';
+    };
+
+    // Find ambient scene (always added to every page)
+    const ambientScene = generatedSceneNames.find(s => s.sectionType === 'ambient');
+
+    for (const page of pages) {
+        const pageName = page.name.replace(/\s+/g, '');
+        const pageSections = (page.sections || []).map(s => classifySection(s));
+        const assignedScenes: string[] = [];
+
+        // Match page sections to generated scenes
+        for (const scene of generatedSceneNames) {
+            if (scene.sectionType === 'ambient') continue; // handled separately
+            if (pageSections.includes(scene.sectionType)) {
+                assignedScenes.push(scene.name);
+            }
+        }
+
+        // HomePage always gets hero + features if available
+        const isHome = page.route === '/' || page.name.toLowerCase().includes('home');
+        if (isHome) {
+            const heroScene = generatedSceneNames.find(s => s.sectionType === 'hero');
+            const featScene = generatedSceneNames.find(s => s.sectionType === 'features');
+            if (heroScene && !assignedScenes.includes(heroScene.name)) assignedScenes.unshift(heroScene.name);
+            if (featScene && !assignedScenes.includes(featScene.name)) assignedScenes.push(featScene.name);
+        }
+
+        // Ensure every page gets at least 3 scenes (pick unassigned ones)
+        if (assignedScenes.length < 3) {
+            for (const scene of generatedSceneNames) {
+                if (scene.sectionType === 'ambient') continue;
+                if (!assignedScenes.includes(scene.name)) {
+                    assignedScenes.push(scene.name);
+                }
+                if (assignedScenes.length >= 3) break;
+            }
+        }
+
+        // Always add ambient scene
+        if (ambientScene && !assignedScenes.includes(ambientScene.name)) {
+            assignedScenes.push(ambientScene.name);
+        }
+
+        scenePageMap[pageName] = assignedScenes;
+    }
+
+    console.log('[generate-3d] Scene-to-page mapping:');
+    Object.entries(scenePageMap).forEach(([page, scenes]) => {
+        console.log(`  ${page}: ${scenes.join(', ')}`);
+    });
+
     let updatedMemory = state.projectMemory;
     if (updatedMemory) {
         updatedMemory = updateMemory3D(updatedMemory, generatedPaths, importInstructions);
@@ -1086,11 +1336,14 @@ ${buildNarrativeContentInstruction(spec, dna, userPrompt)}`;
         files: newFiles,
         fileRegistry: registry,
         projectMemory: updatedMemory,
+        importInstructions: importInstructions,
+        scenePageMap: scenePageMap,
         currentPhase: 'generate_3d_complete',
         messages: [
             `Generated ${newFiles.size} cinematic 3D components for ${dna.industry}`,
             `DNA: ${dna.sceneArchetype} | ${dna.shaderRecommendation} shader | ${dna.particleStyle} particles`,
             `Sections: ${generatedPaths.join(', ')}`,
+            `Scene mapping: ${Object.entries(scenePageMap).map(([p, s]) => `${p}=[${s.join(',')}]`).join(' | ')}`,
         ],
     };
 }

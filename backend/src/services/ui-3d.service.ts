@@ -34,7 +34,7 @@ function rotateApiKey(): void {
     }
 }
 
-const UI3D_MODEL = "gemini-2.5-flash-lite";
+const UI3D_MODEL = "gemini-3-flash-preview";
 
 interface RAGChunk {
     content: string;
@@ -100,29 +100,6 @@ export class UI3DService {
             }
         }
 
-        const defaultQueries = [
-            "React Three Fiber Canvas setup ScrollControls",
-            "Drei Float Sparkles ContactShadows Stars",
-            "MeshDistortMaterial MeshWobbleMaterial drei meshPhysicalMaterial",
-            "useFrame animation loop useScroll scroll-linked drei",
-            "EffectComposer Bloom Vignette postprocessing",
-        ];
-
-        for (const query of defaultQueries) {
-            try {
-                const result = await queryDocumentation(query);
-                if (result.retrievedChunks > 0 && result.context) {
-                    const chunkParts = result.context.split("--- Chunk");
-                    for (const part of chunkParts) {
-                        const moduleMatch = part.match(/Module:\s*(\S+)/);
-                        const urlMatch = part.match(/Source:\s*(\S+)/);
-                        addChunk(part, moduleMatch?.[1] || query, urlMatch?.[1] || "");
-                    }
-                }
-            } catch {
-                // silent fallback
-            }
-        }
 
         console.log(`[UI3D] Total unique chunks collected: ${allChunks.length}`);
 
@@ -136,7 +113,7 @@ export class UI3DService {
         const result: UI3DSelectionResult = {
             selectedChunks: topChunks,
             formattedForPrompt,
-            queryCount: queries.length + defaultQueries.length,
+            queryCount: queries.length,
         };
 
         selectionCache.set(cacheKey, result);
@@ -151,7 +128,8 @@ export class UI3DService {
                 rotateApiKey();
                 const prompt = `You are a Three.js/React Three Fiber documentation search expert.
 
-Website project: "${requirements.slice(0, 400)}"
+Website project UI/UX Plan (Excerpt):
+"${requirements.slice(0, 2000)}"
 
 Generate exactly 5 HIGHLY SPECIFIC RAG search queries for this exact business type.
 Each query must target a distinct technical aspect of building this specific 3D website.
@@ -202,49 +180,19 @@ Return ONLY a JSON array of 5 strings. No markdown, no explanation.`;
             }
         }
 
-        const lower = requirements.toLowerCase();
-        if (lower.match(/luxury|jewel|fashion|premium|haute/)) {
-            return [
-                "threejs gold metallic PBR clearcoat material caustics",
-                "react three fiber environment studio lighting preset",
-                "drei ContactShadows soft product showcase",
-                "postprocessing EffectComposer DepthOfField bokeh",
-                "react three fiber PresentationControls product rotation",
-            ];
-        }
-        if (lower.match(/food|bak|drink|beverag|restaurant|cafe/)) {
-            return [
-                "three.js liquid glass transmission refraction material",
-                "MeshDistortMaterial organic shape warm amber glow",
-                "drei Float animation gentle bobbing food product",
-                "react three fiber warm spotlight point light scene",
-                "drei Sparkles warm particle effect floating",
-            ];
-        }
-        if (lower.match(/tech|saas|data|ai|software|startup|cloud/)) {
-            return [
-                "react three fiber data visualization node network particles grid",
-                "threejs hologram scanline GLSL shader material effect",
-                "react three fiber particle system BufferGeometry data stream",
-                "postprocessing Bloom ChromaticAberration tech neon glow",
-                "drei ScrollControls scroll-driven data reveal animation",
-            ];
-        }
-        if (lower.match(/fitness|gym|sport|workout|health|wellness/)) {
-            return [
-                "threejs energy rings pulse emissive glow animation useFrame",
-                "react three fiber dynamic TorusKnotGeometry fast rotation",
-                "drei Sparkles energy particle effect directional speed",
-                "postprocessing Bloom high intensity athletic glow",
-                "react three fiber IcosahedronGeometry wireframe energy",
-            ];
-        }
+        console.warn('[UI3D] LLM query generation failed, building dynamic fallback from requirements');
+        const keywords = requirements
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .split(/\s+/)
+            .filter(w => w.length > 3)
+            .slice(0, 6);
+        const base = keywords.join(' ');
         return [
-            `react three fiber ${requirements.split(" ").slice(0, 3).join(" ")} 3D immersive scene`,
-            "drei Float ContactShadows Environment preset ambient",
-            "MeshDistortMaterial MeshWobbleMaterial organic material animation",
-            "EffectComposer Bloom Vignette Noise postprocessing",
-            "ScrollControls useScroll scroll-driven narrative animation",
+            `react three fiber ${base} 3D scene`,
+            `drei ScrollControls Environment ${keywords.slice(0, 2).join(' ')}`,
+            `three.js material shader ${keywords.slice(2, 4).join(' ')}`,
+            `react three fiber postprocessing Bloom ${keywords.slice(0, 1).join(' ')}`,
+            `useFrame animation interaction ${keywords.slice(1, 3).join(' ')}`,
         ];
     }
 

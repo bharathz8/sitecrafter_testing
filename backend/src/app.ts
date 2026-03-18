@@ -29,6 +29,7 @@ import Project from './models/project';
 import { analyzeModificationRequest, applyModifications } from './services/modification.service';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
+import { classifyIntents, resolveContext, formatDocsForPrompt } from "./services/context-3d.service";
 dotenv.config();
 
 // Configure multer for file uploads (memory storage)
@@ -141,7 +142,7 @@ app.post("/planning", async (req, res) => {
         }
 
         console.log(`[Planning] Project type from frontend: ${projectType || 'not provided'}`);
-        
+
         const is3D = enable3D === true || projectType === '3d' || requirements.toLowerCase().includes('3d');
 
         let result;
@@ -450,6 +451,50 @@ app.post("/test/mem0", async (req: Request, res: Response) => {
 
 
 
+
+app.post("/test/context-3d", async (req: Request, res: Response) => {
+    try {
+        const { prompt, tags } = req.body;
+        let finalTags = tags || [];
+
+        console.log('\n🧪 /TEST/CONTEXT-3D ENDPOINT CALLED');
+
+        if (prompt && !tags) {
+            console.log(`[test-context] Classifying intents for prompt: "${prompt.slice(0, 50)}..."`);
+            finalTags = await classifyIntents(prompt);
+        }
+
+        if (finalTags.length === 0) {
+            res.status(400).json({ error: "Provide either 'prompt' or 'tags' array" });
+            return;
+        }
+
+        console.log(`[test-context] Resolving context for tags: ${finalTags.join(', ')}`);
+        const resolved = await resolveContext(finalTags);
+        const formatted = formatDocsForPrompt(resolved);
+
+        res.json({
+            success: true,
+            intents: finalTags,
+            counts: {
+                threejs: resolved.threejsDocs.length,
+                external: resolved.externalDocs.length
+            },
+            docs: {
+                threejs: resolved.threejsDocs,
+                external: resolved.externalDocs
+            },
+            fullContextString: formatted
+        });
+
+    } catch (error: any) {
+        console.error("[test-context] Error:", error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // ============================================================
 // NEW: COMPLETE FULLSTACK GENERATION (BEST - WITH ANALYSIS)
@@ -1436,15 +1481,15 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
             }
 
             const rootConfigs = [
-                'package.json', 'tsconfig.json', 'tsconfig.node.json', 'vite.config.ts', 
+                'package.json', 'tsconfig.json', 'tsconfig.node.json', 'vite.config.ts',
                 'postcss.config.js', 'tailwind.config.js', 'eslint.config.js', 'index.html',
                 '.gitignore', '.env', '.env.local', 'package-lock.json', 'README.md'
             ];
-            
+
             const fileName = entryName.split('/').pop()?.toLowerCase() || '';
-            const isInStandardFolder = entryName.toLowerCase().startsWith('src/') || 
-                                      entryName.toLowerCase().startsWith('public/') ||
-                                      entryName.toLowerCase().startsWith('node_modules/');
+            const isInStandardFolder = entryName.toLowerCase().startsWith('src/') ||
+                entryName.toLowerCase().startsWith('public/') ||
+                entryName.toLowerCase().startsWith('node_modules/');
 
             if (!isInStandardFolder && !rootConfigs.includes(fileName)) {
                 entryName = 'src/' + entryName;

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LangGraph Website Generator - Graph State
  * Central state that flows through all nodes
  */
@@ -293,9 +293,28 @@ export const WebsiteStateAnnotation = Annotation.Root({
         default: () => ''
     }),
 
+    intentTags: Annotation<string[]>({
+        reducer: (_, newVal) => newVal,
+        default: () => []
+    }),
+
+    // Full 3D scene integration guide built by generate-3d-component-node.
+    // Passed directly into page-node instead of relying on compressed external memory.
+    importInstructions: Annotation<string>({
+        reducer: (_, newVal) => newVal,
+        default: () => ''
+    }),
+
     projectMemory: Annotation<ProjectMemory | null>({
         reducer: (_, newVal) => newVal,
         default: () => null
+    }),
+
+    // Maps each page name to its assigned scene component names
+    // e.g. { "HomePage": ["HeroScene3D", "FeaturesScene3D"], "AboutPage": ["AboutScene3D"] }
+    scenePageMap: Annotation<Record<string, string[]>>({
+        reducer: (_, newVal) => newVal,
+        default: () => ({})
     })
 });
 

@@ -1,5 +1,5 @@
 import { WebsiteState } from '../graph-state';
-import { queryDocumentation, isVectorStoreReady, tavilySearch } from '../../../rag/rag-3d';
+import { queryDocumentation, queryDocumentationDiverse, isVectorStoreReady, tavilySearch } from '../../../rag/rag-3d';
 import { invokeLLM } from '../llm-utils';
 import crypto from 'crypto';
 
@@ -72,31 +72,13 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
         }
     }
 
-    console.log(`  [rag-3d-context] Running ${DEFAULT_3D_QUERIES.length} default 3D queries (banned terms filtered)...`);
-    const safeDefaults = DEFAULT_3D_QUERIES.filter(q => !BANNED_RAG_TERMS.some(b => q.toLowerCase().includes(b.toLowerCase())));
-    for (const query of safeDefaults) {
-        try {
-            const result = await queryDocumentation(query);
-            if (result.retrievedChunks > 0 && result.context) {
-                const chunkParts = result.context.split('--- Chunk');
-                for (const part of chunkParts) {
-                    const moduleMatch = part.match(/Module:\s*(\S+)/);
-                    const urlMatch = part.match(/Source:\s*(\S+)/);
-                    addChunk(part, moduleMatch?.[1] || query, urlMatch?.[1] || '');
-                }
-            }
-        } catch { }
-    }
-    console.log(`  [rag-3d-context] Default queries done. Total chunks so far: ${allChunks.length}`);
-
-
-
+    console.log(`  [rag-3d-context] Running LLM-expanded queries FIRST (project-specific priority)...`);
     const llmExpanded = await expandQueriesWithLLM(state.userPrompt || '', modules);
     if (llmExpanded.length > 0) {
-        console.log(`  [rag-3d-context] LLM expanded ${llmExpanded.length} additional queries: ${llmExpanded.slice(0, 5).join(', ')}...`);
+        console.log(`  [rag-3d-context] LLM expanded ${llmExpanded.length} queries: ${llmExpanded.slice(0, 5).join(', ')}...`);
         for (const query of llmExpanded) {
             try {
-                const result = await queryDocumentation(query);
+                const result = await queryDocumentationDiverse(query);
                 if (result.retrievedChunks > 0 && result.context) {
                     const chunkParts = result.context.split('--- Chunk');
                     for (const part of chunkParts) {
@@ -110,9 +92,62 @@ export async function rag3DContextNode(state: WebsiteState): Promise<Partial<Web
         console.log(`  [rag-3d-context] LLM expansion done. Total chunks: ${allChunks.length}`);
     }
 
+    console.log(`  [rag-3d-context] Running ${DEFAULT_3D_QUERIES.length} default 3D queries (banned terms filtered)...`);
+    const safeDefaults = DEFAULT_3D_QUERIES.filter(q => !BANNED_RAG_TERMS.some(b => q.toLowerCase().includes(b.toLowerCase())));
+    for (const query of safeDefaults) {
+        try {
+            const result = await queryDocumentationDiverse(query);
+            if (result.retrievedChunks > 0 && result.context) {
+                const chunkParts = result.context.split('--- Chunk');
+                for (const part of chunkParts) {
+                    const moduleMatch = part.match(/Module:\s*(\S+)/);
+                    const urlMatch = part.match(/Source:\s*(\S+)/);
+                    addChunk(part, moduleMatch?.[1] || query, urlMatch?.[1] || '');
+                }
+            }
+        } catch { }
+    }
+    console.log(`  [rag-3d-context] Default queries done. Total chunks so far: ${allChunks.length}`);
+
     const totalQueries = modules.length + promptKeywords.length + safeDefaults.length + llmExpanded.length;
 
-    const topChunks = allChunks.slice(0, 70);
+    // Module-balanced chunk selection: group by module, take proportional slices
+    const chunkBuckets: Record<string, typeof allChunks> = {};
+    for (const chunk of allChunks) {
+        const mod = (chunk.module || 'general').toLowerCase();
+        let bucket = 'general';
+        if (mod.includes('three') && !mod.includes('fiber')) bucket = 'threejs';
+        else if (mod.includes('drei')) bucket = 'drei';
+        else if (mod.includes('r3f') || mod.includes('fiber') || mod.includes('react-three')) bucket = 'r3f';
+        if (!chunkBuckets[bucket]) chunkBuckets[bucket] = [];
+        chunkBuckets[bucket].push(chunk);
+    }
+    const TARGET_CHUNKS = 100;
+    const threejsSlice = Math.ceil(TARGET_CHUNKS * 0.3);
+    const dreiSlice = Math.ceil(TARGET_CHUNKS * 0.4);
+    const r3fSlice = Math.ceil(TARGET_CHUNKS * 0.2);
+    const generalSlice = TARGET_CHUNKS - threejsSlice - dreiSlice - r3fSlice;
+
+    const topChunks = [
+        ...(chunkBuckets['threejs'] || []).slice(0, threejsSlice),
+        ...(chunkBuckets['drei'] || []).slice(0, dreiSlice),
+        ...(chunkBuckets['r3f'] || []).slice(0, r3fSlice),
+        ...(chunkBuckets['general'] || []).slice(0, generalSlice),
+    ];
+
+    // Fill remaining slots from any bucket
+    if (topChunks.length < TARGET_CHUNKS) {
+        const used = new Set(topChunks.map(c => c.hash));
+        for (const chunk of allChunks) {
+            if (topChunks.length >= TARGET_CHUNKS) break;
+            if (!used.has(chunk.hash)) {
+                topChunks.push(chunk);
+                used.add(chunk.hash);
+            }
+        }
+    }
+
+    console.log(`  [rag-3d-context] Module-balanced selection: ${topChunks.length} chunks (threejs:${(chunkBuckets['threejs'] || []).slice(0, threejsSlice).length} drei:${(chunkBuckets['drei'] || []).slice(0, dreiSlice).length} r3f:${(chunkBuckets['r3f'] || []).slice(0, r3fSlice).length} general:${(chunkBuckets['general'] || []).slice(0, generalSlice).length})`);
 
     let tavilyContext = '';
     const tavilyQueries = [
@@ -223,35 +258,20 @@ const BANNED_RAG_TERMS = [
 
 const DEFAULT_3D_QUERIES = [
     'useFrame animation loop',
-    'useThree camera viewport',
     'Canvas setup configuration',
-    'ScrollControls pages damping',
-    'useScroll offset scroll position',
-    'Float animation component',
-    'Sparkles particle effect',
-    'ContactShadows ground shadow',
+    'ScrollControls pages damping useScroll',
     'MeshDistortMaterial organic shape',
-    'MeshWobbleMaterial wobble effect',
-    'meshPhysicalMaterial clearcoat metalness',
-    'meshStandardMaterial emissive glow',
-    'Bloom luminance threshold smoothing',
-    'Vignette darkness offset',
+    'meshPhysicalMaterial clearcoat metalness emissive',
+    'Bloom luminance threshold EffectComposer',
     'Environment preset reflections',
-    'fog depth atmosphere',
-    'ambientLight intensity',
-    'spotLight angle penumbra',
-    'pointLight color position',
     'ShaderMaterial vertexShader fragmentShader uTime uniform',
     'CatmullRomCurve3 camera path scroll animation',
     'particle morph BufferGeometry position lerp useFrame',
     'Stars deep space background drei',
     'AdaptiveDpr AdaptiveEvents performance drei',
-    'mesh onPointerOver onPointerOut',
-    'THREE.MathUtils.lerp smooth',
-    'useProgress active progress',
-    'Html drei overlay component',
-    'ChromaticAberration EffectComposer animate',
+    'useProgress active progress loading',
     'PresentationControls product showcase drei',
+    'fog depth atmosphere ambientLight spotLight',
 ];
 
 

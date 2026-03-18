@@ -1,0 +1,421 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "threejs_base_url": "https://threejs.org/docs/pages/{name}.html.md",
+    "fetch_strategy": {
+      "threejs": "plain_fetch",
+      "external": "tavily_extract"
+    }
+  },
+
+  "threejs_pages": {
+    "core": [
+      "ARButton", "AmmoPhysics", "BasicLightingModel", "BatchedMesh",
+      "BezierInterpolant", "BitonicSort_BitonicSort", "BlendMode", "Bone",
+      "BooleanKeyframeTrack", "BufferAttribute", "BundleGroup", "CCDIKSolver",
+      "CSM", "CSMFrustum", "CSS2DObject", "CSS2DRenderer", "CSS3DObject",
+      "CSS3DRenderer", "CSS3DSprite", "Cache", "CanvasTarget", "Capsule",
+      "CinquefoilKnot", "ClippingGroup", "Clock", "ColladaComposer",
+      "ColladaParser", "ColorConverter", "ColorEnvironment", "ColorKeyframeTrack",
+      "ConvexHull", "ConvexObjectBreaker", "CubeRenderTarget", "CubicInterpolant",
+      "Cylindrical", "DRACOExporter", "DataUtils", "DebugEnvironment",
+      "DecoratedTorusKnot4a", "DecoratedTorusKnot4b", "DecoratedTorusKnot5a",
+      "DecoratedTorusKnot5c", "DirectionalLightShadow", "DiscreteInterpolant",
+      "Earcut", "EdgeSplitModifier", "EffectComposer", "EventDispatcher",
+      "FigureEightPolynomialKnot", "Float16BufferAttribute", "Float32BufferAttribute",
+      "Flow", "Fog", "FogExp2", "Font", "FullScreenQuad", "GLBufferAttribute",
+      "GLSLNodeBuilder", "GLSLNodeFunction", "GLSLNodeParser", "GLTFExporter",
+      "GPUComputationRenderer", "GrannyKnot", "GroundedSkybox", "Group",
+      "Gyroscope", "HTMLMesh", "ImageUtils", "ImprovedNoise",
+      "IndirectStorageBufferAttribute", "Info", "InspectorBase",
+      "InstancedBufferAttribute", "InstancedFlow", "InstancedInterleavedBuffer",
+      "InstancedMesh", "Int16BufferAttribute", "Int32BufferAttribute",
+      "Int8BufferAttribute", "InteractiveGroup", "InterleavedBuffer",
+      "InterleavedBufferAttribute", "Interpolant", "JoltPhysics", "KTX2Exporter",
+      "KeyframeTrack", "LDrawUtils", "LOD", "Layers", "Lensflare",
+      "LensflareElement", "LensflareMesh", "LightProbe", "LightProbeGenerator",
+      "LightShadow", "LightingModel", "Line", "Line2", "Line3", "LineLoop",
+      "LineSegments", "LineSegments2", "LinearInterpolant", "LoaderUtils",
+      "LoadingManager", "Lut", "MD2Character", "MD2CharacterComplex",
+      "MarchingCubes", "MathUtils", "Mesh", "MeshSurfaceSampler",
+      "MorphAnimMesh", "MorphBlendMesh", "NURBSSurface", "NURBSVolume",
+      "NodeAttribute", "NodeBuilder", "NodeCache", "NodeCode", "NodeError",
+      "NodeFrame", "NodeFunction", "NodeFunctionInput", "NodeMaterialObserver",
+      "NodeParser", "NodeUniform", "NodeVar", "NodeVarying",
+      "NumberKeyframeTrack", "OBB", "OBJExporter", "Object3D", "Octree",
+      "OculusHandModel", "OculusHandPointerModel", "PLYExporter", "PMREMGenerator",
+      "Path", "PhongLightingModel", "PhysicalLightingModel", "PointLightShadow",
+      "Points", "PostProcessing", "ProgressiveLightMap", "Projector",
+      "PropertyBinding", "PropertyMixer", "QuadMesh", "RapierPhysics",
+      "RectAreaLightTexturesLib", "RectAreaLightUniformsLib", "Reflector",
+      "Refractor", "RenderPipeline", "RenderTarget", "RenderTarget3D",
+      "Renderer", "RoomEnvironment", "SSSLightingModel", "STLExporter",
+      "SVGObject", "SVGRenderer", "Scene", "SceneOptimizer", "SelectionBox",
+      "ShadowMapViewer", "ShadowMaskModel", "ShadowMesh", "Shape", "ShapePath",
+      "ShapeUtils", "SimplexNoise", "SimplifyModifier", "Skeleton", "SkinnedMesh",
+      "Sky", "SkyMesh", "Source", "Spherical", "SphericalHarmonics3",
+      "SpotLightShadow", "Sprite", "StackTrace", "StorageBufferAttribute",
+      "StorageInstancedBufferAttribute", "StringKeyframeTrack", "TSL", "Tab",
+      "TessellateModifier", "TextureUtils", "TiledLighting", "Timer",
+      "TimestampQueryPool", "ToonLightingModel", "TorusKnot", "Transpiler",
+      "TrefoilKnot", "TrefoilPolynomialKnot", "TubePainter", "USDComposer",
+      "USDZExporter", "Uint16BufferAttribute", "Uint32BufferAttribute",
+      "Uint8BufferAttribute", "Uint8ClampedBufferAttribute", "Uniform",
+      "UniformsGroup", "VRButton", "Volume", "VolumeSlice",
+      "VolumetricLightingModel", "WGSLNodeBuilder", "WGSLNodeFunction",
+      "WGSLNodeParser", "Water", "WaterMesh", "WebGL", "WebGL3DRenderTarget",
+      "WebGLArrayRenderTarget", "WebGLCubeRenderTarget", "WebGLRenderTarget",
+      "WebGLRenderer", "WebGLTimestampQueryPool", "WebGPU", "WebGPURenderer",
+      "WebGPUTimestampQueryPool", "Wireframe", "WireframeGeometry2", "WorkerPool"
+    ],
+    "cameras": [
+      "ArrayCamera", "Camera", "CubeCamera", "OrthographicCamera",
+      "PerspectiveCamera", "StereoCamera"
+    ],
+    "lights": [
+      "AmbientLight", "DirectionalLight", "HemisphereLight", "IESSpotLight",
+      "Light", "PointLight", "ProjectorLight", "RectAreaLight", "SpotLight",
+      "XREstimatedLight"
+    ],
+    "materials": [
+      "LDrawConditionalLineMaterial", "Line2NodeMaterial", "LineBasicMaterial",
+      "LineBasicNodeMaterial", "LineDashedMaterial", "LineDashedNodeMaterial",
+      "LineMaterial", "Material", "MeshBasicMaterial", "MeshBasicNodeMaterial",
+      "MeshDepthMaterial", "MeshDistanceMaterial", "MeshLambertMaterial",
+      "MeshLambertNodeMaterial", "MeshMatcapMaterial", "MeshMatcapNodeMaterial",
+      "MeshNormalMaterial", "MeshNormalNodeMaterial", "MeshPhongMaterial",
+      "MeshPhongNodeMaterial", "MeshPhysicalMaterial", "MeshPhysicalNodeMaterial",
+      "MeshSSSNodeMaterial", "MeshStandardMaterial", "MeshStandardNodeMaterial",
+      "MeshToonMaterial", "MeshToonNodeMaterial", "NodeMaterial",
+      "PointsMaterial", "PointsNodeMaterial", "RawShaderMaterial",
+      "ShaderMaterial", "ShadowMaterial", "ShadowNodeMaterial",
+      "SpriteMaterial", "SpriteNodeMaterial", "VolumeNodeMaterial", "WoodNodeMaterial"
+    ],
+    "geometries": [
+      "BoxGeometry", "BoxLineGeometry", "BufferGeometry", "CapsuleGeometry",
+      "CircleGeometry", "ConeGeometry", "ConvexGeometry", "CylinderGeometry",
+      "DecalGeometry", "DodecahedronGeometry", "EdgesGeometry", "ExtrudeGeometry",
+      "IcosahedronGeometry", "InstancedBufferGeometry", "LatheGeometry",
+      "LineGeometry", "LineSegmentsGeometry", "OctahedronGeometry",
+      "ParametricGeometry", "PlaneGeometry", "PolyhedronGeometry", "RingGeometry",
+      "RollerCoasterGeometry", "RollerCoasterLiftersGeometry",
+      "RollerCoasterShadowGeometry", "RoundedBoxGeometry", "ShapeGeometry",
+      "SkyGeometry", "SphereGeometry", "TeapotGeometry", "TetrahedronGeometry",
+      "TextGeometry", "TorusGeometry", "TorusKnotGeometry", "TreesGeometry",
+      "TubeGeometry", "WireframeGeometry"
+    ],
+    "textures": [
+      "CanvasTexture", "CompressedArrayTexture", "CompressedCubeTexture",
+      "CompressedTexture", "CubeDepthTexture", "CubeTexture", "Data3DTexture",
+      "DataArrayTexture", "DataTexture", "DepthTexture", "ExternalTexture",
+      "FlakesTexture", "FramebufferTexture", "Storage3DTexture",
+      "StorageArrayTexture", "StorageTexture", "Texture", "VideoFrameTexture",
+      "VideoTexture"
+    ],
+    "loaders": [
+      "AMFLoader", "AnimationLoader", "AudioLoader", "BVHLoader",
+      "BufferGeometryLoader", "ColladaLoader", "CompressedTextureLoader",
+      "CubeTextureLoader", "DDSLoader", "DRACOLoader", "DataTextureLoader",
+      "EXRLoader", "FBXLoader", "FileLoader", "FontLoader", "GCodeLoader",
+      "GLTFLoader", "HDRCubeTextureLoader", "HDRLoader", "IESLoader",
+      "ImageBitmapLoader", "ImageLoader", "KMZLoader", "KTX2Loader", "KTXLoader",
+      "LDrawLoader", "LUT3dlLoader", "LUTCubeLoader", "LUTImageLoader",
+      "LWOLoader", "Loader", "LottieLoader", "MD2Loader", "MDDLoader",
+      "MTLLoader", "MaterialLoader", "MaterialXLoader", "NRRDLoader",
+      "NodeLoader", "NodeMaterialLoader", "NodeObjectLoader", "OBJLoader",
+      "ObjectLoader", "PCDLoader", "PDBLoader", "PLYLoader", "PVRLoader",
+      "Rhino3dmLoader", "STLLoader", "SVGLoader", "TDSLoader", "TGALoader",
+      "TIFFLoader", "TTFLoader", "TextureLoader", "ThreeMFLoader", "USDLoader",
+      "UltraHDRLoader", "VOXLoader", "VRMLLoader", "VTKLoader", "XYZLoader"
+    ],
+    "controls": [
+      "ArcballControls", "Controls", "DragControls", "FirstPersonControls",
+      "FlyControls", "MapControls", "OrbitControls", "PointerLockControls",
+      "TrackballControls", "TransformControls"
+    ],
+    "helpers": [
+      "AnimationPathHelper", "ArrowHelper", "AxesHelper", "Box3Helper",
+      "BoxHelper", "CCDIKHelper", "CSMHelper", "CameraHelper",
+      "DirectionalLightHelper", "GridHelper", "HemisphereLightHelper",
+      "LightProbeHelper", "OctreeHelper", "PlaneHelper", "PointLightHelper",
+      "PolarGridHelper", "PositionalAudioHelper", "RapierHelper",
+      "RectAreaLightHelper", "SelectionHelper", "SkeletonHelper",
+      "SpotLightHelper", "TextureHelper", "TileShadowNodeHelper",
+      "VertexNormalsHelper", "VertexTangentsHelper", "ViewHelper"
+    ],
+    "animation": [
+      "AnimationAction", "AnimationClip", "AnimationClipCreator",
+      "AnimationMixer", "AnimationObjectGroup", "AnimationUtils"
+    ],
+    "audio": [
+      "Audio", "AudioAnalyser", "AudioContext", "AudioListener", "PositionalAudio"
+    ],
+    "math": [
+      "Box2", "Box3", "Color", "Euler", "Frustum", "FrustumArray",
+      "Matrix2", "Matrix3", "Matrix4", "Plane", "Quaternion",
+      "QuaternionKeyframeTrack", "QuaternionLinearInterpolant", "Ray",
+      "Raycaster", "Sphere", "Triangle", "Vector2", "Vector3", "Vector4",
+      "VectorKeyframeTrack"
+    ],
+    "curves": [
+      "ArcCurve", "CatmullRomCurve3", "CubicBezierCurve", "CubicBezierCurve3",
+      "Curve", "CurvePath", "EllipseCurve", "HeartCurve", "HelixCurve",
+      "KnotCurve", "LineCurve", "LineCurve3", "NURBSCurve",
+      "QuadraticBezierCurve", "QuadraticBezierCurve3", "SplineCurve", "VivianiCurve"
+    ],
+    "effects": [
+      "AnaglyphEffect", "AsciiEffect", "OutlineEffect",
+      "ParallaxBarrierEffect", "StereoEffect"
+    ],
+    "post_processing": [
+      "AfterimagePass", "AnaglyphPassNode", "BloomPass", "BokehPass",
+      "ClearMaskPass", "ClearPass", "CubeTexturePass", "DotScreenPass",
+      "FXAAPass", "FilmPass", "GTAOPass", "GlitchPass", "HalftonePass",
+      "LUTPass", "MaskPass", "OutlinePass", "OutputPass",
+      "ParallaxBarrierPassNode", "Pass", "PassNode", "PixelationPassNode",
+      "ReflectorForSSRPass", "RenderPass", "RenderPixelatedPass",
+      "RenderTransitionPass", "RetroPassNode", "SAOPass", "SMAAPass",
+      "SSAAPassNode", "SSAARenderPass", "SSAOPass", "SSRPass", "SavePass",
+      "ShaderPass", "StereoCompositePassNode", "StereoPassNode",
+      "TAARenderPass", "TexturePass", "ToonOutlinePassNode", "UnrealBloomPass"
+    ],
+    "nodes_tsl": [
+      "AONode", "AfterImageNode", "AmbientLightNode", "AnalyticLightNode",
+      "AnamorphicNode", "ArrayElementNode", "ArrayNode", "AssignNode",
+      "AtomicFunctionNode", "AttributeNode", "BarrierNode",
+      "BasicEnvironmentNode", "BasicLightMapNode", "BatchNode",
+      "BilateralBlurNode", "BitcastNode", "BitcountNode", "BloomNode",
+      "BufferAttributeNode", "BufferNode", "BuiltinNode", "BumpMapNode",
+      "BypassNode", "CSMShadowNode", "ChromaticAberrationNode", "ClippingNode",
+      "CodeNode", "ColorSpaceNode", "ComputeBuiltinNode", "ComputeNode",
+      "ConditionalNode", "ConstNode", "ContextNode", "ConvertNode",
+      "CubeMapNode", "CubeTextureNode", "DenoiseNode", "DepthOfFieldNode",
+      "DirectionalLightNode", "DotScreenNode", "EnvironmentNode", "EventNode",
+      "ExpressionNode", "FXAANode", "FilmNode", "FlipNode", "FrontFacingNode",
+      "FunctionCallNode", "FunctionNode", "FunctionOverloadingNode", "GTAONode",
+      "GaussianBlurNode", "GodraysNode", "HemisphereLightNode",
+      "IESSpotLightNode", "IndexNode", "InputNode", "InspectorNode",
+      "InstanceNode", "InstancedMeshNode", "IrradianceNode", "IsolateNode",
+      "JoinNode", "LensflareNode", "LightProbeNode", "LightingContextNode",
+      "LightingNode", "LightsNode", "LoopNode", "Lut3DNode", "MRTNode",
+      "MaterialNode", "MaterialReferenceNode", "MathNode", "MaxMipLevelNode",
+      "MemberNode", "ModelNode", "MorphNode", "Node", "NormalMapNode",
+      "Object3DNode", "OperatorNode", "OutlineNode", "OutputStructNode",
+      "PMREMNode", "PackFloatNode", "ParameterNode", "PassMultipleTextureNode",
+      "PassTextureNode", "PixelationNode", "PointLightNode", "PointShadowNode",
+      "PointUVNode", "ProjectorLightNode", "PropertyNode", "RGBShiftNode",
+      "RTTNode", "RangeNode", "RectAreaLightNode", "ReferenceBaseNode",
+      "ReferenceElementNode", "ReferenceNode", "ReflectorNode", "RemapNode",
+      "RenderOutputNode", "RendererReferenceNode", "RotateNode", "SMAANode",
+      "SSGINode", "SSRNode", "SSSNode", "SampleNode", "ScreenNode", "SetNode",
+      "ShadowBaseNode", "ShadowNode", "SkinningNode", "SobelOperatorNode",
+      "SplitNode", "SpotLightNode", "StackNode", "StorageArrayElementNode",
+      "StorageBufferNode", "StorageTextureNode", "StructNode", "StructTypeNode",
+      "SubBuildNode", "SubgroupFunctionNode", "TRAANode", "TempNode",
+      "Texture3DNode", "TextureNode", "TextureSizeNode", "TileShadowNode",
+      "TiledLightsNode", "ToneMappingNode", "TransitionNode",
+      "UniformArrayElementNode", "UniformArrayNode", "UniformGroupNode",
+      "UniformNode", "UnpackFloatNode", "UserDataNode", "VarNode",
+      "VaryingNode", "VelocityNode", "VertexColorNode", "ViewportDepthNode",
+      "ViewportDepthTextureNode", "ViewportSharedTextureNode",
+      "ViewportTextureNode", "WorkgroupInfoElementNode", "WorkgroupInfoNode"
+    ],
+    "webxr": [
+      "EXRExporter", "WebXRDepthSensing", "WebXRManager", "XRButton",
+      "XRControllerModel", "XRControllerModelFactory", "XRHandMeshModel",
+      "XRHandModel", "XRHandModelFactory", "XRHandPrimitiveModel",
+      "XRManager", "XRPlanes"
+    ],
+    "shader_modules": [
+      "module-ACESFilmicToneMappingShader", "module-AfterimageShader",
+      "module-BasicShader", "module-Bayer", "module-BleachBypassShader",
+      "module-BlendShader", "module-BokehShader", "module-BokehShader2",
+      "module-BrightnessContrastShader", "module-BufferGeometryUtils",
+      "module-CSMShader", "module-CameraUtils", "module-ColorCorrectionShader",
+      "module-ColorSpaces", "module-ColorifyShader", "module-ConvolutionShader",
+      "module-CopyShader", "module-DOFMipMapShader",
+      "module-DepthLimitedBlurShader", "module-DigitalGlitch",
+      "module-DotScreenShader", "module-ExposureShader", "module-FXAAShader",
+      "module-FilmShader", "module-FocusShader", "module-FreiChenShader",
+      "module-GTAOShader", "module-GammaCorrectionShader",
+      "module-GeometryCompressionUtils", "module-GeometryUtils",
+      "module-HalftoneShader", "module-HorizontalBlurShader",
+      "module-HorizontalTiltShiftShader", "module-HueSaturationShader",
+      "module-Interpolations", "module-KaleidoShader",
+      "module-LuminosityHighPassShader", "module-LuminosityShader",
+      "module-MirrorShader", "module-NURBSUtils", "module-NormalMapShader",
+      "module-OutputShader", "module-ParametricFunctions",
+      "module-PoissonDenoiseShader", "module-RGBShiftShader",
+      "module-Raymarching", "module-SAOShader", "module-SMAAShader",
+      "module-SSAOShader", "module-SSRShader", "module-SceneUtils",
+      "module-SepiaShader", "module-SkeletonUtils", "module-SobelOperatorShader",
+      "module-SortUtils", "module-SubsurfaceScatteringShader", "module-Text2D",
+      "module-TriangleBlurShader", "module-UVsDebug", "module-UniformsUtils",
+      "module-UnpackDepthRGBAShader", "module-VelocityShader",
+      "module-VerticalBlurShader", "module-VerticalTiltShiftShader",
+      "module-VignetteShader", "module-VolumeShader",
+      "module-WaterRefractionShader", "module-WebGLTextureUtils",
+      "module-WebGPUTextureUtils"
+    ]
+  },
+
+  "external_libraries": {
+    "gsap_scrolltrigger": {
+      "crawl_url": "https://gsap.com/docs/v3/Plugins/ScrollTrigger/",
+      "fetch_method": "tavily",
+      "description": "GSAP ScrollTrigger connects scroll position to animations. Enables scrubbing, pinning, snapping, and scroll-driven camera paths. Free as of 2025.",
+      "keywords": ["scroll", "scrolltrigger", "cinematic scroll", "pin", "scrub", "parallax", "scroll animation", "reveal", "on scroll"],
+      "codesnippet": "import { gsap } from 'gsap';\nimport { ScrollTrigger } from 'gsap/ScrollTrigger';\n\ngsap.registerPlugin(ScrollTrigger);\n\n// Basic scroll-triggered animation\ngsap.to('.box', {\n  scrollTrigger: {\n    trigger: '.box',\n    start: 'top center',\n    end: 'bottom top',\n    scrub: 1,\n    pin: true,\n    markers: false\n  },\n  x: 500,\n  rotation: 360\n});\n\n// Timeline pinned section (storytelling scroll)\nconst tl = gsap.timeline({\n  scrollTrigger: {\n    trigger: '.section',\n    start: 'top top',\n    end: '+=1000',\n    scrub: true,\n    pin: true\n  }\n});\ntl.to('.title', { opacity: 1, y: 0 })\n  .to('.image', { scale: 1.2 })\n  .to('.text', { opacity: 1 });\n\n// Horizontal scroll\ngsap.to('.wrapper', {\n  xPercent: -100,\n  scrollTrigger: {\n    trigger: '.container',\n    pin: true,\n    scrub: true,\n    end: '+=1000'\n  }\n});\n\n// Callbacks\nScrollTrigger.create({\n  trigger: '.element',\n  start: 'top 80%',\n  onEnter: ({ progress, direction, isActive }) => console.log('entered'),\n  onLeave: () => console.log('left'),\n  onEnterBack: () => console.log('entered back'),\n  onUpdate: self => console.log('progress:', self.progress)\n});",
+      "dependencies": "npm install gsap"
+    },
+
+    "lenis": {
+      "crawl_url": "https://github.com/darkroomengineering/lenis",
+      "fetch_method": "tavily",
+      "description": "Lenis is a lightweight smooth scroll library that synchronizes native scroll with requestAnimationFrame, keeping CSS sticky, IntersectionObserver, and GSAP ScrollTrigger all working correctly.",
+      "keywords": ["smooth scroll", "lenis", "scroll sync", "butter scroll", "inertia scroll", "lerp scroll"],
+      "codesnippet": "import Lenis from 'lenis';\nimport { gsap } from 'gsap';\nimport { ScrollTrigger } from 'gsap/ScrollTrigger';\n\n// Basic Lenis setup\nconst lenis = new Lenis({\n  duration: 1.2,        // scroll duration multiplier\n  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),\n  orientation: 'vertical',\n  gestureOrientation: 'vertical',\n  smoothWheel: true,\n  wheelMultiplier: 1,\n  touchMultiplier: 2,\n  infinite: false\n});\n\n// Standalone RAF loop\nfunction raf(time) {\n  lenis.raf(time);\n  requestAnimationFrame(raf);\n}\nrequestAnimationFrame(raf);\n\n// GSAP ScrollTrigger integration (recommended)\nlenis.on('scroll', ScrollTrigger.update);\ngsap.ticker.add((time) => {\n  lenis.raf(time * 1000);\n});\ngsap.ticker.lagSmoothing(0);\n\n// Listen to scroll events\nlenis.on('scroll', (e) => {\n  console.log(e.scroll, e.progress, e.velocity, e.direction);\n});\n\n// Control methods\nlenis.stop();     // pause scrolling\nlenis.start();    // resume scrolling\nlenis.scrollTo('#target', { offset: -100, duration: 2 });\n\n// Required CSS\n// html.lenis, html.lenis body { height: auto; }\n// .lenis.lenis-smooth { scroll-behavior: auto !important; }\n// .lenis.lenis-stopped { overflow: hidden; }",
+      "dependencies": "npm install lenis"
+    },
+
+    "rapier": {
+      "crawl_url": "https://rapier.rs/docs/user_guides/javascript/getting_started_js/",
+      "fetch_method": "tavily",
+      "description": "Rapier is a high-performance Rust-based physics engine compiled to WASM. Handles rigid bodies, colliders, joints, gravity, forces, and collision events. Used with Three.js by syncing physics body positions to mesh positions each frame.",
+      "keywords": ["physics", "rapier", "rigid body", "collision", "gravity", "bounce", "fall", "physics engine", "simulate", "forces", "joints"],
+      "codesnippet": "import('@dimforge/rapier3d-compat').then(RAPIER => {\n  RAPIER.init().then(() => {\n\n    // 1. Create world with gravity\n    const gravity = { x: 0.0, y: -9.81, z: 0.0 };\n    const world = new RAPIER.World(gravity);\n\n    // 2. Static ground collider (no rigid body = fixed)\n    const groundDesc = RAPIER.ColliderDesc.cuboid(10.0, 0.1, 10.0);\n    world.createCollider(groundDesc);\n\n    // 3. Dynamic rigid body\n    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()\n      .setTranslation(0.0, 5.0, 0.0)\n      .setLinearDamping(0.5)\n      .setGravityScale(1.0);\n    const rigidBody = world.createRigidBody(rigidBodyDesc);\n\n    // 4. Attach collider to rigid body\n    const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5)\n      .setFriction(0.8)\n      .setRestitution(0.3)\n      .setDensity(1.0);\n    world.createCollider(colliderDesc, rigidBody);\n\n    // 5. Three.js mesh (separate from physics body)\n    const mesh = new THREE.Mesh(\n      new THREE.BoxGeometry(1, 1, 1),\n      new THREE.MeshStandardMaterial({ color: 0xff6600 })\n    );\n    scene.add(mesh);\n\n    // 6. Sync loop — copy physics position to mesh every frame\n    function animate() {\n      world.step(); // advance physics\n      const pos = rigidBody.translation();\n      const rot = rigidBody.rotation();\n      mesh.position.set(pos.x, pos.y, pos.z);\n      mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w);\n    }\n\n    // Collider shapes: cuboid, ball, capsule, cylinder, trimesh, heightfield\n    // Body types: dynamic(), fixed(), kinematicPositionBased(), kinematicVelocityBased()\n    // Apply forces: rigidBody.applyImpulse({ x:0, y:10, z:0 }, true);\n    // Apply torque:  rigidBody.applyTorqueImpulse({ x:0, y:1, z:0 }, true);\n    // Set velocity:  rigidBody.setLinvel({ x:1, y:3, z:0 }, true);\n  });\n});",
+      "dependencies": "npm install @dimforge/rapier3d-compat"
+    },
+
+    "howler": {
+      "crawl_url": "https://github.com/goldfire/howler.js#documentation",
+      "fetch_method": "tavily",
+      "description": "Howler.js is a full-featured spatial audio library. Supports positional 3D audio (Web Audio API), audio sprites, streaming, fade in/out, and automatic codec detection. Far more capable than Three.js's built-in Audio for immersive experiences.",
+      "keywords": ["audio", "sound", "music", "spatial audio", "3d sound", "howler", "positional audio", "sound effects", "background music", "audio sprite"],
+      "codesnippet": "import { Howl, Howler } from 'howler';\n\n// Basic sound\nconst sound = new Howl({\n  src: ['sound.webm', 'sound.mp3'],\n  volume: 0.5,\n  loop: false,\n  autoplay: false,\n  onend: () => console.log('Finished!')\n});\nsound.play();\nsound.pause();\nsound.stop();\nsound.fade(0, 1, 2000); // fade from 0 to 1 over 2s\n\n// 3D Positional audio\nconst spatial = new Howl({\n  src: ['ambient.webm', 'ambient.mp3'],\n  loop: true,\n  volume: 1.0,\n  pannerAttr: {\n    panningModel: 'HRTF',\n    refDistance: 1,\n    rolloffFactor: 1,\n    distanceModel: 'inverse'\n  }\n});\nspatial.pos(x, y, z);       // set sound position in 3D space\nspatial.play();\n\n// Update listener position from Three.js camera each frame\nHowler.pos(\n  camera.position.x,\n  camera.position.y,\n  camera.position.z\n);\nHowler.orientation(\n  forward.x, forward.y, forward.z, // look direction\n  up.x, up.y, up.z                  // up vector\n);\n\n// Audio sprites (multiple sounds in one file)\nconst sprite = new Howl({\n  src: ['sprites.webm', 'sprites.mp3'],\n  sprite: {\n    footstep: [0, 350],\n    jump:     [500, 300],\n    land:     [1000, 450]\n  }\n});\nsprite.play('footstep');\nsprite.play('jump');",
+      "dependencies": "npm install howler"
+    }
+  },
+
+  "intent_map": {
+    "particles": {
+      "keywords": ["particles", "confetti", "snow", "rain", "sparks", "smoke", "dust", "fireflies", "stars", "galaxy", "instances"],
+      "threejs_docs": ["Points", "PointsMaterial", "PointsNodeMaterial", "InstancedMesh", "InstancedBufferAttribute", "InstancedBufferGeometry", "BufferAttribute", "RangeNode"]
+    },
+    "reflections": {
+      "keywords": ["reflection", "mirror", "metallic", "chrome", "shiny", "glossy", "envmap", "ibl", "pbr", "realistic material"],
+      "threejs_docs": ["PMREMGenerator", "CubeRenderTarget", "CubeCamera", "MeshPhysicalMaterial", "MeshPhysicalNodeMaterial", "RoomEnvironment", "ReflectorNode", "Reflector"]
+    },
+    "water_ocean": {
+      "keywords": ["water", "ocean", "sea", "lake", "river", "ripple", "wave", "fluid", "pool"],
+      "threejs_docs": ["WaterMesh", "Water", "module-WaterRefractionShader"]
+    },
+    "post_processing": {
+      "keywords": ["bloom", "glow", "blur", "film grain", "chromatic aberration", "vignette", "color grade", "post process", "depth of field", "dof", "bokeh", "fxaa", "ssao", "ambient occlusion", "motion blur", "glitch"],
+      "threejs_docs": ["BloomNode", "GaussianBlurNode", "FXAANode", "SMAANode", "FilmNode", "ChromaticAberrationNode", "DepthOfFieldNode", "GTAONode", "TRAANode", "RenderPipeline", "PostProcessing", "UnrealBloomPass", "SSAOPass", "OutlinePass", "RGBShiftNode", "AnamorphicNode"]
+    },
+    "animation": {
+      "keywords": ["animate", "animation", "walk", "run", "idle", "morph", "skinning", "rigged", "character", "keyframe"],
+      "threejs_docs": ["AnimationMixer", "AnimationClip", "AnimationAction", "AnimationUtils", "SkinnedMesh", "Skeleton", "MorphNode", "AnimationClipCreator"]
+    },
+    "scroll_animation": {
+      "keywords": ["scroll", "scrolltrigger", "on scroll", "parallax", "camera path", "journey", "cinematic", "scroll reveal", "scroll driven"],
+      "threejs_docs": ["CatmullRomCurve3", "TubeGeometry", "OrbitControls"],
+      "external_docs": ["gsap_scrolltrigger", "lenis"]
+    },
+    "smooth_scroll": {
+      "keywords": ["smooth scroll", "lenis", "butter scroll", "inertia", "scroll feel"],
+      "threejs_docs": [],
+      "external_docs": ["lenis", "gsap_scrolltrigger"]
+    },
+    "models": {
+      "keywords": ["model", "gltf", "glb", "fbx", "obj", "load", "import 3d", "3d file", "asset"],
+      "threejs_docs": ["GLTFLoader", "DRACOLoader", "OBJLoader", "FBXLoader", "Group", "Scene", "KTX2Loader"]
+    },
+    "text_3d": {
+      "keywords": ["3d text", "extruded text", "typeface", "font", "word", "letter", "typography 3d"],
+      "threejs_docs": ["TextGeometry", "FontLoader", "ExtrudeGeometry"]
+    },
+    "physics": {
+      "keywords": ["physics", "collision", "gravity", "rigid body", "bounce", "fall", "simulate", "rapier", "jolt", "ammo", "forces", "constraints"],
+      "threejs_docs": ["RapierPhysics", "JoltPhysics", "AmmoPhysics", "RapierHelper"],
+      "external_docs": ["rapier"]
+    },
+    "shadows": {
+      "keywords": ["shadow", "soft shadow", "pcss", "csm", "shadow map", "cast shadow"],
+      "threejs_docs": ["DirectionalLightShadow", "SpotLightShadow", "PointLightShadow", "ShadowNode", "CSM", "LightShadow", "CSMShadowNode"]
+    },
+    "sky": {
+      "keywords": ["sky", "skybox", "hdri", "sunset", "sunrise", "atmosphere", "background", "environment", "stars sky"],
+      "threejs_docs": ["Sky", "SkyMesh", "SkyGeometry", "RoomEnvironment", "ColorEnvironment", "PMREMGenerator", "GroundedSkybox"]
+    },
+    "shaders_custom": {
+      "keywords": ["shader", "glsl", "custom material", "noise", "distortion", "holographic", "dissolve", "tsl", "node material", "procedural", "wgsl", "gpu shader"],
+      "threejs_docs": ["TSL", "MeshStandardNodeMaterial", "MeshPhysicalNodeMaterial", "MeshBasicNodeMaterial", "NodeMaterial", "NormalMapNode", "BumpMapNode", "SimplexNoise", "ImprovedNoise"]
+    },
+    "spatial_audio": {
+      "keywords": ["audio", "sound", "music", "spatial audio", "3d sound", "positional audio", "sound effects", "ambient sound"],
+      "threejs_docs": ["Audio", "AudioListener", "PositionalAudio", "AudioAnalyser"],
+      "external_docs": ["howler"]
+    },
+    "compute_gpu": {
+      "keywords": ["compute", "gpu", "webgpu", "simulation", "fluid simulation", "cloth", "massive instancing", "parallel compute"],
+      "threejs_docs": ["ComputeNode", "StorageBufferNode", "StorageBufferAttribute", "StorageInstancedBufferAttribute", "WebGPURenderer", "WebGPU", "GPUComputationRenderer"]
+    },
+    "controls": {
+      "keywords": ["orbit", "drag", "fly", "first person", "trackball", "pan", "zoom", "rotate camera", "pointer lock", "fps"],
+      "threejs_docs": ["OrbitControls", "DragControls", "FlyControls", "FirstPersonControls", "TrackballControls", "PointerLockControls", "TransformControls"]
+    },
+    "lighting": {
+      "keywords": ["light", "lamp", "neon", "spotlight", "point light", "area light", "rect light", "ies", "lighting", "ambient"],
+      "threejs_docs": ["DirectionalLight", "PointLight", "SpotLight", "RectAreaLight", "HemisphereLight", "AmbientLight", "IESSpotLight", "RectAreaLightUniformsLib", "LightProbe", "LightProbeGenerator"]
+    },
+    "geometry_procedural": {
+      "keywords": ["terrain", "landscape", "procedural", "custom geometry", "heightmap", "mesh deform", "displacement", "morph"],
+      "threejs_docs": ["PlaneGeometry", "BufferGeometry", "BufferAttribute", "SphereGeometry", "TorusKnotGeometry", "LatheGeometry", "TubeGeometry", "ExtrudeGeometry", "MarchingCubes"]
+    },
+    "video_texture": {
+      "keywords": ["video", "screen", "monitor", "tv", "canvas texture", "live texture", "video background"],
+      "threejs_docs": ["VideoTexture", "VideoFrameTexture", "CanvasTexture"]
+    },
+    "xr_vr_ar": {
+      "keywords": ["vr", "ar", "xr", "webxr", "virtual reality", "augmented reality", "immersive", "headset", "oculus", "quest"],
+      "threejs_docs": ["WebXRManager", "VRButton", "ARButton", "XRControllerModelFactory", "XRHandModelFactory", "WebXRDepthSensing", "XRPlanes"]
+    },
+    "performance": {
+      "keywords": ["performance", "lod", "level of detail", "optimize", "batching", "culling", "large scene", "fps", "slow"],
+      "threejs_docs": ["LOD", "BatchedMesh", "InstancedMesh", "SceneOptimizer", "DRACOLoader", "KTX2Loader"]
+    },
+    "fog_atmosphere": {
+      "keywords": ["fog", "mist", "haze", "atmosphere", "volumetric", "depth fog"],
+      "threejs_docs": ["Fog", "FogExp2", "VolumetricLightingModel"]
+    },
+    "css_html_3d": {
+      "keywords": ["html in 3d", "css 3d", "dom element 3d", "label 3d", "html overlay"],
+      "threejs_docs": ["CSS3DRenderer", "CSS3DObject", "CSS3DSprite", "CSS2DRenderer", "CSS2DObject", "HTMLMesh"]
+    }
+  },
+
+  "core_docs_always_included": [
+    "WebGLRenderer",
+    "Scene",
+    "PerspectiveCamera",
+    "Mesh",
+    "MeshStandardMaterial",
+    "BoxGeometry",
+    "SphereGeometry",
+    "DirectionalLight",
+    "AmbientLight",
+    "OrbitControls",
+    "BufferGeometry",
+    "Group",
+    "Object3D",
+    "Texture",
+    "TextureLoader",
+    "Clock",
+    "Vector3",
+    "Color",
+    "Raycaster",
+    "LoadingManager"
+  ]
+}

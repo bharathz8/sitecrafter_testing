@@ -31,6 +31,7 @@ import { analyzeModificationRequest, applyModifications } from './services/modif
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { ingestDocumentation, queryDocumentation, generateComponent, testPipeline } from './rag/rag-3d';
+import { classifyIntents, resolveContext, formatDocsForPrompt } from "./services/context-3d.service";
 dotenv.config();
 
 // Configure multer for file uploads (memory storage)
@@ -135,6 +136,50 @@ app.get("/test-3d", async (_req: Request, res: Response) => {
   }
 });
 
+app.post("/test/context-3d", async (req: Request, res: Response) => {
+  try {
+    const { prompt, tags } = req.body;
+    let finalTags = tags || [];
+
+    console.log('\n🧪 /TEST/CONTEXT-3D ENDPOINT CALLED');
+
+    if (prompt && !tags) {
+      console.log(`[test-context] Classifying intents for prompt: "${prompt.slice(0, 50)}..."`);
+      finalTags = await classifyIntents(prompt);
+    }
+
+    if (finalTags.length === 0) {
+      res.status(400).json({ error: "Provide either 'prompt' or 'tags' array" });
+      return;
+    }
+
+    console.log(`[test-context] Resolving context for tags: ${finalTags.join(', ')}`);
+    const resolved = await resolveContext(finalTags);
+    const formatted = formatDocsForPrompt(resolved);
+
+    res.json({
+      success: true,
+      intents: finalTags,
+      counts: {
+        threejs: resolved.threejsDocs.length,
+        external: resolved.externalDocs.length
+      },
+      docs: {
+        threejs: resolved.threejsDocs,
+        external: resolved.externalDocs
+      },
+      fullContextString: formatted
+    });
+
+  } catch (error: any) {
+    console.error("[test-context] Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Migration endpoint - adds userId to existing users (run once)
 app.post('/api/migrate-users', async (req: Request, res: Response) => {
   try {
@@ -160,13 +205,6 @@ app.post('/api/migrate-users', async (req: Request, res: Response) => {
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const systemPrompt = getSystemPrompt();
 
-// const genAI = new GoogleGenerativeAI(process.env.gemini);
-// const model = genAI.getGenerativeModel({
-//   model: "gemini-2.5-flash",
-//   systemInstruction: getSystemPrompt(),
-// });
-
-// Template endpoint - uses projectType from frontend (no keyword detection)
 app.post("/template", async (req: any, res: any) => {
   const { prompt, projectType } = req.body;
 
@@ -200,7 +238,7 @@ app.post("/template", async (req: any, res: any) => {
   return;
 });
 
-// Planning endpoint
+
 app.post("/planning", async (req, res) => {
   try {
     const { requirements, projectType, enable3D } = req.body;
@@ -215,7 +253,7 @@ app.post("/planning", async (req, res) => {
 
     console.log(`[Planning] Project type from frontend: ${projectType || 'not provided'}`);
 
-    const is3D = enable3D === true || projectType === '3d' || requirements.toLowerCase().includes('3d');
+    const is3D = enable3D === true || enable3D === 'true' || projectType === '3d' || requirements.toLowerCase().includes('3d');
 
     let result;
     if (is3D) {
@@ -237,7 +275,6 @@ app.post("/planning", async (req, res) => {
   }
 });
 
-// Chat endpoint - Now with robust frontend generation
 app.post("/chat", async (req, res) => {
   try {
     interface Message {
@@ -307,11 +344,6 @@ ${PRODUCTION_GENERATION_INSTRUCTIONS}`;
 });
 
 
-// ═══════════════════════════════════════════════════════════════════════════
-// LangGraph-based Generation Endpoint
-// Uses stateful graph with proper context passing and repair loops
-// ═══════════════════════════════════════════════════════════════════════════
-
 app.post("/chat/langgraph", async (req: Request, res: Response) => {
   try {
     const { prompt, projectType = 'frontend' } = req.body;
@@ -363,9 +395,7 @@ app.post("/chat/langgraph", async (req: Request, res: Response) => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// NEW SSE STREAMING ENDPOINT FOR REAL-TIME FILE UPDATES
-// ═══════════════════════════════════════════════════════════════════════════
+
 app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
   const { prompt, projectType = 'frontend', enable3D = false, skipBlueprintGeneration = false } = req.body;
 
@@ -474,7 +504,7 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
   }
 });
 
-//testing mem0
+
 
 
 
@@ -483,7 +513,7 @@ app.post("/chat/langgraph-stream", async (req: Request, res: Response) => {
 const MEM0_API_KEY = process.env.mem0 || "";
 const MEM0_API_URL = "https://api.mem0.ai/v1";
 
-// Create axios client with types
+
 const mem0Client: AxiosInstance = axios.create({
   baseURL: MEM0_API_URL,
   headers: {
@@ -531,14 +561,10 @@ app.post("/test/mem0", async (req: Request, res: Response) => {
 
 
 
-// ============================================================
-// NEW: COMPLETE FULLSTACK GENERATION (BEST - WITH ANALYSIS)
-// ============================================================
+
 app.post("/build/fullstack-complete", generateCompleteFullstack);
 
-// ============================================================
-// NEW: INTEGRATED FULLSTACK GENERATION (RECOMMENDED)
-// ============================================================
+
 app.post("/build/fullstack-integrated", generateIntegratedFullstack);
 
 // TEST: Separate Backend/Frontend Generation (No Context Sharing)
@@ -993,14 +1019,7 @@ function extractBackendStructure(code: string): string {
   return structure.length > 0 ? structure.join('\n') : 'Backend structure analysis pending...';
 }
 
-// ====================================
-// ERROR FIXING ENDPOINTS (for WebContainer)
-// ====================================
 
-/**
- * POST /api/fix-error
- * Uses LLM to fix code errors from WebContainer
- */
 app.post('/api/fix-error', async (req: Request, res: Response) => {
   try {
     const { error, filePath, fileContent } = req.body;
@@ -1030,10 +1049,7 @@ app.post('/api/fix-error', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/analyze-code
- * Analyzes code files for potential issues
- */
+
 app.post('/api/analyze-code', async (req: Request, res: Response) => {
   try {
     const { files } = req.body;
@@ -1061,14 +1077,7 @@ app.post('/api/analyze-code', async (req: Request, res: Response) => {
   }
 });
 
-// ====================================
-// PROJECT STORAGE ENDPOINTS
-// ====================================
 
-/**
- * POST /api/projects
- * Save a new project or update existing one
- */
 app.post('/api/projects', async (req: Request, res: Response) => {
   try {
     const { sessionId, userId, name, prompt, files, blueprint } = req.body;
@@ -1111,10 +1120,7 @@ app.post('/api/projects', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/projects
- * Get all projects (filtered by userId for logged-in users, or sessionId for anonymous)
- */
+
 app.get('/api/projects', async (req: Request, res: Response) => {
   try {
     const { sessionId, userId } = req.query;
@@ -1144,10 +1150,7 @@ app.get('/api/projects', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/projects/:projectId
- * Get a single project with all files
- */
+
 app.get('/api/projects/:projectId', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -1169,14 +1172,6 @@ app.get('/api/projects/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/projects/:projectId/chat
- * Intelligent chat endpoint - handles questions, modifications, or explanations
- * Detects intent and responds appropriately:
- * - Questions: Answer without modifying files
- * - Modifications: Analyze and apply changes
- * - Explanations: Explain project structure
- */
 app.post('/api/projects/:projectId/chat', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -1332,10 +1327,7 @@ Answer the user's question specifically:
   }
 });
 
-/**
- * POST /api/projects/:projectId/modify
- * Apply follow-up modifications to a project
- */
+
 app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -1402,10 +1394,7 @@ app.post('/api/projects/:projectId/modify', async (req: Request, res: Response) 
   }
 });
 
-/**
- * PATCH /api/projects/:projectId/files
- * Update one or more files in a project
- */
+
 app.patch('/api/projects/:projectId/files', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -1455,10 +1444,7 @@ app.patch('/api/projects/:projectId/files', async (req: Request, res: Response) 
   }
 });
 
-/**
- * DELETE /api/projects/:projectId
- * Delete a project
- */
+
 app.delete('/api/projects/:projectId', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -1479,10 +1465,6 @@ app.delete('/api/projects/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/projects/upload
- * Upload a zip file and import as a project
- */
 app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
@@ -1519,15 +1501,15 @@ app.post('/api/projects/upload', upload.single('zipFile'), async (req: Request, 
       }
 
       const rootConfigs = [
-        'package.json', 'tsconfig.json', 'tsconfig.node.json', 'vite.config.ts', 
+        'package.json', 'tsconfig.json', 'tsconfig.node.json', 'vite.config.ts',
         'postcss.config.js', 'tailwind.config.js', 'eslint.config.js', 'index.html',
         '.gitignore', '.env', '.env.local', 'package-lock.json', 'README.md'
       ];
-      
+
       const fileName = entryName.split('/').pop()?.toLowerCase() || '';
-      const isInStandardFolder = entryName.toLowerCase().startsWith('src/') || 
-                                entryName.toLowerCase().startsWith('public/') ||
-                                entryName.toLowerCase().startsWith('node_modules/');
+      const isInStandardFolder = entryName.toLowerCase().startsWith('src/') ||
+        entryName.toLowerCase().startsWith('public/') ||
+        entryName.toLowerCase().startsWith('node_modules/');
 
       if (!isInStandardFolder && !rootConfigs.includes(fileName)) {
         entryName = 'src/' + entryName;

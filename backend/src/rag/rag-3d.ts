@@ -14,10 +14,19 @@ import fs from "fs";
 const HNSW_PERSIST_DIR = path.resolve(__dirname, "../../hnsw_3d_docs");
 const CHUNK_SIZE = 512;
 const CHUNK_OVERLAP = 100;
-const TOP_K = 5;
+const TOP_K = 12;
 const EMBED_BATCH_SIZE = 5;
 const EMBED_BATCH_DELAY = 2500;
 const SCRAPE_DELAY = 250;
+
+// Tracks per-key failure count within the current generation run.
+// Keys that fail 3+ times are skipped automatically to avoid cumulative 1 s delays.
+const runFailureCounts = new Map<number, number>();
+
+/** Call at the start of each new generation run to reset failure tracking. */
+export function resetEmbedFailureCounts(): void {
+    runFailureCounts.clear();
+}
 
 function sleep(ms: number): Promise<void> {
     return new Promise((r) => setTimeout(r, ms));
@@ -204,15 +213,19 @@ class RotatingBatchedEmbeddings extends Embeddings {
         const startIdx = Math.floor(Math.random() * this.keys.length);
         for (let attempt = 0; attempt < this.keys.length; attempt++) {
             const keyIdx = (startIdx + attempt) % this.keys.length;
+            // Skip keys that have permanently failed 3+ times this run
+            if ((runFailureCounts.get(keyIdx) || 0) >= 3) continue;
             try {
                 const embedder = makeEmbeddingForKey(this.keys[keyIdx], this.taskType);
                 const vec = await embedder.embedQuery(text.replace(/\s+/g, " ").trim());
                 if (vec && vec.length > 0) return vec;
             } catch (err: any) {
+                // Track cumulative failure count for this key
+                runFailureCounts.set(keyIdx, (runFailureCounts.get(keyIdx) || 0) + 1);
                 if (attempt === this.keys.length - 1) throw err;
                 const msg = err.message?.slice(0, 80) || "";
                 const waitMs = (msg.includes("429") || msg.includes("quota")) ? 5000 : 1000;
-                console.warn(`[Embed] Query failed on key #${keyIdx + 1}: ${msg} -- trying next (wait ${waitMs / 1000}s)`);
+                console.warn(`[Embed] Query failed on key #${keyIdx + 1} (${runFailureCounts.get(keyIdx)}/3 failures): ${msg} -- trying next (wait ${waitMs / 1000}s)`);
                 await sleep(waitMs);
             }
         }
@@ -646,6 +659,75 @@ export async function queryDocumentation(query: string) {
     const sources = results.map((doc: any) => ({ module: (doc.metadata as any).module || "", url: (doc.metadata as any).url || "" }));
 
     return { query, retrievedChunks: results.length, context, sources };
+}
+
+/**
+ * Module-balanced diverse retrieval.
+ * Fetches topK*3 candidates, groups by module (threejs/drei/r3f/general),
+ * then selects proportionally: 30% threejs, 40% drei, 30% r3f/general.
+ */
+export async function queryDocumentationDiverse(query: string) {
+    if (!query?.trim()) throw new Error("Query cannot be empty");
+
+    const keys = getGeminiKeys();
+    const embeddings = new RotatingBatchedEmbeddings(keys, TaskType.RETRIEVAL_QUERY);
+
+    let vectorStore: HNSWLib;
+    try {
+        vectorStore = await HNSWLib.load(HNSW_PERSIST_DIR, embeddings);
+    } catch {
+        return { query, retrievedChunks: 0, context: "Vector store not found. Run POST /ingest-3d first.", sources: [] as { module: string; url: string }[] };
+    }
+
+    // Fetch 3x candidates for diversity selection
+    const candidateCount = TOP_K * 3;
+    const results = await vectorStore.similaritySearch(query, candidateCount);
+
+    // Group by module
+    const buckets: Record<string, typeof results> = { threejs: [], drei: [], r3f: [], general: [] };
+    for (const doc of results) {
+        const module = ((doc.metadata as any)?.module || 'general').toLowerCase();
+        if (module.includes('three') && !module.includes('fiber')) buckets.threejs.push(doc);
+        else if (module.includes('drei')) buckets.drei.push(doc);
+        else if (module.includes('r3f') || module.includes('fiber') || module.includes('react-three')) buckets.r3f.push(doc);
+        else buckets.general.push(doc);
+    }
+
+    // Proportional selection: 30% threejs, 40% drei, 30% r3f+general
+    const threejsCount = Math.ceil(TOP_K * 0.3);
+    const dreiCount = Math.ceil(TOP_K * 0.4);
+    const r3fCount = TOP_K - threejsCount - dreiCount;
+
+    const selected = [
+        ...buckets.threejs.slice(0, threejsCount),
+        ...buckets.drei.slice(0, dreiCount),
+        ...buckets.r3f.slice(0, r3fCount),
+        ...buckets.general.slice(0, Math.max(0, TOP_K - buckets.threejs.slice(0, threejsCount).length - buckets.drei.slice(0, dreiCount).length - buckets.r3f.slice(0, r3fCount).length)),
+    ].slice(0, TOP_K);
+
+    // If any bucket was short, fill from remaining candidates
+    if (selected.length < TOP_K) {
+        const selectedSet = new Set(selected);
+        for (const doc of results) {
+            if (selected.length >= TOP_K) break;
+            if (!selectedSet.has(doc)) {
+                selected.push(doc);
+                selectedSet.add(doc);
+            }
+        }
+    }
+
+    const contextParts = selected.map((doc: any, i: number) => {
+        const meta = doc.metadata as { module?: string; url?: string; title?: string };
+        return [`--- Chunk ${i + 1} ---`, `Module: ${meta.module ?? "unknown"}`, `Title: ${meta.title ?? ""}`, `Source: ${meta.url ?? "unknown"}`, `Content: ${doc.pageContent}`].join("\n");
+    });
+
+    const context = ["You are a React Three Fiber expert.", "Use this diverse 3D documentation context:", "", ...contextParts, "", `User Query: ${query}`].join("\n");
+    const sources = selected.map((doc: any) => ({ module: (doc.metadata as any).module || "", url: (doc.metadata as any).url || "" }));
+
+    console.log(`[RAG-diverse] ${query.slice(0, 40)}... -> ${selected.length} chunks (threejs:${buckets.threejs.slice(0, threejsCount).length} drei:${buckets.drei.slice(0, dreiCount).length} r3f:${buckets.r3f.slice(0, r3fCount).length} general:${buckets.general.length})`);
+
+    return { query, retrievedChunks: selected.length, context, sources };
 }
 
 export async function buildLiveSearchContext(prompt: string): Promise<{ context: string; sources: { url: string; module: string }[] }> {
